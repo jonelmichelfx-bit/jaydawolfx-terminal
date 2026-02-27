@@ -1,0 +1,10 @@
+flask>=3.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+python-dotenv>=1.0.0
+yfinance>=0.2.0
+
+# Auth (Phase 1)
+Flask-SQLAlchemy>=3.1.1
+Flask-Login>=0.6.3
+Werkzeug>=3.0.1

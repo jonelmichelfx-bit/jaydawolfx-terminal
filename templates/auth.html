@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JAYDAWOLFX OPTIONS TERMINAL</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: #2a2a3e;
+      --accent: #00ff88;
+      --accent2: #7c3aed;
+      --red: #ff4757;
+      --gold: #ffd700;
+      --text: #e0e0f0;
+      --text-dim: #6b7280;
+      --font: 'Courier New', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      padding: 20px;
+    }
+
+    /* Logo */
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-wolf {
+      font-size: 48px;
+      line-height: 1;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 0 20px rgba(0,255,136,0.5));
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { filter: drop-shadow(0 0 20px rgba(0,255,136,0.5)); }
+      50% { filter: drop-shadow(0 0 40px rgba(0,255,136,0.9)); }
+    }
+
+    .logo-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: var(--accent);
+      letter-spacing: 4px;
+      text-shadow: 0 0 20px rgba(0,255,136,0.6);
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 28px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--font);
+      font-size: 13px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: bold;
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 18px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--text-dim); }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn:hover { background: #00cc6e; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Trial badge */
+    .trial-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 4px;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+
+    .trial-badge .icon { font-size: 20px; }
+    .trial-badge strong { color: var(--accent); display: block; margin-bottom: 2px; }
+    .trial-badge span { color: var(--text-dim); }
+
+    /* Alert */
+    .alert {
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert.error { background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.3); color: var(--red); }
+    .alert.success { background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); color: var(--accent); }
+    .alert.show { display: block; }
+
+    /* Plan cards */
+    .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+
+    .plan-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 12px;
+    }
+
+    .plan-card.pro { border-color: var(--accent2); }
+    .plan-card .plan-name { font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; }
+    .plan-card.basic .plan-name { color: var(--gold); }
+    .plan-card.pro .plan-name { color: #a78bfa; }
+    .plan-card .plan-price { color: var(--text-dim); font-size: 11px; margin-bottom: 6px; }
+    .plan-card .plan-feature { color: var(--text-dim); line-height: 1.6; font-size: 11px; }
+
+    /* Remember me */
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .remember-row input[type=checkbox] {
+      width: auto;
+      accent-color: var(--accent);
+    }
+
+    /* Loader */
+    .btn-loading { opacity: 0.7; pointer-events: none; }
+    .btn-loading::after {
+      content: ' ▋';
+      animation: blink 0.5s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* Ticker at bottom */
+    .ticker {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 20px;
+      font-size: 11px;
+      color: var(--text-dim);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .ticker-inner {
+      display: inline-block;
+      animation: scroll 30s linear infinite;
+    }
+
+    @keyframes scroll {
+      0% { transform: translateX(100vw); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .up { color: var(--accent); }
+    .dn { color: var(--red); }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="logo">
+    <div class="logo-wolf">🐺</div>
+    <div class="logo-name">JAYDAWOLFX</div>
+    <div class="logo-sub">OPTIONS TERMINAL</div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('login')">LOGIN</button>
+      <button class="tab" onclick="showTab('signup')">SIGN UP</button>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <!-- LOGIN FORM -->
+    <div id="login-form">
+      <div class="form-group">
+        <label>EMAIL OR USERNAME</label>
+        <input type="text" id="login-identifier" placeholder="wolftrader@example.com" autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label>PASSWORD</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <div class="remember-row">
+        <input type="checkbox" id="remember" checked/>
+        <label for="remember" style="margin:0;letter-spacing:0">Keep me logged in</label>
+      </div>
+      <button class="btn" id="login-btn" onclick="doLogin()">ENTER TERMINAL</button>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="signup-form" style="display:none">
+      <div class="trial-badge">
+        <span class="icon">🔥</span>
+        <div>
+          <strong>20-DAY FREE TRIAL</strong>
+          <span>No credit card required. Full access.</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>EMAIL</label>
+        <input type="email" id="signup-email" placeholder="wolftrader@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>USERNAME</label>
+        <input type="text" id="signup-username" placeholder="wolftrader42" autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label>PASSWORD</label>
+        <input type="password" id="signup-password" placeholder="Min 8 chars + 1 number" autocomplete="new-password"/>
+      </div>
+
+      <div class="plans">
+        <div class="plan-card basic">
+          <div class="plan-name">BASIC</div>
+          <div class="plan-price">$20/month</div>
+          <div class="plan-feature">✓ 5 analyses/day<br/>✓ Greeks calc<br/>✓ P&L chart</div>
+        </div>
+        <div class="plan-card pro">
+          <div class="plan-name">PRO 🐺</div>
+          <div class="plan-price">$40/month</div>
+          <div class="plan-feature">✓ Unlimited<br/>✓ Trade journal<br/>✓ Alerts</div>
+        </div>
+      </div>
+
+      <button class="btn" id="signup-btn" onclick="doSignup()">START FREE TRIAL</button>
+    </div>
+  </div>
+</div>
+
+<div class="ticker">
+  <span class="ticker-inner">
+    SPY <span class="up">▲ 521.44 +0.82%</span> &nbsp;&nbsp;
+    QQQ <span class="up">▲ 438.22 +1.14%</span> &nbsp;&nbsp;
+    AAPL <span class="dn">▼ 182.34 -0.43%</span> &nbsp;&nbsp;
+    TSLA <span class="up">▲ 241.11 +2.31%</span> &nbsp;&nbsp;
+    NVDA <span class="up">▲ 867.55 +3.22%</span> &nbsp;&nbsp;
+    VIX <span class="dn">▼ 14.22 -1.05%</span> &nbsp;&nbsp;
+    AMD <span class="up">▲ 178.90 +1.67%</span> &nbsp;&nbsp;
+    META <span class="up">▲ 502.10 +0.95%</span> &nbsp;&nbsp;
+  </span>
+</div>
+
+<script>
+  function showTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'signup' && i === 1));
+    });
+    document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('signup-form').style.display = tab === 'signup' ? 'block' : 'none';
+    clearAlert();
+  }
+
+  function showAlert(msg, type = 'error') {
+    const el = document.getElementById('alert');
+    el.textContent = msg;
+    el.className = `alert ${type} show`;
+  }
+
+  function clearAlert() {
+    const el = document.getElementById('alert');
+    el.className = 'alert';
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.classList.toggle('btn-loading', loading);
+    btn.disabled = loading;
+  }
+
+  async function doLogin() {
+    clearAlert();
+    const identifier = document.getElementById('login-identifier').value.trim();
+    const password = document.getElementById('login-password').value;
+    const remember = document.getElementById('remember').checked;
+
+    if (!identifier || !password) {
+      showAlert('Please enter your email/username and password.');
+      return;
+    }
+
+    setLoading('login-btn', true);
+
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password, remember }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showAlert(data.message, 'success');
+        setTimeout(() => { window.location.href = '/'; }, 800);
+      } else {
+        showAlert(data.error || 'Login failed.');
+      }
+    } catch (e) {
+      showAlert('Connection error. Check your network.');
+    } finally {
+      setLoading('login-btn', false);
+    }
+  }
+
+  async function doSignup() {
+    clearAlert();
+    const email = document.getElementById('signup-email').value.trim();
+    const username = document.getElementById('signup-username').value.trim();
+    const password = document.getElementById('signup-password').value;
+
+    if (!email || !username || !password) {
+      showAlert('All fields are required.');
+      return;
+    }
+
+    setLoading('signup-btn', true);
+
+    try {
+      const res = await fetch('/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, username, password }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showAlert(data.message, 'success');
+        setTimeout(() => { window.location.href = '/'; }, 1000);
+      } else {
+        showAlert(data.error || 'Signup failed.');
+      }
+    } catch (e) {
+      showAlert('Connection error. Check your network.');
+    } finally {
+      setLoading('signup-btn', false);
+    }
+  }
+
+  // Enter key support
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const loginVisible = document.getElementById('login-form').style.display !== 'none';
+      loginVisible ? doLogin() : doSignup();
+    }
+  });
+</script>
+</body>
+</html>

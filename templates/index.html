@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐺 JAYDAWOLFX OPTIONS TERMINAL</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#080c0f;--bg2:#0d1318;--bg3:#141c24;--panel:#0f1923;
+  --border:#2a3f52;--border2:#34506a;
+  --green:#00ff99;--green2:#00cc77;--red:#ff4466;--yellow:#ffe033;
+  --cyan:#33ddff;--cyan2:#22aacc;--text:#ffffff;--text2:#b0d0e0;
+  --text3:#90b8d0;--accent:#ff7744;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:9999;}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:var(--bg2);border-bottom:1px solid var(--border);height:50px;position:sticky;top:0;z-index:100;}
+.logo{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--green);letter-spacing:3px;text-shadow:0 0 16px rgba(0,255,153,.4);}
+.logo span{color:var(--cyan);}
+.hdr-r{display:flex;align-items:center;gap:16px;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:pulse 2s infinite;}
+.dot.on{background:var(--green);box-shadow:0 0 8px var(--green);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.status-txt{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);letter-spacing:2px;}
+.clock{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3);}
+
+/* HOW-TO GUIDE TOGGLE */
+.guide-toggle{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:5px 14px;border:1px solid var(--cyan2);color:var(--cyan);background:transparent;cursor:pointer;transition:all .15s;}
+.guide-toggle:hover{background:rgba(51,221,255,.1);}
+
+/* GUIDE PANEL */
+.guide-panel{background:var(--bg2);border-bottom:2px solid var(--cyan2);padding:24px;display:none;}
+.guide-panel.open{display:block;}
+.guide-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--cyan);letter-spacing:2px;margin-bottom:16px;}
+.guide-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+.guide-step{background:var(--panel);border:1px solid var(--border);padding:16px;border-left:3px solid var(--green);}
+.gs-num{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:2px;margin-bottom:6px;}
+.gs-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.gs-desc{font-size:13px;color:var(--text2);line-height:1.6;}
+.gs-example{margin-top:8px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--green);background:rgba(0,255,153,.07);padding:6px 10px;}
+
+/* MAIN LAYOUT */
+.body-wrap{display:flex;min-height:calc(100vh - 50px);}
+.sidebar{width:340px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border2);}
+.content{flex:1;overflow-y:auto;min-width:0;}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:var(--border2);}
+
+/* SIDEBAR SECTIONS */
+.sec{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:#90b8d0;padding:10px 16px 6px;border-bottom:1px solid var(--border);text-transform:uppercase;}
+
+/* TICKER SEARCH */
+.ticker-search{padding:16px;border-bottom:1px solid var(--border);background:rgba(0,255,153,.02);}
+.ticker-row{display:flex;gap:8px;margin-bottom:8px;}
+.ticker-in{flex:1;min-width:0;background:var(--bg3);border:2px solid var(--border2);color:var(--text);padding:11px 12px;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:2px;text-transform:uppercase;outline:none;transition:border-color .15s;}
+.ticker-in:focus{border-color:var(--green);}
+.btn{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:8px 16px;border:1px solid;cursor:pointer;background:transparent;transition:all .15s;white-space:nowrap;}
+.btn-g{border-color:var(--green2);color:var(--green);}
+.btn-g:hover{background:rgba(0,255,153,.1);}
+.btn-c{border-color:var(--cyan2);color:var(--cyan);}
+.btn-c:hover{background:rgba(51,221,255,.1);}
+.fetch-hint{font-size:12px;color:#cce0ee;line-height:1.5;}
+.fetch-hint.ok{color:var(--green);}
+.fetch-hint.err{color:var(--red);}
+.popular{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.pop-btn{font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 10px;border:1px solid var(--border2);color:var(--text3);background:transparent;cursor:pointer;transition:all .15s;letter-spacing:1px;}
+.pop-btn:hover{border-color:var(--green2);color:var(--green);}
+
+/* FORM */
+.form-sec{padding:14px 16px;border-bottom:1px solid var(--border);}
+.fg{margin-bottom:12px;}
+.fl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:#cce0ee;margin-bottom:5px;display:block;text-transform:uppercase;}
+.fl-hint{font-size:11px;color:#a0c8e0;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;text-transform:none;margin-left:6px;}
+.fi{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;transition:border-color .15s;}
+.fi:focus{border-color:var(--cyan2);}
+select.fi{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236a9ab8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.toggle{display:flex;border:1px solid var(--border);overflow:hidden;margin-bottom:6px;}
+.tgl{flex:1;padding:9px;background:transparent;border:none;color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.tgl.c-on{background:rgba(0,255,153,.15);color:var(--green);}
+.tgl.p-on{background:rgba(255,68,102,.15);color:var(--red);}
+.tgl-hint{font-size:11px;color:#a0c8e0;margin-bottom:8px;}
+.run-btn{width:100%;padding:13px;font-size:13px;letter-spacing:3px;margin-top:6px;background:rgba(0,255,153,.05);}
+
+/* CONTENT AREA */
+.content-inner{padding:20px;display:flex;flex-direction:column;gap:16px;}
+
+/* VERDICT CARD */
+.verdict-card{border:2px solid var(--border);padding:20px 24px;position:relative;overflow:hidden;}
+.verdict-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.verdict-card.good{border-color:rgba(0,255,153,.5);}
+.verdict-card.good::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.verdict-card.bad{border-color:rgba(255,68,102,.5);}
+.verdict-card.bad::before{background:linear-gradient(90deg,transparent,var(--red),transparent);}
+.verdict-card.warn{border-color:rgba(255,224,51,.5);}
+.verdict-card.warn::before{background:linear-gradient(90deg,transparent,var(--yellow),transparent);}
+.verdict-card.neutral{border-color:var(--border);}
+.verdict-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;}
+.verdict-main{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;letter-spacing:2px;line-height:1;}
+.verdict-card.good .verdict-main{color:var(--green);}
+.verdict-card.bad .verdict-main{color:var(--red);}
+.verdict-card.warn .verdict-main{color:var(--yellow);}
+.verdict-card.neutral .verdict-main{color:var(--text3);}
+.verdict-explain{font-size:15px;color:#cce0ee;margin-top:10px;line-height:1.6;max-width:600px;}
+.verdict-meta{display:flex;gap:24px;margin-top:14px;flex-wrap:wrap;}
+.vm-item{display:flex;flex-direction:column;gap:3px;}
+.vm-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;}
+.vm-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.full{grid-column:1/-1;}
+
+/* PANEL */
+.panel{background:var(--panel);border:1px solid var(--border);position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;}
+.ga::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.ca::before{background:linear-gradient(90deg,transparent,var(--cyan),transparent);}
+.ya::before{background:linear-gradient(90deg,transparent,var(--yellow),transparent);}
+.ra::before{background:linear-gradient(90deg,transparent,var(--red),transparent);}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);}
+.pt{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:#cce0ee;text-transform:uppercase;}
+.badge{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;padding:2px 8px;border:1px solid;}
+.bg{border-color:var(--green2);color:var(--green);}
+.bc{border-color:var(--cyan2);color:var(--cyan);}
+.by{border-color:#ccaa00;color:var(--yellow);}
+
+/* GREEKS */
+.g-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.g-cell{background:var(--panel);padding:14px 16px;position:relative;overflow:hidden;}
+.g-cell.sp2{grid-column:1/-1;}
+.g-cell::after{content:attr(data-sym);position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:40px;opacity:.04;font-family:'Barlow Condensed',sans-serif;font-weight:900;color:white;}
+.gn{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;color:#90b8d0;text-transform:uppercase;margin-bottom:4px;}
+.gv{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;line-height:1;}
+.ge{font-size:12px;color:#c0dcea;margin-top:5px;line-height:1.5;}
+.sp2-inner{display:flex;gap:40px;align-items:flex-start;}
+
+/* CHART */
+.chart-wrap{padding:14px 14px 0;}
+.chart-box{position:relative;height:200px;}
+.sliders{padding:14px;}
+.sl-row{margin-bottom:12px;}
+.sl-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.sl-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:#cce0ee;text-transform:uppercase;}
+.sl-lbl small{font-size:10px;color:var(--text3);font-family:'Barlow',sans-serif;letter-spacing:0;text-transform:none;margin-left:6px;}
+.sl-val{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--cyan);}
+input[type=range]{width:100%;height:4px;background:var(--border2);outline:none;-webkit-appearance:none;cursor:pointer;border-radius:2px;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--cyan);cursor:pointer;box-shadow:0 0 8px rgba(51,221,255,.5);}
+
+/* CALC ROWS */
+.calc-box{padding:14px 16px;}
+.c-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}
+.c-row:last-child{border-bottom:none;}
+.c-lbl{display:flex;flex-direction:column;gap:3px;}
+.c-lbl-main{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;color:#cce0ee;text-transform:uppercase;}
+.c-lbl-hint{font-size:11px;color:#a0c8e0;}
+.c-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;}
+.v-red{color:var(--red);}
+.v-green{color:var(--green);}
+.v-cyan{color:var(--cyan);}
+.v-yellow{color:var(--yellow);}
+.v-white{color:var(--text);}
+
+/* VERDICT MINI inside panels */
+.mini-verdict{margin:0 14px 14px;padding:12px 16px;text-align:center;border:1px solid;background:rgba(0,0,0,.3);}
+.mv-text{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:2px;}
+.mv-sub{font-size:12px;margin-top:4px;}
+
+/* SCENARIO CHART */
+.sc-wrap{padding:14px;}
+.sc-box{height:240px;position:relative;}
+
+/* LOADING */
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--border2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-left:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ALERT */
+.alert-banner{position:fixed;top:58px;right:18px;background:rgba(255,68,102,.15);border:1px solid var(--red);color:var(--red);padding:10px 20px;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;z-index:500;display:none;box-shadow:0 0 20px rgba(255,68,102,.2);}
+
+/* WATCHDOG */
+.wd{margin:10px 16px;padding:12px 14px;background:rgba(0,0,0,.3);border:1px solid var(--border);}
+.wd.alert{border-color:rgba(255,68,102,.7);background:rgba(255,68,102,.06);animation:ap 1.5s infinite;}
+@keyframes ap{0%,100%{border-color:rgba(255,68,102,.4);}50%{border-color:var(--red);box-shadow:0 0 12px rgba(255,68,102,.2);}}
+.wd-title{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:4px;}
+.wd-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;color:var(--red);}
+.wd-sub{font-size:11px;color:#cce0ee;margin-top:2px;}
+
+/* RATIO BAR */
+.ratio-wrap{margin-top:10px;}
+.ratio-track{height:4px;background:var(--border);}
+.ratio-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--yellow),var(--green));width:0%;transition:width .5s;}
+
+/* SHORT HOLD */
+.sh-box{padding:12px 16px;border-bottom:1px solid var(--border);}
+.sh-inner{background:var(--bg3);border:1px solid var(--border);padding:12px;margin-top:8px;}
+
+/* DISC */
+.disc{padding:12px 16px;font-size:10px;color:#7a9db8;line-height:1.6;border-top:1px solid var(--border);}
+
+@media(max-width:900px){
+  .body-wrap{flex-direction:column;}
+  .sidebar{width:100%;}
+  .grid2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="alert-banner" id="alertBanner">⚠ THETA DECAY ALERT — EXCEEDS YOUR THRESHOLD</div>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo">🐺 JAYDAWOLFX<span>//</span>OPTIONS TERMINAL</div>
+  <div class="hdr-r">
+    <div class="clock" id="clock">--:--:--</div>
+    <button class="guide-toggle" onclick="toggleGuide()">? HOW TO USE</button>
+    <div class="dot" id="dot"></div>
+    <div class="status-txt" id="statusTxt">MANUAL MODE</div>
+  </div>
+</header>
+
+<!-- HOW-TO GUIDE -->
+<div class="guide-panel" id="guidePanel">
+  <div class="guide-title">🐺 HOW TO USE YOUR OPTIONS TERMINAL</div>
+  <div class="guide-steps">
+    <div class="guide-step">
+      <div class="gs-num">STEP 01</div>
+      <div class="gs-title">Type a Ticker & Hit Fetch</div>
+      <div class="gs-desc">Type the stock symbol in the box on the left — like AAPL for Apple or TSLA for Tesla. Hit the FETCH button and the terminal pulls the current stock price and all available expiration dates automatically.</div>
+      <div class="gs-example">Example: type "AAPL" → hit FETCH</div>
+    </div>
+    <div class="guide-step">
+      <div class="gs-num">STEP 02</div>
+      <div class="gs-title">Pick Your Expiration Date</div>
+      <div class="gs-desc">The expiration date is when your option contract expires. After fetching, a dropdown appears with all available dates. Pick the one that matches what you see in Robinhood. The terminal auto-fills the closest strike price for you.</div>
+      <div class="gs-example">Example: pick "2026-03-20"</div>
+    </div>
+    <div class="guide-step">
+      <div class="gs-num">STEP 03</div>
+      <div class="gs-title">Choose Call or Put</div>
+      <div class="gs-desc">A CALL makes money when the stock goes UP. A PUT makes money when the stock goes DOWN. Toggle whichever matches what you're buying in Robinhood.</div>
+      <div class="gs-example">Betting stock goes up? → CALL</div>
+    </div>
+    <div class="guide-step">
+      <div class="gs-num">STEP 04</div>
+      <div class="gs-title">Hit Run Analysis</div>
+      <div class="gs-desc">Press RUN ANALYSIS and the terminal calculates everything — all the Greeks, your P&L curve, and most importantly gives you a GOOD TRADE or BAD TRADE verdict at the top. Plain English. No math required from you.</div>
+      <div class="gs-example">Green = good. Red = walk away.</div>
+    </div>
+    <div class="guide-step">
+      <div class="gs-num">STEP 05</div>
+      <div class="gs-title">Use the Position Calculator</div>
+      <div class="gs-desc">Scroll down in the left sidebar. Type how many contracts you want to buy and the price. It shows you exactly how much money you're putting in, what you could make, and how much theta burns every day.</div>
+      <div class="gs-example">3 contracts at $5 = $1,500 at risk</div>
+    </div>
+    <div class="guide-step">
+      <div class="gs-num">STEP 06</div>
+      <div class="gs-title">Short Hold Calculator</div>
+      <div class="gs-desc">Planning to hold for just 5 hours or 24 hours? Type your hold time and how much you think the stock will move. The terminal tells you if the move is fast enough to beat time decay — and gives you a verdict.</div>
+      <div class="gs-example">5hr hold + $3 move = profit?</div>
+    </div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="body-wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="sec">// Step 1 — Search Stock</div>
+    <div class="ticker-search">
+      <div class="ticker-row">
+        <input class="ticker-in" id="tickerIn" type="text" value="AAPL" placeholder="AAPL" maxlength="6">
+        <button class="btn btn-c" onclick="doFetch()" id="fetchBtn" style="padding:8px 12px;min-width:70px;">FETCH</button>
+      </div>
+      <div class="fetch-hint" id="fetchHint">Type any stock symbol and hit FETCH</div>
+      <div class="popular">
+        <button class="pop-btn" onclick="quickLoad('AAPL')">AAPL</button>
+        <button class="pop-btn" onclick="quickLoad('TSLA')">TSLA</button>
+        <button class="pop-btn" onclick="quickLoad('SPY')">SPY</button>
+        <button class="pop-btn" onclick="quickLoad('NVDA')">NVDA</button>
+        <button class="pop-btn" onclick="quickLoad('AMZN')">AMZN</button>
+        <button class="pop-btn" onclick="quickLoad('META')">META</button>
+      </div>
+    </div>
+
+    <div class="sec">// Step 2 — Contract Details</div>
+    <div class="form-sec">
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">Strike Price <span class="fl-hint">the $ on the contract</span></label>
+          <input class="fi" id="iStrike" type="number" value="230" step="1">
+        </div>
+        <div class="fg">
+          <label class="fl">Stock Price <span class="fl-hint">current price</span></label>
+          <input class="fi" id="iStock" type="number" value="225" step="0.01">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Expiration Date <span class="fl-hint">when it expires</span></label>
+        <select class="fi" id="iExp" onchange="onExpChange()">
+          <option value="">— fetch a ticker first —</option>
+        </select>
+      </div>
+
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">IV <span class="fl-hint">volatility % ÷ 100</span></label>
+          <input class="fi" id="iIV" type="number" value="0.30" step="0.01" min="0.01">
+        </div>
+        <div class="fg">
+          <label class="fl">Premium Paid <span class="fl-hint">cost to buy</span></label>
+          <input class="fi" id="iPrem" type="number" value="5.00" step="0.01">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Call or Put? <span class="fl-hint">which direction</span></label>
+        <div class="toggle">
+          <button class="tgl c-on" id="tCall" onclick="setType('call')">📈 CALL — Stock Goes Up</button>
+          <button class="tgl" id="tPut" onclick="setType('put')">📉 PUT — Stock Goes Down</button>
+        </div>
+        <div class="tgl-hint" id="typeHint">A CALL makes money when the stock rises above your strike price.</div>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Theta Alert <span class="fl-hint">warn me if decay exceeds</span></label>
+        <input class="fi" id="iAlert" type="number" value="50" step="1">
+      </div>
+
+      <button class="btn btn-g run-btn" onclick="analyze()" id="runBtn">▶ RUN ANALYSIS</button>
+    </div>
+
+    <div class="sec">// Theta Watchdog</div>
+    <div class="wd" id="watchdog">
+      <div class="wd-title">⏰ DAILY TIME DECAY</div>
+      <div class="wd-val" id="wdVal">—</div>
+      <div class="wd-sub" id="wdSub">How much you lose per day just from waiting</div>
+    </div>
+
+    <div class="sec">// Position Calculator</div>
+    <div class="form-sec">
+      <div class="row2">
+        <div class="fg">
+          <label class="fl"># Contracts</label>
+          <input class="fi" id="iContracts" type="number" value="1" min="1" oninput="calcPos()">
+        </div>
+        <div class="fg">
+          <label class="fl">Price / Contract</label>
+          <input class="fi" id="iCPrice" type="number" value="5.00" step="0.01" oninput="calcPos()">
+        </div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:12px;">
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Total Money In</div><div class="c-lbl-hint">What you're spending total</div></div>
+          <div class="c-val v-red" id="pTotal">—</div>
+        </div>
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Max You Can Lose</div><div class="c-lbl-hint">If option goes to $0</div></div>
+          <div class="c-val v-red" id="pMax">—</div>
+        </div>
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Theta Burn / Day</div><div class="c-lbl-hint">Lost every day from time passing</div></div>
+          <div class="c-val v-red" id="pDaily">—</div>
+        </div>
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Theta Burn / Week</div><div class="c-lbl-hint">If you hold a full week</div></div>
+          <div class="c-val v-red" id="pWeekly">—</div>
+        </div>
+        <div class="fg" style="margin-top:10px;">
+          <label class="fl">Target Gain % <span class="fl-hint">what % profit do you want?</span></label>
+          <input class="fi" id="iTarget" type="number" placeholder="e.g. 50 for 50% gain" oninput="calcPos()">
+        </div>
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">You Would Make</div><div class="c-lbl-hint">At your target % gain</div></div>
+          <div class="c-val v-green" id="pReturn">—</div>
+        </div>
+        <div class="ratio-wrap">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <div class="c-lbl-main">Risk vs Reward</div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan);" id="pRatio">—</div>
+          </div>
+          <div class="ratio-track"><div class="ratio-fill" id="pBar"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">// Short Hold Calculator</div>
+    <div class="form-sec">
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">Hold Time (hours)</label>
+          <input class="fi" id="iHours" type="number" value="5" min="1" max="72" oninput="calcHold()">
+        </div>
+        <div class="fg">
+          <label class="fl">Expected Move ($)</label>
+          <input class="fi" id="iMove" type="number" value="2" step="0.25" oninput="calcHold()">
+        </div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:12px;">
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Time Decay Cost</div><div class="c-lbl-hint">What theta steals in your hold window</div></div>
+          <div class="c-val v-red" id="hTheta">—</div>
+        </div>
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Gain From Move</div><div class="c-lbl-hint">If stock moves your expected amount</div></div>
+          <div class="c-val v-green" id="hDelta">—</div>
+        </div>
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Net Profit / Contract</div><div class="c-lbl-hint">Gain minus decay</div></div>
+          <div class="c-val" id="hNet">—</div>
+        </div>
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Net Profit / All Contracts</div><div class="c-lbl-hint">Your total across all you're buying</div></div>
+          <div class="c-val" id="hNetAll">—</div>
+        </div>
+        <div class="c-row">
+          <div class="c-lbl"><div class="c-lbl-main">Min Move Needed</div><div class="c-lbl-hint">Stock must move at least this much</div></div>
+          <div class="c-val v-cyan" id="hBE">—</div>
+        </div>
+        <div style="padding:12px;text-align:center;border:1px solid var(--border);background:var(--bg);margin-top:10px;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;">SHORT HOLD VERDICT</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:2px;margin-top:4px;" id="hVerdict">RUN ANALYSIS FIRST</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="disc">⚠ For educational purposes only. Not financial advice. Options trading involves significant risk of loss. Past performance does not predict future results.</div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="content-inner">
+
+      <!-- BIG VERDICT -->
+      <div class="verdict-card neutral" id="verdictCard">
+        <div class="verdict-label">// OVERALL TRADE VERDICT</div>
+        <div class="verdict-main" id="verdictMain">RUN ANALYSIS</div>
+        <div class="verdict-explain" id="verdictExplain">Type a ticker on the left, fill in your contract details, and hit RUN ANALYSIS. The terminal will tell you in plain English whether this trade makes sense.</div>
+        <div class="verdict-meta" id="verdictMeta"></div>
+        <div id="simLine" style="display:flex;flex-direction:column;gap:4px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"></div>
+      </div>
+
+      <!-- GREEKS + P&L -->
+      <div class="grid2">
+
+        <!-- GREEKS -->
+        <div class="panel ga">
+          <div class="ph"><div class="pt">THE GREEKS — What the Numbers Mean</div><div class="badge bc" id="greekBadge">BLACK-SCHOLES</div></div>
+          <div class="g-grid">
+            <div class="g-cell" data-sym="Δ">
+              <div class="gn">DELTA</div>
+              <div class="gv v-green" id="gDelta">—</div>
+              <div class="ge" id="gDeltaE">How much your option gains for every $1 the stock moves in your direction.</div>
+            </div>
+            <div class="g-cell" data-sym="Γ">
+              <div class="gn">GAMMA</div>
+              <div class="gv v-cyan" id="gGamma">—</div>
+              <div class="ge">How fast Delta speeds up. High Gamma = bigger swings both ways.</div>
+            </div>
+            <div class="g-cell" data-sym="Θ">
+              <div class="gn">THETA — Your Enemy</div>
+              <div class="gv v-red" id="gTheta">—</div>
+              <div class="ge" id="gThetaE">Value you lose every single day just from time passing. Even if the stock doesn't move.</div>
+            </div>
+            <div class="g-cell" data-sym="V">
+              <div class="gn">VEGA</div>
+              <div class="gv v-yellow" id="gVega">—</div>
+              <div class="ge">How much your option changes when market volatility moves 1%.</div>
+            </div>
+            <div class="g-cell sp2" data-sym="$">
+              <div class="gn">THEORETICAL PRICE &nbsp;|&nbsp; RHO</div>
+              <div class="sp2-inner">
+                <div>
+                  <div class="gv" style="color:var(--accent)" id="gPrice">—</div>
+                  <div class="ge">What the math says the option is worth right now.</div>
+                </div>
+                <div>
+                  <div class="gv v-white" id="gRho">—</div>
+                  <div class="ge">Sensitivity to interest rate changes.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- P&L CHART -->
+        <div class="panel ca">
+          <div class="ph"><div class="pt">P&L CURVE — Drag to See Your Profit at Any Price</div><div class="badge bg">AT EXPIRY</div></div>
+          <div class="chart-wrap"><div class="chart-box"><canvas id="pnlChart"></canvas></div></div>
+          <div class="sliders">
+            <div class="sl-row">
+              <div class="sl-head">
+                <div class="sl-lbl">TARGET PRICE <small>drag to simulate</small></div>
+                <div class="sl-val" id="slTVal">$—</div>
+              </div>
+              <input type="range" id="slTarget" min="100" max="400" value="225" step="0.5" oninput="onTarget()">
+            </div>
+            <div class="sl-row" style="margin-bottom:0">
+              <div class="sl-head">
+                <div class="sl-lbl">DAYS HELD <small>see theta eat your position</small></div>
+                <div class="sl-val" id="slDVal">0 days</div>
+              </div>
+              <input type="range" id="slDays" min="0" max="60" value="0" step="1" oninput="onDays()">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SCENARIO CHART -->
+      <div class="panel ya full">
+        <div class="ph">
+          <div class="pt">TIME DECAY SCENARIOS — Watch Theta Eat Your Position Over Time</div>
+          <div class="badge by">DAY 0 → DAY 20</div>
+        </div>
+        <div style="padding:0 16px 8px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border);">
+          Each line shows your profit curve at a different point in time. Notice how the lines drop lower — that's theta stealing value every day even if the stock doesn't move.
+        </div>
+        <div class="sc-wrap"><div class="sc-box"><canvas id="scChart"></canvas></div></div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /body-wrap -->
+
+<script>
+const ST={optType:'call',greeks:null,pnlCurve:[],scenarios:[],stockPrice:0,premium:0,dailyTheta:0};
+let pnlCh=null,scCh=null;
+
+// Clock
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});},1000);
+
+// Default expiration
+(function(){
+  const d=new Date();d.setDate(d.getDate()+30);
+  const sel=document.getElementById('iExp');
+  sel.innerHTML=`<option value="${d.toISOString().split('T')[0]}">${d.toISOString().split('T')[0]}</option>`;
+})();
+
+// Guide toggle
+function toggleGuide(){
+  const p=document.getElementById('guidePanel');
+  p.classList.toggle('open');
+}
+
+// Quick load popular stock
+function quickLoad(ticker){
+  document.getElementById('tickerIn').value=ticker;
+  doFetch();
+}
+
+// Option type
+function setType(t){
+  ST.optType=t;
+  document.getElementById('tCall').className='tgl'+(t==='call'?' c-on':'');
+  document.getElementById('tPut').className='tgl'+(t==='put'?' p-on':'');
+  document.getElementById('typeHint').textContent=t==='call'
+    ?'A CALL makes money when the stock rises above your strike price.'
+    :'A PUT makes money when the stock drops below your strike price.';
+}
+
+// FETCH ticker data
+async function doFetch(){
+  const ticker=document.getElementById('tickerIn').value.trim().toUpperCase();
+  if(!ticker)return;
+  const btn=document.getElementById('fetchBtn'),hint=document.getElementById('fetchHint');
+  btn.innerHTML='FETCHING<span class="spin"></span>';btn.disabled=true;
+  hint.className='fetch-hint';hint.textContent='Loading live data from Yahoo Finance...';
+  try{
+    const r=await fetch('/api/autofill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker})});
+    const d=await r.json();
+    if(d.error){
+      hint.className='fetch-hint err';
+      hint.textContent='✕ '+d.error+' — try: pip install yfinance';
+    }else{
+      if(d.stock_price){
+        document.getElementById('iStock').value=d.stock_price;
+      }
+      if(d.expirations&&d.expirations.length){
+        const sel=document.getElementById('iExp');
+        sel.innerHTML=d.expirations.map(e=>`<option value="${e}">${e}</option>`).join('');
+        await fetchStrikes(ticker,d.expirations[0]);
+      }
+      hint.className='fetch-hint ok';
+      hint.textContent='✓ '+ticker+' loaded — $'+d.stock_price.toFixed(2)+' — now pick expiration & hit RUN ANALYSIS';
+      document.getElementById('dot').className='dot on';
+      document.getElementById('statusTxt').textContent='LIVE DATA';
+    }
+  }catch(e){
+    hint.className='fetch-hint err';
+    hint.textContent='✕ Could not connect — make sure app is running';
+  }
+  btn.innerHTML='FETCH';btn.disabled=false;
+}
+
+async function onExpChange(){
+  const ticker=document.getElementById('tickerIn').value.trim().toUpperCase();
+  const exp=document.getElementById('iExp').value;
+  if(ticker&&exp){
+    await fetchStrikes(ticker,exp);
+    await fetchContract(ticker,exp);
+  }
+}
+
+async function fetchStrikes(ticker,exp){
+  try{
+    const r=await fetch('/api/strikes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker,expiration:exp,option_type:ST.optType})});
+    const d=await r.json();
+    if(d.strikes&&d.strikes.length){
+      const sp=parseFloat(document.getElementById('iStock').value)||0;
+      const atm=d.strikes.reduce((a,b)=>Math.abs(b-sp)<Math.abs(a-sp)?b:a);
+      document.getElementById('iStrike').value=atm;
+    }
+  }catch(e){}
+}
+
+async function fetchContract(ticker,exp){
+  const strike=parseFloat(document.getElementById('iStrike').value);
+  if(!ticker||!exp||!strike)return;
+  try{
+    const r=await fetch('/api/contract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker,expiration:exp,strike,option_type:ST.optType})});
+    const d=await r.json();
+    if(d.data){
+      if(d.data.iv)document.getElementById('iIV').value=d.data.iv.toFixed(4);
+      if(d.data.mark)document.getElementById('iPrem').value=d.data.mark.toFixed(2);
+      if(d.data.stock_price)document.getElementById('iStock').value=d.data.stock_price.toFixed(2);
+    }
+  }catch(e){}
+}
+
+// ANALYZE
+async function analyze(){
+  const btn=document.getElementById('runBtn');
+  btn.innerHTML='ANALYZING<span class="spin"></span>';btn.disabled=true;
+  const ticker=document.getElementById('tickerIn').value.trim().toUpperCase();
+  const strike=parseFloat(document.getElementById('iStrike').value);
+  const stock=parseFloat(document.getElementById('iStock').value);
+  const exp=document.getElementById('iExp').value;
+  const iv=parseFloat(document.getElementById('iIV').value);
+  const prem=parseFloat(document.getElementById('iPrem').value);
+  const alertVal=parseFloat(document.getElementById('iAlert').value);
+  const days=parseInt(document.getElementById('slDays').value);
+  const dte=exp?Math.max(Math.round((new Date(exp)-new Date())/86400000),1):30;
+
+  const payload={ticker,strike,stock_price:stock,expiration:exp,iv,r:0.045,option_type:ST.optType,premium_paid:prem,days_held:days,theta_alert:alertVal};
+
+  try{
+    const[gr,sim]=await Promise.all([
+      fetch('/api/greeks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()),
+      fetch('/api/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock_price:stock,strike,dte,r:0.045,iv,option_type:ST.optType,premium_paid:prem})}).then(r=>r.json()),
+    ]);
+
+    ST.greeks=gr.greeks;ST.pnlCurve=gr.pnl_curve;ST.stockPrice=gr.stock_price;
+    ST.premium=gr.premium_paid;ST.scenarios=sim.scenarios;ST.dailyTheta=gr.daily_theta_dollars;
+
+    updGreeks(gr,ticker,strike,exp,iv);
+    updVerdict(gr,ticker,strike,stock,iv,dte);
+    updWatchdog(gr);
+    buildPnL();buildSc();initSliders();calcPos();calcHold();
+
+    if(gr.theta_alert){
+      const b=document.getElementById('alertBanner');
+      b.style.display='block';setTimeout(()=>b.style.display='none',5000);
+    }
+    if(gr.live_data){
+      document.getElementById('greekBadge').textContent='LIVE';
+      document.getElementById('greekBadge').className='badge bg';
+    }
+  }catch(e){console.error(e);}
+  btn.innerHTML='▶ RUN ANALYSIS';btn.disabled=false;
+}
+
+function updGreeks(d,ticker,strike,exp,iv){
+  const g=d.greeks;if(!g)return;
+  document.getElementById('gDelta').textContent=g.delta;
+  document.getElementById('gGamma').textContent=g.gamma;
+  document.getElementById('gTheta').textContent=g.theta;
+  document.getElementById('gVega').textContent=g.vega;
+  document.getElementById('gRho').textContent=g.rho;
+  document.getElementById('gPrice').textContent='$'+g.price;
+  document.getElementById('gTheta').className='gv '+(g.theta<0?'v-red':'v-green');
+
+  // Plain English Delta explanation
+  const dollarPerMove=(Math.abs(g.delta)*100).toFixed(0);
+  document.getElementById('gDeltaE').textContent=`For every $1 ${ticker} moves in your direction, this option gains about $${dollarPerMove} per contract.`;
+
+  // Plain English Theta explanation
+  const dailyDollar=Math.abs(g.theta*100).toFixed(2);
+  document.getElementById('gThetaE').textContent=`You lose $${dailyDollar} per contract every single day — even if the stock doesn't move. That's $${(dailyDollar*7).toFixed(2)}/week.`;
+}
+
+function updVerdict(d,ticker,strike,stock,iv,dte){
+  // Only show verdict if we have real data — warn if manual
+  const isLive = d.live_data && d.live_data.iv && d.live_data.stock_price;
+  const dataWarning = isLive ? '' : ' (Note: using your manual inputs — hit FETCH for live data)';
+  const g=d.greeks;if(!g)return;
+  const card=document.getElementById('verdictCard');
+  const main=document.getElementById('verdictMain');
+  const explain=document.getElementById('verdictExplain');
+  const meta=document.getElementById('verdictMeta');
+
+  const prem=d.premium_paid;
+  const dailyTheta=Math.abs(g.theta*100);
+  const delta=Math.abs(g.delta);
+  const isCall=ST.optType==='call';
+  const distToStrike=Math.abs(stock-strike);
+  const pctToStrike=(distToStrike/stock*100).toFixed(1);
+  const breakeven=isCall?strike+prem:strike-prem;
+  const daysToBreakeven=prem>0&&dailyTheta>0?(prem/dailyTheta).toFixed(0):0;
+
+  // Score the trade
+  let score=0;
+  if(delta>0.4)score++;
+  if(delta>0.6)score++;
+  if(dailyTheta<20)score++;
+  if(dte>14)score++;
+  if(distToStrike/stock<0.05)score++;
+
+  let cls,txt,exp;
+  if(score>=4){
+    cls='good';txt='✓ LOOKS LIKE A GOOD TRADE';
+    exp=`This option has solid Delta (${g.delta}) meaning it moves well with the stock, and manageable time decay of $${dailyTheta.toFixed(2)}/day. The stock needs to reach $${breakeven.toFixed(2)} to break even. You have ${dte} days until expiration.`+dataWarning;
+  }else if(score>=2){
+    cls='warn';txt='⚠ PROCEED WITH CAUTION';
+    exp=`This trade has some risk. Delta is ${g.delta} so time decay is costing $${dailyTheta.toFixed(2)}/day per contract. The stock needs to reach $${breakeven.toFixed(2)} to break even — currently ${pctToStrike}% away.`+dataWarning;
+  }else{
+    cls='bad';txt='✕ HIGH RISK — BE CAREFUL';
+    exp=`High risk. Time decay costs $${dailyTheta.toFixed(2)}/day and Delta is only ${g.delta}. The stock needs to reach $${breakeven.toFixed(2)} to break even — that's ${pctToStrike}% from current price.`+dataWarning;
+  }
+
+  card.className='verdict-card '+cls;
+  main.textContent=txt;
+  explain.textContent=exp;
+
+  meta.innerHTML=`
+    <div class="vm-item"><div class="vm-label">Break Even Price</div><div class="vm-val" style="color:var(--cyan)">$${breakeven.toFixed(2)}</div></div>
+    <div class="vm-item"><div class="vm-label">Days to Exp</div><div class="vm-val" style="color:var(--yellow)">${dte} days</div></div>
+    <div class="vm-item"><div class="vm-label">Daily Cost</div><div class="vm-val" style="color:var(--red)">-$${dailyTheta.toFixed(2)}/day</div></div>
+    <div class="vm-item"><div class="vm-label">Stock Must Move</div><div class="vm-val" style="color:var(--text)">${pctToStrike}%</div></div>
+    <div class="vm-item"><div class="vm-label">Current Price</div><div class="vm-val" style="color:var(--green)">$${d.stock_price.toFixed(2)}</div></div>
+  `;
+}
+
+function updWatchdog(d){
+  document.getElementById('wdVal').textContent='$'+Math.abs(d.daily_theta_dollars).toFixed(2)+'/day';
+  document.getElementById('wdSub').textContent='= $'+Math.abs(d.daily_theta_dollars*7).toFixed(2)+' lost per week if stock stays flat';
+  d.theta_alert?document.getElementById('watchdog').classList.add('alert'):document.getElementById('watchdog').classList.remove('alert');
+}
+
+function buildPnL(){
+  const curve=ST.pnlCurve;if(!curve.length)return;
+  if(pnlCh)pnlCh.destroy();
+  const ctx=document.getElementById('pnlChart').getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'rgba(0,255,153,.15)');grad.addColorStop(1,'rgba(255,68,102,.08)');
+  pnlCh=new Chart(ctx,{
+    type:'line',
+    data:{labels:curve.map(p=>'$'+p.price.toFixed(0)),datasets:[{
+      label:'P&L',data:curve.map(p=>p.pnl),
+      borderWidth:2.5,pointRadius:0,fill:true,backgroundColor:grad,tension:.4,
+      segment:{borderColor:c=>c.p0.parsed.y>=0&&c.p1.parsed.y>=0?'#00ff99':c.p0.parsed.y<0&&c.p1.parsed.y<0?'#ff4466':'#ffe033'}
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#0f1923',borderColor:'#2a3f52',borderWidth:1,titleColor:'#6a9ab8',bodyColor:'#fff',titleFont:{family:'Share Tech Mono'},bodyFont:{family:'Share Tech Mono'},callbacks:{label:c=>(c.raw>=0?'PROFIT: +':'LOSS: ')+'$'+Math.abs(c.raw).toFixed(2)}}},
+      scales:{
+        x:{grid:{color:'rgba(42,63,82,.5)'},ticks:{color:'#6a9ab8',font:{family:'Share Tech Mono',size:9},maxTicksLimit:7},border:{color:'#2a3f52'}},
+        y:{grid:{color:'rgba(42,63,82,.5)'},ticks:{color:'#b0d0e0',font:{family:'Share Tech Mono',size:9},callback:v=>(v>=0?'+':'')+'$'+v.toFixed(0)},border:{color:'#2a3f52'}}
+      }
+    }
+  });
+}
+
+function buildSc(){
+  const sc=ST.scenarios;if(!sc.length)return;
+  if(scCh)scCh.destroy();
+  const cols=['#00ff99','#33ddff','#ffe033','#ff7744','#ff4466'];
+  const ctx=document.getElementById('scChart').getContext('2d');
+  scCh=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:sc[0].curve.map(p=>'$'+p.price.toFixed(0)),
+      datasets:sc.map((s,i)=>({
+        label:'Day '+s.days,data:s.curve.map(p=>p.pnl),
+        borderColor:cols[i],backgroundColor:'transparent',
+        borderWidth:i===0?2.5:1.5,pointRadius:0,
+        borderDash:i===0?[]:[5,3],tension:.4
+      }))
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,labels:{color:'#b0d0e0',font:{family:'Share Tech Mono',size:10},boxWidth:20,padding:12}},
+        tooltip:{backgroundColor:'#0f1923',borderColor:'#2a3f52',borderWidth:1,titleColor:'#6a9ab8',bodyColor:'#fff',titleFont:{family:'Share Tech Mono'},bodyFont:{family:'Share Tech Mono',size:10},callbacks:{label:c=>`${c.dataset.label}: ${c.raw>=0?'+':''}$${c.raw.toFixed(2)}`}}
+      },
+      scales:{
+        x:{grid:{color:'rgba(42,63,82,.4)'},ticks:{color:'#6a9ab8',font:{family:'Share Tech Mono',size:9},maxTicksLimit:7},border:{color:'#2a3f52'}},
+        y:{grid:{color:'rgba(42,63,82,.4)'},ticks:{color:'#b0d0e0',font:{family:'Share Tech Mono',size:9},callback:v=>(v>=0?'+':'')+'$'+v.toFixed(0)},border:{color:'#2a3f52'}}
+      }
+    }
+  });
+}
+
+function initSliders(){
+  const curve=ST.pnlCurve;if(!curve.length)return;
+  const min=curve[0].price,max=curve[curve.length-1].price;
+  const sl=document.getElementById('slTarget');
+  sl.min=min;sl.max=max;sl.step=(max-min)/100;sl.value=ST.stockPrice;
+  document.getElementById('slTVal').textContent='$'+ST.stockPrice.toFixed(2);
+  const exp=document.getElementById('iExp').value;
+  if(exp){const dte=Math.max(Math.round((new Date(exp)-new Date())/86400000),1);document.getElementById('slDays').max=dte;}
+}
+
+function onTarget(){
+  const val=parseFloat(document.getElementById('slTarget').value);
+  document.getElementById('slTVal').textContent='$'+val.toFixed(2);
+  if(!ST.pnlCurve.length)return;
+  // Find closest point on curve
+  const c=ST.pnlCurve.reduce((a,b)=>Math.abs(b.price-val)<Math.abs(a.price-val)?b:a);
+  const ticker=document.getElementById('tickerIn').value.toUpperCase();
+  // Update the sim line in verdict meta — DON'T overwrite the main verdict
+  const simEl=document.getElementById('simLine');
+  if(simEl){
+    const isProfit=c.pnl>=0;
+    simEl.innerHTML=`<span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:2px;">PRICE SIM</span>
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:${isProfit?'var(--green)':'var(--red)'};">
+      ${isProfit?'PROFIT':'LOSS'}: ${isProfit?'+':'-'}$${Math.abs(c.pnl).toFixed(2)} per contract
+    </span>
+    <span style="font-size:12px;color:var(--text2);">if ${ticker} hits $${val.toFixed(2)}</span>`;
+  }
+}
+
+function onDays(){
+  const d=parseInt(document.getElementById('slDays').value);
+  document.getElementById('slDVal').textContent=d+' days';
+  analyze();
+}
+
+function calcPos(){
+  const c=parseInt(document.getElementById('iContracts').value)||1;
+  const p=parseFloat(document.getElementById('iCPrice').value)||0;
+  const t=parseFloat(document.getElementById('iTarget').value)||0;
+  const total=c*p*100;
+  const dAll=Math.abs(ST.dailyTheta||0)*c;
+  const pot=total*(t/100);
+  const ratio=total>0?pot/total:0;
+  document.getElementById('pTotal').textContent='$'+total.toFixed(2);
+  document.getElementById('pMax').textContent='-$'+total.toFixed(2);
+  document.getElementById('pDaily').textContent=dAll>0?'-$'+dAll.toFixed(2):'Run analysis first';
+  document.getElementById('pWeekly').textContent=dAll>0?'-$'+(dAll*7).toFixed(2):'—';
+  document.getElementById('pReturn').textContent=t>0?'+$'+pot.toFixed(2):'Enter target % above';
+  document.getElementById('pRatio').textContent=ratio>0?ratio.toFixed(2)+':1':'—';
+  document.getElementById('pBar').style.width=Math.min((ratio/5)*100,100)+'%';
+}
+
+function calcHold(){
+  if(!ST.greeks)return;
+  const h=parseFloat(document.getElementById('iHours').value)||5;
+  const m=parseFloat(document.getElementById('iMove').value)||0;
+  const c=parseInt(document.getElementById('iContracts').value)||1;
+  const delta=Math.abs(ST.greeks.delta);
+  const theta=Math.abs(ST.greeks.theta);
+  const tc=(theta/24)*h*100;
+  const dg=delta*m*100;
+  const net=dg-tc;
+  const netAll=net*c;
+  const be=delta>0?tc/(delta*100):0;
+  document.getElementById('hTheta').textContent='-$'+tc.toFixed(2);
+  document.getElementById('hDelta').textContent='+$'+dg.toFixed(2);
+  const ne=document.getElementById('hNet');ne.textContent=(net>=0?'+':'')+'$'+net.toFixed(2);ne.className='c-val '+(net>=0?'v-green':'v-red');
+  const na=document.getElementById('hNetAll');na.textContent=(netAll>=0?'+':'')+'$'+netAll.toFixed(2);na.className='c-val '+(netAll>=0?'v-green':'v-red');
+  document.getElementById('hBE').textContent='$'+be.toFixed(2);
+  const vt=document.getElementById('hVerdict');
+  if(net>0){vt.textContent='✓ TRADE LOOKS GOOD';vt.style.color='var(--green)';}
+  else if(net>-20){vt.textContent='⚠ BORDERLINE — BE CAREFUL';vt.style.color='var(--yellow)';}
+  else{vt.textContent='✕ THETA KILLS THIS TRADE';vt.style.color='var(--red)';}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.activeElement.tagName==='INPUT')analyze();});
+window.addEventListener('load',()=>setTimeout(analyze,400));
+</script>
+</body>
+</html>
