@@ -1,4 +1,5 @@
 import os
+import re
 import json
 from datetime import datetime, date
 from flask import Blueprint, request, jsonify
@@ -236,21 +237,28 @@ def analyze():
     try:
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=1000,
+            max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )
         
         text = message.content[0].text.strip()
         
+        # Try to extract JSON from response
         if '```json' in text:
             text = text.split('```json')[1].split('```')[0].strip()
         elif '```' in text:
             text = text.split('```')[1].split('```')[0].strip()
         
+        # Try to find JSON array in text using regex
+        if not text.startswith('['):
+            match = re.search(r'\[.*\]', text, re.DOTALL)
+            if match:
+                text = match.group(0)
+        
         stocks = json.loads(text)
         return jsonify({'stocks': stocks}), 200
         
-    except json.JSONDecodeError:
-        return jsonify({'error': 'AI response could not be parsed. Try again.'}), 500
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'Parse error: {str(e)}. Raw: {text[:200]}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
