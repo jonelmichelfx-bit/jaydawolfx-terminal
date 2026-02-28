@@ -43,6 +43,9 @@ app.register_blueprint(auth_bp)
 from payments import payments_bp
 app.register_blueprint(payments_bp)
 
+from scanner import scanner_bp
+app.register_blueprint(scanner_bp)
+
 # ── Create DB tables ─────────────────────────────────
 with app.app_context():
     db.create_all()
@@ -164,6 +167,11 @@ def login_page():
 def pricing():
     return render_template('pricing.html')
 
+@app.route('/ai-scanner')
+@login_required
+def ai_scanner():
+    return render_template('scanner.html')
+
 # ────────────────────────────────────────────────────
 # API ROUTES — now protected with @analysis_gate
 # ────────────────────────────────────────────────────
@@ -262,4 +270,4 @@ def health():
     return jsonify({'status': 'online', 'terminal': 'JAYDAWOLFX OPTIONS TERMINAL 🐺'}), 200
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=True, port=5000)

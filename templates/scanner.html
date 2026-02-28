@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JAYDAWOLFX — AI Stock Scanner</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: #2a2a3e;
+      --accent: #00ff88;
+      --accent2: #7c3aed;
+      --red: #ff4757;
+      --gold: #ffd700;
+      --blue: #3b82f6;
+      --text: #e0e0f0;
+      --text-dim: #6b7280;
+      --font: 'Courier New', monospace;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon { font-size: 32px; }
+    .header-title { font-size: 20px; font-weight: bold; color: var(--accent); letter-spacing: 3px; }
+    .header-sub { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; margin-top: 2px; }
+    .back-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 12px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Pro badge */
+    .pro-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      color: #a78bfa;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    /* Search bar */
+    .search-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .search-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+      border-radius: 8px 8px 0 0;
+    }
+    .search-label { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 10px; }
+    .search-row { display: flex; gap: 10px; }
+    .search-input {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      outline: none;
+    }
+    .search-input:focus { border-color: var(--accent2); }
+    .search-input::placeholder { color: var(--text-dim); }
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-search { background: var(--accent2); color: white; }
+    .btn-search:hover { background: #6d28d9; }
+    .btn-daily { background: var(--accent); color: var(--bg); }
+    .btn-daily:hover { background: #00cc6e; box-shadow: 0 0 20px rgba(0,255,136,0.3); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .theme-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .theme-tag {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+    .theme-tag:hover { border-color: var(--accent2); color: #a78bfa; }
+
+    /* Results */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .results-title { font-size: 13px; color: var(--text-dim); letter-spacing: 2px; }
+    .results-date { font-size: 11px; color: var(--text-dim); }
+
+    /* Stock cards */
+    .stocks-grid { display: flex; flex-direction: column; gap: 16px; }
+
+    .stock-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stock-card:hover { transform: translateX(4px); border-color: rgba(0,255,136,0.2); }
+    .stock-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--accent);
+    }
+
+    .stock-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .stock-left { display: flex; align-items: center; gap: 14px; }
+    .stock-ticker {
+      font-size: 22px;
+      font-weight: bold;
+      color: var(--accent);
+      letter-spacing: 2px;
+      min-width: 70px;
+    }
+    .stock-info { }
+    .stock-company { font-size: 13px; color: var(--text); margin-bottom: 3px; }
+    .stock-theme {
+      display: inline-block;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 10px;
+      color: #a78bfa;
+      letter-spacing: 1px;
+    }
+
+    .stock-right { text-align: right; }
+    .score-circle {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+    .score-number { font-size: 16px; font-weight: bold; color: var(--accent); line-height: 1; }
+    .score-label { font-size: 8px; color: var(--text-dim); letter-spacing: 1px; }
+    .price-info { font-size: 12px; color: var(--text-dim); }
+    .price-up { color: var(--accent); }
+    .price-dn { color: var(--red); }
+
+    .stock-body { }
+    .stock-why {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .stock-catalyst {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border-radius: 4px;
+      border-left: 2px solid var(--gold);
+    }
+    .stock-catalyst::before { content: '⚡ CATALYST: '; color: var(--gold); font-weight: bold; }
+
+    .stock-footer {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .stock-meta {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .stock-meta span { color: var(--text); }
+    .risk-tag {
+      font-size: 11px;
+      color: var(--red);
+      background: rgba(255,71,87,0.08);
+      border: 1px solid rgba(255,71,87,0.2);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+    .risk-tag::before { content: '⚠ '; }
+
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
+    }
+    .loading-wolf { font-size: 40px; animation: bounce 1s ease-in-out infinite; margin-bottom: 16px; }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .loading-text { font-size: 13px; letter-spacing: 2px; }
+    .loading-bar {
+      width: 200px;
+      height: 2px;
+      background: var(--border);
+      margin: 16px auto 0;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .loading-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      animation: loading 1.5s ease-in-out infinite;
+    }
+    @keyframes loading { 0% { width: 0; margin-left: 0; } 50% { width: 100%; margin-left: 0; } 100% { width: 0; margin-left: 100%; } }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-text { font-size: 13px; letter-spacing: 1px; }
+
+    /* Alert */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+    .alert.error { background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.3); color: var(--red); }
+
+    .rank-badge {
+      position: absolute;
+      top: 20px;
+      right: 60px;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-icon">🤖</div>
+      <div>
+        <div class="header-title">AI STOCK SCANNER</div>
+        <div class="header-sub">POWERED BY CLAUDE AI — PRO FEATURE</div>
+      </div>
+    </div>
+    <a href="/" class="back-btn">← TERMINAL</a>
+  </div>
+
+  <div class="pro-badge">🐺 PRO EXCLUSIVE — AI-Powered Market Intelligence</div>
+
+  <!-- Search Section -->
+  <div class="search-section">
+    <div class="search-label">SEARCH BY THEME OR TREND</div>
+    <div class="search-row">
+      <input
+        type="text"
+        class="search-input"
+        id="theme-input"
+        placeholder="e.g. AI infrastructure, clean energy, defense stocks, biotech..."
+        maxlength="100"
+      />
+      <button class="btn btn-search" onclick="searchTheme()">🔍 SCAN THEME</button>
+      <button class="btn btn-daily" onclick="loadDailyScan()">📡 DAILY TOP 5</button>
+    </div>
+    <div class="theme-suggestions">
+      <span class="theme-tag" onclick="quickSearch('Artificial Intelligence')">🤖 Artificial Intelligence</span>
+      <span class="theme-tag" onclick="quickSearch('Clean Energy')">⚡ Clean Energy</span>
+      <span class="theme-tag" onclick="quickSearch('Defense & Military')">🛡 Defense</span>
+      <span class="theme-tag" onclick="quickSearch('Biotech & Healthcare')">🧬 Biotech</span>
+      <span class="theme-tag" onclick="quickSearch('Semiconductor chips')">💾 Semiconductors</span>
+      <span class="theme-tag" onclick="quickSearch('Space & Satellites')">🚀 Space</span>
+      <span class="theme-tag" onclick="quickSearch('Cybersecurity')">🔐 Cybersecurity</span>
+      <span class="theme-tag" onclick="quickSearch('Crypto & Blockchain')">₿ Crypto Plays</span>
+    </div>
+  </div>
+
+  <!-- Alert -->
+  <div id="alert" class="alert error" style="display:none"></div>
+
+  <!-- Results Header -->
+  <div class="results-header" id="results-header" style="display:none">
+    <div class="results-title" id="results-title">TOP 5 PICKS</div>
+    <div class="results-date" id="results-date"></div>
+  </div>
+
+  <!-- Stocks Grid -->
+  <div id="stocks-container">
+    <div class="empty-state">
+      <div class="empty-icon">🐺</div>
+      <div class="empty-text">CLICK "DAILY TOP 5" FOR TODAY'S AI PICKS<br/>OR SEARCH A THEME TO FIND OPPORTUNITIES</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Load daily scan on page load
+  window.onload = () => loadDailyScan();
+
+  function quickSearch(theme) {
+    document.getElementById('theme-input').value = theme;
+    searchTheme();
+  }
+
+  async function loadDailyScan() {
+    showLoading('SCANNING MARKETS WITH AI...');
+    clearAlert();
+
+    try {
+      const res = await fetch('/scanner/daily');
+      const data = await res.json();
+
+      if (!res.ok) {
+        showAlert(data.error || 'Scan failed.');
+        showEmpty();
+        return;
+      }
+
+      const label = data.cached ? 'TODAY\'S TOP PICKS (CACHED)' : 'TODAY\'S TOP PICKS — FRESH SCAN';
+      renderStocks(data.stocks, label, data.date);
+
+    } catch (e) {
+      showAlert('Connection error. Try again.');
+      showEmpty();
+    }
+  }
+
+  async function searchTheme() {
+    const theme = document.getElementById('theme-input').value.trim();
+    if (!theme) {
+      showAlert('Please enter a theme to search.');
+      return;
+    }
+
+    showLoading(`FINDING TOP STOCKS FOR "${theme.toUpperCase()}"...`);
+    clearAlert();
+
+    try {
+      const res = await fetch('/scanner/theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showAlert(data.error || 'Search failed.');
+        showEmpty();
+        return;
+      }
+
+      renderStocks(data.stocks, `TOP PICKS: ${theme.toUpperCase()}`, data.date);
+
+    } catch (e) {
+      showAlert('Connection error. Try again.');
+      showEmpty();
+    }
+  }
+
+  function renderStocks(stocks, title, date) {
+    document.getElementById('results-header').style.display = 'flex';
+    document.getElementById('results-title').textContent = title;
+    document.getElementById('results-date').textContent = date;
+
+    if (!stocks || stocks.length === 0) {
+      showEmpty();
+      return;
+    }
+
+    const container = document.getElementById('stocks-container');
+    container.innerHTML = '';
+
+    const grid = document.createElement('div');
+    grid.className = 'stocks-grid';
+
+    stocks.forEach((stock, index) => {
+      const changeClass = stock.change_pct >= 0 ? 'price-up' : 'price-dn';
+      const changeSign = stock.change_pct >= 0 ? '+' : '';
+      const scoreColor = stock.score >= 80 ? '#00ff88' : stock.score >= 60 ? '#ffd700' : '#ff4757';
+
+      grid.innerHTML += `
+        <div class="stock-card">
+          <div class="rank-badge">#${index + 1}</div>
+          <div class="stock-top">
+            <div class="stock-left">
+              <div class="stock-ticker">${stock.ticker}</div>
+              <div class="stock-info">
+                <div class="stock-company">${stock.company}</div>
+                <span class="stock-theme">${stock.theme}</span>
+                ${stock.type ? `<span class="stock-theme" style="margin-left:4px;background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.2);color:var(--accent)">${stock.type}</span>` : ''}
+              </div>
+            </div>
+            <div class="stock-right">
+              <div class="score-circle" style="border-color:${scoreColor}">
+                <div class="score-number" style="color:${scoreColor}">${stock.score}</div>
+                <div class="score-label">SCORE</div>
+              </div>
+              ${stock.current_price ? `
+                <div class="price-info">
+                  $${stock.current_price}
+                  <span class="${changeClass}">${changeSign}${stock.change_pct}%</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          <div class="stock-body">
+            <div class="stock-why">${stock.why}</div>
+            <div class="stock-catalyst">${stock.catalyst}</div>
+            <div class="stock-footer">
+              <div class="stock-meta">⏱ TIMEFRAME: <span>${stock.timeframe}</span></div>
+              <div class="risk-tag">${stock.risk}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.appendChild(grid);
+  }
+
+  function showLoading(text) {
+    document.getElementById('results-header').style.display = 'none';
+    document.getElementById('stocks-container').innerHTML = `
+      <div class="loading">
+        <div class="loading-wolf">🐺</div>
+        <div class="loading-text">${text}</div>
+        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+      </div>
+    `;
+  }
+
+  function showEmpty() {
+    document.getElementById('results-header').style.display = 'none';
+    document.getElementById('stocks-container').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🐺</div>
+        <div class="empty-text">NO RESULTS FOUND. TRY A DIFFERENT THEME.</div>
+      </div>
+    `;
+  }
+
+  function showAlert(msg) {
+    const el = document.getElementById('alert');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function clearAlert() {
+    document.getElementById('alert').style.display = 'none';
+  }
+
+  // Enter key on search
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('theme-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') searchTheme();
+    });
+  });
+</script>
+</body>
+</html>
