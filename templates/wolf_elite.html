@@ -328,7 +328,13 @@ async function generatePicks() {
 
   } catch(e) {
     document.getElementById('loading').classList.remove('visible');
-    showAlert('Error: ' + e.message);
+    if (e.message && e.message.includes('token')) {
+      // Session expired - reload page to re-login
+      showAlert('Session expired. Refreshing...');
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      showAlert('Error: ' + e.message + ' — Try again.');
+    }
     document.getElementById('gen-btn').disabled = false;
   }
 }
