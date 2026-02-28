@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JAYDAWOLFX — AI Stock Scanner</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a12; --surface: #131320; --surface2: #1c1c2e;
+      --border: #30305a; --accent: #00ffaa; --accent2: #8b5cf6;
+      --red: #ff5566; --gold: #ffd700; --blue: #60a5fa;
+      --text: #f0f0ff; --text-dim: #9090bb; --font: 'Courier New', monospace;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; padding: 24px; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,255,170,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,170,0.025) 1px, transparent 1px);
+      background-size: 40px 40px; pointer-events: none; z-index: 0;
+    }
+    .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
+
+    /* HEADER */
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .header-icon { font-size: 36px; filter: drop-shadow(0 0 12px rgba(0,255,170,0.6)); }
+    .header-title { font-size: 22px; font-weight: bold; color: var(--accent); letter-spacing: 3px; text-shadow: 0 0 20px rgba(0,255,170,0.4); }
+    .header-sub { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; margin-top: 3px; }
+    .back-btn { background: transparent; border: 1px solid var(--border); color: var(--text-dim); padding: 9px 18px; border-radius: 5px; font-family: var(--font); font-size: 12px; cursor: pointer; letter-spacing: 1px; text-decoration: none; transition: all 0.2s; display: inline-block; }
+    .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* MODE TABS */
+    .mode-tabs { display: flex; gap: 0; margin-bottom: 24px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .mode-tab { flex: 1; padding: 14px; text-align: center; cursor: pointer; font-family: var(--font); font-size: 12px; font-weight: bold; letter-spacing: 2px; border: none; transition: all 0.2s; }
+    .mode-tab.swing { background: var(--surface2); color: var(--text-dim); }
+    .mode-tab.swing.active { background: var(--accent2); color: white; box-shadow: 0 0 20px rgba(139,92,246,0.4); }
+    .mode-tab.day { background: var(--surface2); color: var(--text-dim); border-left: 1px solid var(--border); }
+    .mode-tab.day.active { background: linear-gradient(135deg, #ff5566, #ff8800); color: white; box-shadow: 0 0 20px rgba(255,85,102,0.4); }
+
+    /* SEARCH SECTION */
+    .search-section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 24px; position: relative; display: none; }
+    .search-section.visible { display: block; }
+    .search-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent2), transparent); border-radius: 10px 10px 0 0; }
+    .search-label { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 12px; }
+    .search-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .search-input { flex: 1; min-width: 200px; padding: 13px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: var(--font); font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .search-input:focus { border-color: var(--accent2); }
+    .search-input::placeholder { color: var(--text-dim); }
+    .btn { padding: 13px 22px; border: none; border-radius: 5px; font-family: var(--font); font-size: 12px; font-weight: bold; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-search { background: var(--accent2); color: white; }
+    .btn-search:hover { background: #7c3aed; box-shadow: 0 0 20px rgba(139,92,246,0.3); }
+    .btn-daily { background: var(--accent); color: #000; font-weight: bold; }
+    .btn-daily:hover { background: #00ddaa; box-shadow: 0 0 20px rgba(0,255,170,0.4); }
+    .btn-daytrader { background: linear-gradient(135deg, #ff5566, #ff8800); color: white; font-weight: bold; width: 100%; padding: 16px; font-size: 14px; border-radius: 8px; }
+    .btn-daytrader:hover { box-shadow: 0 0 30px rgba(255,85,102,0.5); transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+    .theme-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .theme-tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 11px; color: var(--text-dim); cursor: pointer; transition: all 0.2s; letter-spacing: 1px; }
+    .theme-tag:hover { border-color: var(--accent2); color: #c4b5fd; background: rgba(139,92,246,0.1); }
+
+    /* DAY TRADER SECTION */
+    .daytrader-section { background: var(--surface); border: 1px solid rgba(255,85,102,0.3); border-radius: 10px; padding: 28px; margin-bottom: 24px; display: none; position: relative; }
+    .daytrader-section.visible { display: block; }
+    .daytrader-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #ff5566, #ff8800, #ff5566); border-radius: 10px 10px 0 0; }
+    .dt-header { margin-bottom: 20px; }
+    .dt-title { font-size: 16px; font-weight: bold; color: #ff7788; letter-spacing: 2px; margin-bottom: 6px; }
+    .dt-sub { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+    .dt-warning { background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.25); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: var(--gold); margin-bottom: 18px; line-height: 1.6; }
+
+    /* RESULTS */
+    .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .results-title { font-size: 14px; color: var(--accent); letter-spacing: 2px; font-weight: bold; }
+    .results-date { font-size: 11px; color: var(--text-dim); }
+    .stocks-grid { display: flex; flex-direction: column; gap: 18px; }
+
+    /* SWING CARD */
+    .stock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 22px 26px; position: relative; overflow: hidden; transition: transform 0.2s, border-color 0.2s; }
+    .stock-card:hover { transform: translateX(5px); }
+    .left-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 10px 0 0 10px; }
+    .stock-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+    .stock-left { display: flex; align-items: center; gap: 16px; }
+    .rank-num { font-size: 28px; min-width: 40px; }
+    .stock-ticker { font-size: 26px; font-weight: bold; color: var(--accent); letter-spacing: 2px; }
+    .current-price { font-size: 14px; color: var(--gold); font-weight: bold; margin-top: 2px; }
+    .price-change { font-size: 12px; margin-top: 1px; }
+    .price-up { color: var(--accent); }
+    .price-dn { color: var(--red); }
+    .stock-company { font-size: 13px; color: var(--text); margin-bottom: 6px; }
+    .stock-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .tag { display: inline-block; border-radius: 20px; padding: 3px 11px; font-size: 10px; letter-spacing: 1px; }
+    .tag-theme { background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3); color: #c4b5fd; }
+    .tag-type { background: rgba(0,255,170,0.08); border: 1px solid rgba(0,255,170,0.2); color: var(--accent); }
+    .score-circle { width: 60px; height: 60px; border-radius: 50%; border: 2px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .score-number { font-size: 20px; font-weight: bold; line-height: 1; }
+    .score-label { font-size: 8px; color: var(--text-dim); letter-spacing: 1px; }
+    .stock-why { font-size: 13px; color: var(--text); line-height: 1.8; margin-bottom: 14px; padding: 12px 14px; background: var(--surface2); border-radius: 6px; border-left: 3px solid var(--accent2); }
+    .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .info-box { background: var(--surface2); border-radius: 6px; padding: 11px 13px; font-size: 12px; }
+    .info-box-label { color: var(--text-dim); font-size: 10px; letter-spacing: 1px; margin-bottom: 5px; }
+    .info-box-value { color: var(--text); line-height: 1.5; font-size: 13px; }
+    .info-box.catalyst { border-left: 3px solid var(--gold); }
+    .info-box.risk { border-left: 3px solid var(--red); }
+    .info-box.target { border-left: 3px solid var(--accent); }
+    .info-box.entry { border-left: 3px solid var(--accent2); }
+    .stock-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .timeframe { font-size: 12px; color: var(--text-dim); }
+    .timeframe span { color: var(--text); font-weight: bold; }
+    .action-badge { border-radius: 5px; padding: 7px 16px; font-size: 12px; font-weight: bold; letter-spacing: 2px; }
+
+    /* DAY TRADE CARD */
+    .trade-card { background: var(--surface); border: 1px solid rgba(255,85,102,0.25); border-radius: 10px; padding: 22px 26px; position: relative; overflow: hidden; transition: transform 0.2s; }
+    .trade-card:hover { transform: translateX(5px); border-color: rgba(255,85,102,0.5); }
+    .trade-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 10px 0 0 10px; }
+    .trade-card.call::before { background: var(--accent); }
+    .trade-card.put::before { background: var(--red); }
+    .trade-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+    .trade-left { display: flex; align-items: center; gap: 16px; }
+    .trade-ticker { font-size: 26px; font-weight: bold; letter-spacing: 2px; }
+    .trade-ticker.call { color: var(--accent); }
+    .trade-ticker.put { color: var(--red); }
+    .direction-badge { font-size: 18px; font-weight: bold; padding: 6px 16px; border-radius: 6px; letter-spacing: 3px; }
+    .direction-badge.call { background: rgba(0,255,170,0.15); border: 2px solid var(--accent); color: var(--accent); }
+    .direction-badge.put { background: rgba(255,85,102,0.15); border: 2px solid var(--red); color: var(--red); }
+    .prob-badge { text-align: center; }
+    .prob-circle { width: 64px; height: 64px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
+    .prob-circle.high { border: 2px solid var(--accent); color: var(--accent); background: rgba(0,255,170,0.08); }
+    .prob-circle.med { border: 2px solid var(--gold); color: var(--gold); background: rgba(255,215,0,0.08); }
+    .prob-label { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-top: 2px; }
+    .trade-why { font-size: 13px; color: var(--text); line-height: 1.8; margin-bottom: 14px; padding: 12px 14px; background: var(--surface2); border-radius: 6px; }
+    .trade-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .trade-box { background: var(--surface2); border-radius: 6px; padding: 11px 13px; text-align: center; }
+    .trade-box-label { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 5px; }
+    .trade-box-value { font-size: 15px; font-weight: bold; color: var(--text); }
+    .trade-box.strike .trade-box-value { color: var(--blue); }
+    .trade-box.entry-price .trade-box-value { color: var(--gold); }
+    .trade-box.rr .trade-box-value { color: var(--accent2); }
+    .trade-levels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .level-box { border-radius: 6px; padding: 11px 13px; }
+    .level-box.stop { background: rgba(255,85,102,0.08); border: 1px solid rgba(255,85,102,0.3); }
+    .level-box.profit { background: rgba(0,255,170,0.08); border: 1px solid rgba(0,255,170,0.3); }
+    .level-label { font-size: 10px; letter-spacing: 1px; margin-bottom: 5px; }
+    .level-box.stop .level-label { color: var(--red); }
+    .level-box.profit .level-label { color: var(--accent); }
+    .level-value { font-size: 16px; font-weight: bold; }
+    .level-box.stop .level-value { color: var(--red); }
+    .level-box.profit .level-value { color: var(--accent); }
+    .trade-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--border); }
+    .entry-time { font-size: 12px; color: var(--text-dim); }
+    .entry-time span { color: var(--blue); font-weight: bold; }
+    .expiry-badge { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 5px; padding: 5px 14px; font-size: 11px; color: var(--gold); font-weight: bold; letter-spacing: 1px; }
+
+    /* STATES */
+    .loading { text-align: center; padding: 70px 20px; }
+    .loading-wolf { font-size: 44px; animation: bounce 1s ease-in-out infinite; margin-bottom: 18px; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+    .loading-text { font-size: 14px; letter-spacing: 2px; color: var(--accent); margin-bottom: 8px; }
+    .loading-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; }
+    .loading-bar { width: 220px; height: 2px; background: var(--border); margin: 0 auto; border-radius: 2px; overflow: hidden; }
+    .loading-bar-fill { height: 100%; background: var(--accent); animation: load 1.5s ease-in-out infinite; }
+    @keyframes load { 0%{width:0;margin-left:0} 50%{width:100%;margin-left:0} 100%{width:0;margin-left:100%} }
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-icon { font-size: 50px; margin-bottom: 16px; }
+    .empty-text { font-size: 13px; color: var(--text-dim); letter-spacing: 1px; line-height: 2.2; }
+    .alert { padding: 13px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; }
+    .alert.error { background: rgba(255,85,102,0.1); border: 1px solid rgba(255,85,102,0.3); color: var(--red); }
+    .disclaimer { margin-top: 26px; padding: 13px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 11px; color: var(--text-dim); text-align: center; line-height: 1.7; }
+  </style>
+</head>
+<body>
+<!-- LIVE MARKET STATUS BAR -->
+<div id="market-bar" style="background:rgba(8,12,15,0.95);border-bottom:1px solid #2a3f52;padding:5px 24px;display:flex;align-items:center;justify-content:space-between;font-size:11px;position:fixed;top:44px;left:0;right:0;z-index:9998;">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <span style="color:#90b8d0;letter-spacing:1px;">🕐 <span id="live-time" style="color:#33ddff;">--:--:--</span></span>
+    <span style="color:#90b8d0;letter-spacing:1px;">📅 <span id="live-date" style="color:#ffffff;">--</span></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div id="market-dot" style="width:8px;height:8px;border-radius:50%;background:#ff4466;animation:pulse 2s infinite;"></div>
+    <span id="market-status" style="color:#ff4466;font-weight:bold;letter-spacing:1px;">LOADING...</span>
+  </div>
+</div>
+<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
+<script>
+function updateMarketBar(){fetch("/api/server-time").then(r=>r.json()).then(d=>{
+  document.getElementById("live-time").textContent=d.time;
+  document.getElementById("live-date").textContent=d.date;
+  document.getElementById("market-status").textContent=d.market_status;
+  document.getElementById("market-status").style.color=d.status_color;
+  document.getElementById("market-dot").style.background=d.status_color;
+}).catch(()=>{});}
+updateMarketBar();setInterval(updateMarketBar,30000);
+</script>
+<div class="container">
+  <div class="header">
+    <div class="header-left">
+      <div class="header-icon">🤖</div>
+      <div>
+        <div class="header-title">AI STOCK SCANNER</div>
+        <div class="header-sub">POWERED BY CLAUDE AI — PRO EXCLUSIVE</div>
+      </div>
+    </div>
+    <a href="/" class="back-btn">← TERMINAL</a>
+  </div>
+
+  <!-- MODE TABS -->
+  <div class="mode-tabs">
+    <button class="mode-tab swing active" onclick="setMode('swing')">📈 SWING TRADER — Multi-week picks</button>
+    <button class="mode-tab day" onclick="setMode('day')">⚡ DAY TRADER — Options expiring today/tomorrow</button>
+  </div>
+
+  <!-- SWING MODE -->
+  <div class="search-section visible" id="swing-section">
+    <div class="search-label">SCAN BY THEME, SECTOR, OR TREND</div>
+    <div class="search-row">
+      <input type="text" class="search-input" id="theme-input" placeholder="e.g. AI infrastructure, clean energy, defense, biotech..." maxlength="100"/>
+      <button class="btn btn-search" id="search-btn" onclick="searchTheme()">🔍 SCAN THEME</button>
+      <button class="btn btn-daily" id="daily-btn" onclick="loadDailyScan()">📡 TODAY'S TOP PICKS</button>
+    </div>
+    <div class="theme-suggestions">
+      <span class="theme-tag" onclick="quickSearch('Artificial Intelligence & Data Centers')">🤖 AI & Data Centers</span>
+      <span class="theme-tag" onclick="quickSearch('Clean Energy & Solar power')">⚡ Clean Energy</span>
+      <span class="theme-tag" onclick="quickSearch('Defense & Military spending')">🛡 Defense</span>
+      <span class="theme-tag" onclick="quickSearch('Biotech & FDA drug approvals')">🧬 Biotech</span>
+      <span class="theme-tag" onclick="quickSearch('Semiconductor chips & AI hardware')">💾 Semiconductors</span>
+      <span class="theme-tag" onclick="quickSearch('Space & Satellite technology')">🚀 Space</span>
+      <span class="theme-tag" onclick="quickSearch('Cybersecurity')">🔐 Cybersecurity</span>
+      <span class="theme-tag" onclick="quickSearch('Crypto & Blockchain infrastructure')">₿ Crypto Plays</span>
+      <span class="theme-tag" onclick="quickSearch('Humanoid robots & automation')">🦾 Robotics</span>
+      <span class="theme-tag" onclick="quickSearch('Nuclear energy & Power grid')">☢️ Nuclear</span>
+    </div>
+  </div>
+
+  <!-- DAY TRADER MODE -->
+  <div class="daytrader-section" id="day-section">
+    <div class="dt-header">
+      <div class="dt-title">⚡ OPTIONS DAY TRADER — REAL-TIME SIGNALS</div>
+      <div class="dt-sub">Claude AI analyzes live market conditions and finds the best options expiring TODAY or TOMORROW. Includes real entry prices, stop loss, and take profit levels.</div>
+    </div>
+    <div class="dt-warning">
+      ⚠️ Day trading options is HIGH RISK. Only risk money you can afford to lose. Always use stop losses. Never hold losing options into expiry.
+    </div>
+    <button class="btn btn-daytrader" id="dt-btn" onclick="loadDayTrades()">
+      ⚡ SCAN FOR TODAY'S BEST OPTIONS TRADES
+    </button>
+  </div>
+
+  <div id="alert" class="alert error" style="display:none"></div>
+
+  <div class="results-header" id="results-header" style="display:none">
+    <div class="results-title" id="results-title">TOP PICKS</div>
+    <div class="results-date" id="results-date"></div>
+  </div>
+
+  <div id="stocks-container">
+    <div class="empty-state">
+      <div class="empty-icon">🐺</div>
+      <div class="empty-text">
+        SELECT A MODE ABOVE AND CLICK SCAN<br/>
+        CLAUDE AI WILL ANALYZE THE MARKET AND FIND YOUR BEST OPPORTUNITIES
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer" id="disclaimer" style="display:none">
+    ⚠️ AI analysis is for informational purposes only. Not financial advice. Always do your own research. Never risk more than you can afford to lose.
+  </div>
+</div>
+
+<script>
+const TODAY = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+let currentMode = 'swing';
+
+window.onload = () => {
+  document.getElementById('theme-input').addEventListener('keydown', e => { if (e.key === 'Enter') searchTheme(); });
+};
+
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelector('.mode-tab.swing').classList.toggle('active', mode === 'swing');
+  document.querySelector('.mode-tab.day').classList.toggle('active', mode === 'day');
+  document.getElementById('swing-section').classList.toggle('visible', mode === 'swing');
+  document.getElementById('day-section').classList.toggle('visible', mode === 'day');
+  showEmpty(mode === 'swing'
+    ? 'CLICK "TODAY\'S TOP PICKS" OR SEARCH A THEME FOR AI-POWERED BUY SIGNALS'
+    : 'CLICK "SCAN FOR TODAY\'S OPTIONS TRADES" FOR REAL-TIME DAY TRADING SIGNALS');
+  clearAlert();
+  document.getElementById('results-header').style.display = 'none';
+  document.getElementById('disclaimer').style.display = 'none';
+}
+
+function quickSearch(theme) {
+  document.getElementById('theme-input').value = theme;
+  searchTheme();
+}
+
+function setLoading(v) {
+  ['search-btn','daily-btn','dt-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = v;
+  });
+}
+
+async function loadDailyScan() {
+  showLoading("SCANNING TODAY'S MARKETS...", "Claude AI analyzing trends with real live prices");
+  clearAlert(); setLoading(true);
+  try {
+    const res = await fetch('/scanner/daily');
+    const data = await res.json();
+    if (!res.ok) { showAlert(data.error || 'Scan failed.'); showEmpty(); setLoading(false); return; }
+    renderSwingStocks(data.stocks, "TODAY'S TOP 5 BUY SIGNALS 🐺", data.date);
+    setLoading(false);
+  } catch(e) { showAlert('Error. Try again.'); showEmpty(); setLoading(false); }
+}
+
+async function searchTheme() {
+  const theme = document.getElementById('theme-input').value.trim();
+  if (!theme) { showAlert('Enter a theme.'); return; }
+  showLoading(`SCANNING "${theme.toUpperCase()}"...`, "Finding best stocks for this theme with real prices");
+  clearAlert(); setLoading(true);
+
+  const prompt = `You are an elite stock analyst. Today is ${TODAY}.
+Find TOP 5 best stocks to BUY for the theme: "${theme}"
+Include direct plays AND second-derivative winners.
+Give complete buy thesis with realistic price targets based on CURRENT prices.
+Respond ONLY with JSON array (no markdown):
+[{"ticker":"","company":"","score":90,"action":"STRONG BUY","theme":"${theme}","type":"1st Derivative","why":"","catalyst":"","price_target":"$X by Month Year","entry":"Buy at $X-$X","risk":"","timeframe":""}]`;
+
+  await runSwingAI(prompt, `TOP PICKS: ${theme.toUpperCase()}`);
+}
+
+async function runSwingAI(prompt, title) {
+  try {
+    const res = await fetch('/scanner/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    if (!res.ok) { showAlert(data.error || 'AI scan failed.'); showEmpty(); setLoading(false); return; }
+    renderSwingStocks(data.stocks, title, TODAY);
+    setLoading(false);
+  } catch(e) { showAlert('Error: ' + e.message); showEmpty(); setLoading(false); }
+}
+
+async function loadDayTrades() {
+  showLoading("⚡ SCANNING FOR OPTIONS TRADES...", "Claude AI analyzing live prices for today/tomorrow expiry trades");
+  clearAlert(); setLoading(true);
+  try {
+    const res = await fetch('/scanner/daytrader', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+    const data = await res.json();
+    if (!res.ok) { showAlert(data.error || 'Scan failed.'); showEmpty(); setLoading(false); return; }
+    renderDayTrades(data.trades, "⚡ TODAY'S OPTIONS TRADES", data.date);
+    setLoading(false);
+  } catch(e) { showAlert('Error: ' + e.message); showEmpty(); setLoading(false); }
+}
+
+function renderSwingStocks(stocks, title, date) {
+  document.getElementById('results-header').style.display = 'flex';
+  document.getElementById('results-title').textContent = title;
+  document.getElementById('results-date').textContent = date;
+  document.getElementById('disclaimer').style.display = 'block';
+  const container = document.getElementById('stocks-container');
+  const grid = document.createElement('div');
+  grid.className = 'stocks-grid';
+  container.innerHTML = '';
+
+  stocks.forEach((s, i) => {
+    const rankEmoji = ['🥇','🥈','🥉','#4','#5'][i] || '#'+(i+1);
+    const barColor = i===0?'#ffd700':i===1?'#c0c0c0':i===2?'#cd7f32':'#00ffaa';
+    const scoreColor = s.score>=85?'#00ffaa':s.score>=70?'#ffd700':'#ff6b6b';
+    const isBuy = s.action && s.action.includes('BUY');
+    const actionStyle = isBuy
+      ? 'background:rgba(0,255,170,0.15);border:1px solid rgba(0,255,170,0.4);color:#00ffaa'
+      : 'background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);color:#ffd700';
+
+    const card = document.createElement('div');
+    card.className = 'stock-card';
+    card.innerHTML = `
+      <div class="left-bar" style="background:${barColor}"></div>
+      <div class="stock-top">
+        <div class="stock-left">
+          <div class="rank-num" style="color:${barColor}">${rankEmoji}</div>
+          <div>
+            <div class="stock-ticker">${s.ticker}</div>
+            ${s.current_price ? `<div class="current-price">$${s.current_price} <span class="${s.change_pct>=0?'price-up':'price-dn'}">${s.change_pct>=0?'+':''}${s.change_pct}%</span></div>` : ''}
+            <div class="stock-company">${s.company}</div>
+            <div class="stock-tags">
+              <span class="tag tag-theme">${s.theme}</span>
+              ${s.type?`<span class="tag tag-type">${s.type}</span>`:''}
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="score-circle" style="border-color:${scoreColor}">
+            <div class="score-number" style="color:${scoreColor}">${s.score}</div>
+            <div class="score-label">SCORE</div>
+          </div>
+        </div>
+      </div>
+      <div class="stock-why">${s.why}</div>
+      <div class="info-row">
+        <div class="info-box catalyst"><div class="info-box-label">⚡ CATALYST</div><div class="info-box-value">${s.catalyst}</div></div>
+        <div class="info-box target"><div class="info-box-label">🎯 PRICE TARGET</div><div class="info-box-value">${s.price_target}</div></div>
+        <div class="info-box entry"><div class="info-box-label">📈 ENTRY STRATEGY</div><div class="info-box-value">${s.entry}</div></div>
+        <div class="info-box risk"><div class="info-box-label">⚠ RISK</div><div class="info-box-value">${s.risk}</div></div>
+      </div>
+      <div class="stock-footer">
+        <div class="timeframe">⏱ TIMEFRAME: <span>${s.timeframe}</span></div>
+        <div class="action-badge" style="${actionStyle}">${s.action||'ANALYZE'}</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+}
+
+function renderDayTrades(trades, title, date) {
+  document.getElementById('results-header').style.display = 'flex';
+  document.getElementById('results-title').textContent = title;
+  document.getElementById('results-date').textContent = date;
+  document.getElementById('disclaimer').style.display = 'block';
+  const container = document.getElementById('stocks-container');
+  const grid = document.createElement('div');
+  grid.className = 'stocks-grid';
+  container.innerHTML = '';
+
+  trades.forEach((t, i) => {
+    const isCall = t.direction === 'CALL';
+    const probNum = parseInt(t.probability) || 70;
+    const probClass = probNum >= 75 ? 'high' : 'med';
+    const rankEmoji = ['🥇','🥈','🥉','#4','#5'][i] || '#'+(i+1);
+
+    const card = document.createElement('div');
+    card.className = `trade-card ${isCall ? 'call' : 'put'}`;
+    card.innerHTML = `
+      <div class="trade-top">
+        <div class="trade-left">
+          <div style="color:${isCall?'#ffd700':'#c0c0c0'};font-size:26px">${rankEmoji}</div>
+          <div>
+            <div class="trade-ticker ${isCall?'call':'put'}">${t.ticker}</div>
+            ${t.current_price ? `<div class="current-price">$${t.current_price} <span class="${t.change_pct>=0?'price-up':'price-dn'}">${t.change_pct>=0?'+':''}${(t.change_pct||0).toFixed(2)}%</span></div>` : ''}
+            <div style="font-size:13px;color:var(--text-dim);margin-top:3px">${t.company}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <div class="direction-badge ${isCall?'call':'put'}">${t.direction}</div>
+          <div class="prob-circle ${probClass}">
+            <div>${t.probability}</div>
+            <div class="prob-label">WIN%</div>
+          </div>
+        </div>
+      </div>
+      <div class="trade-why">${t.why}</div>
+      <div class="trade-grid">
+        <div class="trade-box strike"><div class="trade-box-label">🎯 STRIKE</div><div class="trade-box-value">$${t.strike}</div></div>
+        <div class="trade-box entry-price"><div class="trade-box-label">💰 OPTION ENTRY</div><div class="trade-box-value">${t.option_entry}</div></div>
+        <div class="trade-box rr"><div class="trade-box-label">⚖ RISK/REWARD</div><div class="trade-box-value">${t.risk_reward}</div></div>
+      </div>
+      <div class="trade-levels">
+        <div class="level-box stop"><div class="level-label">🛑 STOP LOSS — EXIT IF HITS</div><div class="level-value">${t.stop_loss}</div></div>
+        <div class="level-box profit"><div class="level-label">✅ TAKE PROFIT — EXIT HERE</div><div class="level-value">${t.take_profit}</div></div>
+      </div>
+      <div class="trade-footer">
+        <div class="entry-time">⏰ BEST ENTRY: <span>${t.entry_time}</span></div>
+        <div class="expiry-badge">EXPIRES: ${t.expiry?.toUpperCase()}</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+}
+
+function showLoading(text, sub) {
+  document.getElementById('results-header').style.display = 'none';
+  document.getElementById('disclaimer').style.display = 'none';
+  document.getElementById('stocks-container').innerHTML = `
+    <div class="loading">
+      <div class="loading-wolf">🐺</div>
+      <div class="loading-text">${text}</div>
+      <div class="loading-sub">${sub}</div>
+      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+    </div>`;
+}
+
+function showEmpty(msg) {
+  document.getElementById('stocks-container').innerHTML = `
+    <div class="empty-state"><div class="empty-icon">🐺</div>
+    <div class="empty-text">${msg || 'NO RESULTS. TRY AGAIN.'}</div></div>`;
+}
+
+function showAlert(msg) { const e=document.getElementById('alert'); e.textContent=msg; e.style.display='block'; }
+function clearAlert() { document.getElementById('alert').style.display='none'; }
+</script>
+</body>
+</html>
