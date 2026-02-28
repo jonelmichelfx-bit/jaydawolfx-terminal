@@ -1,40 +1,34 @@
 import os
 import re
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from decorators import pro_required
 import anthropic
 
 scanner_bp = Blueprint('scanner', __name__, url_prefix='/scanner')
-
-# Initialize Anthropic client
 client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
 
-# Cache to store daily scan results (resets each day)
-_scan_cache = {
-    'date': None,
-    'results': None
-}
+_scan_cache = {'date': None, 'results': None}
 
 
-def get_market_context():
-    """Get current stock prices for context using yfinance."""
+def get_stock_prices(tickers):
+    """Get real current prices for a list of tickers."""
     try:
         import yfinance as yf
-        tickers = ['SPY', 'QQQ', 'NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMZN', 'META', 'GOOGL', 'AMD']
         data = {}
         for ticker in tickers:
             try:
-                hist = yf.Ticker(ticker).history(period='2d')
-                if len(hist) >= 2:
+                t = yf.Ticker(ticker)
+                hist = t.history(period='2d')
+                if len(hist) >= 1:
                     current = float(hist['Close'].iloc[-1])
-                    prev = float(hist['Close'].iloc[-2])
+                    prev = float(hist['Close'].iloc[-2]) if len(hist) >= 2 else current
                     change_pct = ((current - prev) / prev) * 100
                     data[ticker] = {
                         'price': round(current, 2),
-                        'change_pct': round(change_pct, 2)
+                        'change_pct': round(change_pct, 2),
+                        'prev': round(prev, 2)
                     }
             except Exception:
                 pass
@@ -43,222 +37,182 @@ def get_market_context():
         return {}
 
 
-def run_ai_scan(theme=None):
-    """Run AI analysis to find top stock opportunities."""
-    
-    market_data = get_market_context()
-    
-    today = datetime.now().strftime('%B %d, %Y')
-    
-    if theme:
-        prompt = f"""You are an expert stock analyst and financial researcher. Today is {today}.
-
-A trader is asking about stocks related to this theme: "{theme}"
-
-Current market snapshot:
-{json.dumps(market_data, indent=2)}
-
-Your job:
-1. Analyze the "{theme}" theme and find the TOP 5 stocks most likely to benefit
-2. For each stock, explain WHY it will benefit from this theme
-3. Rate each stock's opportunity score from 0-100
-4. Consider both direct plays (1st derivative) and indirect plays (2nd derivative)
-
-Respond ONLY with a JSON array, no other text:
-[
-  {{
-    "ticker": "NVDA",
-    "company": "NVIDIA Corporation", 
-    "score": 92,
-    "theme": "AI Chips",
-    "why": "Direct beneficiary of AI boom - makes the GPUs that power all AI training",
-    "catalyst": "Data center revenue up 400% YoY, new Blackwell chip demand exceeding supply",
-    "risk": "High valuation, China export restrictions",
-    "timeframe": "3-6 months",
-    "type": "1st Derivative"
-  }}
-]"""
-    else:
-        prompt = f"""You are an expert stock analyst and financial researcher. Today is {today}.
-
-Your job is to scan the market and find the TOP 5 stock opportunities RIGHT NOW based on:
-- Current macro trends (AI, energy, geopolitics, interest rates)
-- Sector momentum
-- Recent catalysts
-- Undervalued opportunities
-
-Current market snapshot:
-{json.dumps(market_data, indent=2)}
-
-Find stocks that are "about to move" because of what's happening in the world RIGHT NOW.
-Think about: AI infrastructure, energy transition, defense, biotech breakthroughs, reshoring/manufacturing.
-
-Respond ONLY with a JSON array, no other text:
-[
-  {{
-    "ticker": "NVDA",
-    "company": "NVIDIA Corporation",
-    "score": 92,
-    "theme": "AI Infrastructure",
-    "why": "Direct beneficiary of AI boom - makes the GPUs that power all AI training",
-    "catalyst": "Data center revenue up 400% YoY, new Blackwell chip demand exceeding supply",
-    "risk": "High valuation, China export restrictions",
-    "timeframe": "3-6 months",
-    "type": "1st Derivative"
-  }}
-]"""
-
-    try:
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2000,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        
-        response_text = message.content[0].text.strip()
-        
-        # Clean up response - remove markdown if present
-        if '```json' in response_text:
-            response_text = response_text.split('```json')[1].split('```')[0].strip()
-        elif '```' in response_text:
-            response_text = response_text.split('```')[1].split('```')[0].strip()
-        
-        stocks = json.loads(response_text)
-        
-        # Add current price data if available
-        for stock in stocks:
-            ticker = stock.get('ticker', '')
-            if ticker in market_data:
-                stock['current_price'] = market_data[ticker]['price']
-                stock['change_pct'] = market_data[ticker]['change_pct']
-        
-        return stocks, None
-        
-    except json.JSONDecodeError as e:
-        return None, f"AI response parsing error: {str(e)}"
-    except Exception as e:
-        return None, str(e)
+def get_market_snapshot():
+    """Get broad market context."""
+    tickers = ['SPY', 'QQQ', 'VIX', 'NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMZN', 'META', 'AMD', 'GOOGL']
+    return get_stock_prices(tickers)
 
 
-@scanner_bp.route('/daily', methods=['GET'])
-@pro_required
-def daily_scan():
-    """Returns today's top stock picks - cached daily."""
-    global _scan_cache
-    
-    today = date.today().isoformat()
-    
-    # Return cached results if already ran today
-    if _scan_cache['date'] == today and _scan_cache['results']:
-        return jsonify({
-            'stocks': _scan_cache['results'],
-            'cached': True,
-            'date': today,
-            'message': 'Daily scan results'
-        }), 200
-    
-    # Run fresh scan
-    stocks, error = run_ai_scan()
-    
-    if error:
-        return jsonify({'error': error}), 500
-    
-    # Cache results
-    _scan_cache['date'] = today
-    _scan_cache['results'] = stocks
-    
-    return jsonify({
-        'stocks': stocks,
-        'cached': False,
-        'date': today,
-        'message': 'Fresh daily scan complete'
-    }), 200
+def call_claude(prompt, max_tokens=2000):
+    """Call Claude AI and return parsed JSON."""
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    text = message.content[0].text.strip()
 
+    if '```json' in text:
+        text = text.split('```json')[1].split('```')[0].strip()
+    elif '```' in text:
+        text = text.split('```')[1].split('```')[0].strip()
 
-@scanner_bp.route('/theme', methods=['POST'])
-@pro_required
-def theme_scan():
-    """Search stocks by theme."""
-    data = request.get_json()
-    theme = data.get('theme', '').strip()
-    
-    if not theme:
-        return jsonify({'error': 'Please enter a theme to search.'}), 400
-    
-    if len(theme) > 100:
-        return jsonify({'error': 'Theme too long. Keep it under 100 characters.'}), 400
-    
-    stocks, error = run_ai_scan(theme=theme)
-    
-    if error:
-        return jsonify({'error': error}), 500
-    
-    return jsonify({
-        'stocks': stocks,
-        'theme': theme,
-        'date': date.today().isoformat(),
-        'message': f'Top stocks for theme: {theme}'
-    }), 200
+    if not text.startswith('['):
+        match = re.search(r'\[.*\]', text, re.DOTALL)
+        if match:
+            text = match.group(0)
 
-
-@scanner_bp.route('/refresh', methods=['POST'])
-@pro_required  
-def refresh_scan():
-    """Force refresh the daily scan."""
-    global _scan_cache
-    
-    stocks, error = run_ai_scan()
-    
-    if error:
-        return jsonify({'error': error}), 500
-    
-    today = date.today().isoformat()
-    _scan_cache['date'] = today
-    _scan_cache['results'] = stocks
-    
-    return jsonify({
-        'stocks': stocks,
-        'cached': False,
-        'date': today,
-        'message': 'Scan refreshed'
-    }), 200
+    return json.loads(text)
 
 
 @scanner_bp.route('/analyze', methods=['POST'])
 @login_required
 def analyze():
-    """Generic AI analysis endpoint - called from browser."""
+    """Swing trader - theme or daily scan."""
     data = request.get_json()
-    prompt = data.get('prompt', '')
-    
-    if not prompt:
+    prompt_text = data.get('prompt', '')
+    if not prompt_text:
         return jsonify({'error': 'No prompt provided.'}), 400
 
     try:
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2000,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        
-        text = message.content[0].text.strip()
-        
-        # Try to extract JSON from response
-        if '```json' in text:
-            text = text.split('```json')[1].split('```')[0].strip()
-        elif '```' in text:
-            text = text.split('```')[1].split('```')[0].strip()
-        
-        # Try to find JSON array in text using regex
-        if not text.startswith('['):
-            match = re.search(r'\[.*\]', text, re.DOTALL)
-            if match:
-                text = match.group(0)
-        
-        stocks = json.loads(text)
+        # First get market snapshot for real prices
+        market = get_market_snapshot()
+        today = datetime.now().strftime('%B %d, %Y')
+
+        # Add real price context to prompt
+        price_context = "CURRENT REAL MARKET PRICES:\n"
+        for ticker, info in market.items():
+            price_context += f"{ticker}: ${info['price']} ({'+' if info['change_pct'] >= 0 else ''}{info['change_pct']}%)\n"
+
+        enhanced_prompt = prompt_text + f"\n\n{price_context}\n\nIMPORTANT: Use these REAL current prices when giving price targets and entry points. Do not use outdated prices."
+
+        stocks = call_claude(enhanced_prompt)
+
+        # Enrich with real prices where available
+        for stock in stocks:
+            ticker = stock.get('ticker', '')
+            if ticker in market:
+                stock['current_price'] = market[ticker]['price']
+                stock['change_pct'] = market[ticker]['change_pct']
+
         return jsonify({'stocks': stocks}), 200
-        
+
     except json.JSONDecodeError as e:
-        return jsonify({'error': f'Parse error: {str(e)}. Raw: {text[:200]}'}), 500
+        return jsonify({'error': f'AI parse error. Try again.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@scanner_bp.route('/daytrader', methods=['POST'])
+@login_required
+def daytrader():
+    """Day trader - options expiring today or tomorrow."""
+    try:
+        import yfinance as yf
+
+        today = datetime.now().strftime('%B %d, %Y')
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime('%B %d, %Y')
+        day_of_week = datetime.now().strftime('%A')
+
+        # Get real market data for day trading candidates
+        day_trade_tickers = ['SPY', 'QQQ', 'NVDA', 'TSLA', 'AAPL', 'AMD', 'META', 'AMZN', 'MSFT', 'GOOGL', 'SMCI', 'PLTR', 'COIN', 'MSTR', 'ARM']
+        market = get_stock_prices(day_trade_tickers)
+
+        price_context = "REAL-TIME PRICES RIGHT NOW:\n"
+        for ticker, info in market.items():
+            price_context += f"{ticker}: ${info['price']} ({'+' if info['change_pct'] >= 0 else ''}{info['change_pct']}% today)\n"
+
+        prompt = f"""You are an elite options day trader. Today is {today} ({day_of_week}).
+
+{price_context}
+
+Find the TOP 5 best options trades for TODAY and TOMORROW expiration.
+
+Focus on:
+- High liquidity options (SPY, QQQ, NVDA, TSLA, AAPL, AMD, META have the most volume)
+- Clear technical setups (support/resistance, momentum)
+- Options expiring {today} or {tomorrow}
+- Realistic entry/exit based on the REAL prices above
+
+For each trade give:
+- CALL or PUT
+- Exact strike price (realistic based on current price)
+- Entry price range for the option contract
+- Stop loss (when to exit if wrong)
+- Take profit target
+- Probability of success
+- Best time to enter (market open, mid-day, etc)
+
+Respond ONLY with JSON array (no markdown):
+[{{
+  "ticker": "SPY",
+  "company": "S&P 500 ETF",
+  "direction": "CALL",
+  "current_price": 580.50,
+  "strike": 582,
+  "expiry": "Today",
+  "option_entry": "$1.20-$1.50",
+  "stop_loss": "$0.60",
+  "take_profit": "$2.50-$3.00",
+  "score": 85,
+  "probability": "72%",
+  "why": "SPY holding above key support at 580, momentum building for push to 583",
+  "entry_time": "Market open 9:30-10:00 AM or pullback to support",
+  "catalyst": "Specific reason for move today",
+  "risk": "Main risk factor",
+  "risk_reward": "1:2"
+}}]"""
+
+        trades = call_claude(prompt)
+
+        # Add real current prices
+        for trade in trades:
+            ticker = trade.get('ticker', '')
+            if ticker in market:
+                trade['current_price'] = market[ticker]['price']
+                trade['change_pct'] = market[ticker]['change_pct']
+
+        return jsonify({'trades': trades, 'date': today}), 200
+
+    except json.JSONDecodeError:
+        return jsonify({'error': 'AI parse error. Try again.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@scanner_bp.route('/daily', methods=['GET'])
+@login_required
+def daily_scan():
+    """Cached daily swing scan."""
+    global _scan_cache
+    today = date.today().isoformat()
+
+    if _scan_cache['date'] == today and _scan_cache['results']:
+        return jsonify({'stocks': _scan_cache['results'], 'cached': True, 'date': today}), 200
+
+    market = get_market_snapshot()
+    today_str = datetime.now().strftime('%B %d, %Y')
+    price_context = "\n".join([f"{t}: ${i['price']} ({'+' if i['change_pct']>=0 else ''}{i['change_pct']}%)" for t, i in market.items()])
+
+    prompt = f"""You are an elite hedge fund analyst. Today is {today_str}.
+
+REAL CURRENT PRICES:
+{price_context}
+
+Find TOP 5 best stocks to BUY now based on current macro trends, AI boom, sector momentum, upcoming catalysts.
+Use the REAL prices above for your price targets.
+
+Respond ONLY with JSON array:
+[{{"ticker":"","company":"","score":90,"action":"STRONG BUY","theme":"","type":"1st Derivative","why":"","catalyst":"","price_target":"$X by Month Year","entry":"Buy at $X-$X","risk":"","timeframe":""}}]"""
+
+    try:
+        stocks = call_claude(prompt)
+        for stock in stocks:
+            t = stock.get('ticker', '')
+            if t in market:
+                stock['current_price'] = market[t]['price']
+                stock['change_pct'] = market[t]['change_pct']
+        _scan_cache = {'date': today, 'results': stocks}
+        return jsonify({'stocks': stocks, 'cached': False, 'date': today}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
