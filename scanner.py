@@ -216,3 +216,102 @@ Respond ONLY with JSON array:
         return jsonify({'stocks': stocks, 'cached': False, 'date': today}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@scanner_bp.route('/analyze-chart', methods=['POST'])
+@login_required
+def analyze_chart():
+    """AI chart analysis for a specific ticker."""
+    data = request.get_json()
+    ticker = data.get('ticker', '').upper().strip()
+
+    if not ticker:
+        return jsonify({'error': 'No ticker provided.'}), 400
+
+    try:
+        import yfinance as yf
+
+        # Get real price data
+        t = yf.Ticker(ticker)
+        hist = t.history(period='60d')
+        info = {}
+        try:
+            info = t.info
+        except Exception:
+            pass
+
+        if hist.empty:
+            return jsonify({'error': f'Could not find data for {ticker}. Check the ticker symbol.'}), 400
+
+        current_price = round(float(hist['Close'].iloc[-1]), 2)
+        prev_price = round(float(hist['Close'].iloc[-2]), 2)
+        change_pct = round(((current_price - prev_price) / prev_price) * 100, 2)
+
+        # Calculate basic technicals
+        closes = hist['Close'].tolist()
+        high_20 = round(max(hist['High'].tail(20).tolist()), 2)
+        low_20 = round(min(hist['Low'].tail(20).tolist()), 2)
+        high_5 = round(max(hist['High'].tail(5).tolist()), 2)
+        low_5 = round(min(hist['Low'].tail(5).tolist()), 2)
+        avg_vol_20 = round(hist['Volume'].tail(20).mean())
+        today_vol = int(hist['Volume'].iloc[-1])
+
+        # Simple moving averages
+        ma20 = round(sum(closes[-20:]) / 20, 2) if len(closes) >= 20 else None
+        ma50 = round(sum(closes[-50:]) / 50, 2) if len(closes) >= 50 else None
+
+        company_name = info.get('longName', ticker)
+        sector = info.get('sector', 'Unknown')
+
+        today = datetime.now().strftime('%B %d, %Y')
+
+        prompt = f"""You are an elite technical analyst and options trader. Today is {today}.
+
+REAL MARKET DATA FOR {ticker} ({company_name}):
+- Current Price: ${current_price}
+- Change Today: {'+' if change_pct >= 0 else ''}{change_pct}%
+- 20-Day High: ${high_20}
+- 20-Day Low: ${low_20}
+- 5-Day High: ${high_5}
+- 5-Day Low: ${low_5}
+- 20-Day MA: ${ma20}
+- 50-Day MA: ${ma50}
+- Today's Volume: {today_vol:,}
+- Avg 20-Day Volume: {avg_vol_20:,}
+- Sector: {sector}
+
+Based on this REAL data, provide a complete technical analysis.
+
+Respond ONLY with JSON (no markdown):
+{{
+  "ticker": "{ticker}",
+  "company": "{company_name}",
+  "current_price": {current_price},
+  "change_pct": {change_pct},
+  "signal": "BULLISH",
+  "confidence": 82,
+  "signal_reason": "One sentence why bullish/bearish/neutral",
+  "trend": "Detailed trend analysis 2-3 sentences. Is it uptrend downtrend sideways. Where is it relative to MAs.",
+  "resistance": {high_20},
+  "support": {low_20},
+  "price_target": 0.00,
+  "stop_loss": 0.00,
+  "prediction": "What you expect in next 5-10 days and why based on the data",
+  "risks": "Key risks that could invalidate this analysis",
+  "call_option": "Strike: $X | Expiry: X weeks out | Why: reason<br>Best if price breaks above $X resistance",
+  "put_option": "Strike: $X | Expiry: X weeks out | Why: reason<br>Best if price breaks below $X support",
+  "summary": "2-3 sentence Wolf AI summary of the overall picture and what a trader should do"
+}}"""
+
+        result = call_claude(prompt)
+
+        # Make sure it's a dict not list
+        if isinstance(result, list):
+            result = result[0]
+
+        return jsonify(result), 200
+
+    except json.JSONDecodeError:
+        return jsonify({'error': 'AI parse error. Try again.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

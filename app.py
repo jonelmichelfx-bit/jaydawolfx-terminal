@@ -172,6 +172,11 @@ def pricing():
 def ai_scanner():
     return render_template('scanner.html')
 
+@app.route('/ai-analysis')
+@login_required
+def ai_analysis():
+    return render_template('analysis.html')
+
 # ────────────────────────────────────────────────────
 # API ROUTES — now protected with @analysis_gate
 # ────────────────────────────────────────────────────
