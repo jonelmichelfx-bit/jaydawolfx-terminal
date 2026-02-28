@@ -320,6 +320,8 @@ Respond ONLY with JSON (no markdown):
 @scanner_bp.route('/weekly-picks', methods=['POST'])
 @login_required
 def weekly_picks():
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Please log in to access Wolf Elite.'}), 401
     """Wolf Elite weekly picks - top 5 stocks for the week with options plays."""
     try:
         from datetime import datetime, timedelta
