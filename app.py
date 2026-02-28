@@ -33,9 +33,53 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def unauthorized():
-    if request.path.startswith('/api/'):
-        return jsonify({'error': 'Authentication required.', 'action': 'login'}), 401
+    if request.path.startswith('/api/') or request.path.startswith('/scanner/'):
+        return jsonify({'error': 'Please log in to access this feature.', 'action': 'login'}), 401
     return redirect(url_for('login_page'))
+
+# ── Server Time API ──────────────────────────────────
+@app.route('/api/server-time')
+def server_time():
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    
+    # Calculate week range (Mon-Fri)
+    day = now.weekday()  # 0=Mon, 6=Sun
+    monday = now - timedelta(days=day)
+    friday = monday + timedelta(days=4)
+    
+    week_range = f"{monday.strftime('%b %d')} — {friday.strftime('%b %d, %Y')}"
+    
+    # Market status
+    hour = now.hour
+    minute = now.minute
+    is_weekday = day < 5
+    market_open = is_weekday and (hour > 9 or (hour == 9 and minute >= 30)) and hour < 16
+    pre_market = is_weekday and hour >= 4 and (hour < 9 or (hour == 9 and minute < 30))
+    after_hours = is_weekday and hour >= 16 and hour < 20
+    
+    if market_open:
+        market_status = 'MARKET OPEN'
+        status_color = '#00ff99'
+    elif pre_market:
+        market_status = 'PRE-MARKET'
+        status_color = '#ffe033'
+    elif after_hours:
+        market_status = 'AFTER HOURS'
+        status_color = '#ff7744'
+    else:
+        market_status = 'MARKET CLOSED'
+        status_color = '#ff4466'
+    
+    return jsonify({
+        'date': now.strftime('%B %d, %Y'),
+        'time': now.strftime('%H:%M:%S EST'),
+        'day': now.strftime('%A'),
+        'week_range': week_range,
+        'market_status': market_status,
+        'status_color': status_color,
+        'timestamp': now.isoformat()
+    })
 
 # ── Blueprints ───────────────────────────────────────
 app.register_blueprint(auth_bp)

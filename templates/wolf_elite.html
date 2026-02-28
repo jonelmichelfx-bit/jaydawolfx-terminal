@@ -28,7 +28,7 @@
     .nav-back:hover{border-color:var(--cyan);color:var(--cyan);}
 
     /* MAIN */
-    .main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:80px 24px 60px;}
+    .main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:100px 24px 60px;}
 
     /* HERO */
     .hero{text-align:center;margin-bottom:40px;padding:40px 24px;background:linear-gradient(135deg,rgba(255,215,0,0.05),rgba(168,85,247,0.05));border:1px solid rgba(255,215,0,0.15);border-radius:16px;position:relative;overflow:hidden;}
@@ -123,7 +123,7 @@
     .stat-label{font-size:11px;color:var(--text3);letter-spacing:1px;}
 
     /* LOADING */
-    .loading{text-align:center;padding:80px 20px;display:none;}
+    .loading{text-align:center;padding:100px 20px;display:none;}
     .loading.visible{display:block;}
     .loading-wolf{font-size:50px;animation:bounce 1s ease-in-out infinite;margin-bottom:18px;}
     @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
@@ -133,7 +133,7 @@
     .loading-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--orange));animation:load 1.5s ease-in-out infinite;}
     @keyframes load{0%{width:0;margin-left:0}50%{width:100%;margin-left:0}100%{width:0;margin-left:100%}}
 
-    .empty{text-align:center;padding:80px 20px;color:var(--text3);}
+    .empty{text-align:center;padding:100px 20px;color:var(--text3);}
     .empty-icon{font-size:52px;margin-bottom:16px;}
     .empty-text{font-size:13px;letter-spacing:1px;line-height:2;}
 
@@ -155,6 +155,28 @@
     <a href="/ai-analysis" class="nav-btn" style="background:transparent;border:1px solid #33ddff;color:#33ddff;">📊 ANALYSIS</a>
   </div>
 </nav>
+<!-- LIVE MARKET STATUS BAR -->
+<div id="market-bar" style="background:rgba(8,12,15,0.95);border-bottom:1px solid #2a3f52;padding:5px 24px;display:flex;align-items:center;justify-content:space-between;font-size:11px;position:fixed;top:44px;left:0;right:0;z-index:9998;">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <span style="color:#90b8d0;letter-spacing:1px;">🕐 <span id="live-time" style="color:#33ddff;">--:--:--</span></span>
+    <span style="color:#90b8d0;letter-spacing:1px;">📅 <span id="live-date" style="color:#ffffff;">--</span></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div id="market-dot" style="width:8px;height:8px;border-radius:50%;background:#ff4466;animation:pulse 2s infinite;"></div>
+    <span id="market-status" style="color:#ff4466;font-weight:bold;letter-spacing:1px;">LOADING...</span>
+  </div>
+</div>
+<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
+<script>
+function updateMarketBar(){fetch("/api/server-time").then(r=>r.json()).then(d=>{
+  document.getElementById("live-time").textContent=d.time;
+  document.getElementById("live-date").textContent=d.date;
+  document.getElementById("market-status").textContent=d.market_status;
+  document.getElementById("market-status").style.color=d.status_color;
+  document.getElementById("market-dot").style.background=d.status_color;
+}).catch(()=>{});}
+updateMarketBar();setInterval(updateMarketBar,30000);
+</script>
 
 <div class="main">
 
@@ -173,7 +195,7 @@
   <div class="week-bar">
     <div class="week-info">
       <span class="week-label">WEEK OF</span>
-      <span class="week-date" id="week-date"></span>
+      <span class="week-date" id="week-date"></span><span style="font-size:11px;color:var(--text3);margin-left:8px;" id="week-range"></span>
     </div>
     <button class="btn-generate" id="gen-btn" onclick="generatePicks()">
       🐺 GENERATE THIS WEEK'S PICKS
@@ -239,15 +261,14 @@
 </div>
 
 <script>
-const TODAY = new Date();
-const WEEK_START = getMonday(TODAY);
-document.getElementById('week-date').textContent = WEEK_START.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-
-function getMonday(d) {
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.setDate(diff));
-}
+// Always fetch real date from server
+fetch('/api/server-time').then(r=>r.json()).then(d=>{
+  document.getElementById('week-date').textContent = d.date;
+  document.getElementById('week-range').textContent = d.week_range;
+}).catch(()=>{
+  const TODAY = new Date();
+  document.getElementById('week-date').textContent = TODAY.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+});
 
 async function generatePicks() {
   document.getElementById('gen-btn').disabled = true;

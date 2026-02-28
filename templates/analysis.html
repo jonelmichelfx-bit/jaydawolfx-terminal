@@ -31,7 +31,7 @@
     .nav-scanner:hover{background:#6d28d9;}
 
     /* MAIN */
-    .main{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:80px 24px 40px;}
+    .main{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:100px 24px 40px;}
 
     /* HEADER */
     .page-header{text-align:center;margin-bottom:36px;}
@@ -160,6 +160,28 @@
     <a href="/ai-scanner" class="nav-btn nav-scanner">🤖 AI SCANNER</a>
   </div>
 </nav>
+<!-- LIVE MARKET STATUS BAR -->
+<div id="market-bar" style="background:rgba(8,12,15,0.95);border-bottom:1px solid #2a3f52;padding:5px 24px;display:flex;align-items:center;justify-content:space-between;font-size:11px;position:fixed;top:44px;left:0;right:0;z-index:9998;">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <span style="color:#90b8d0;letter-spacing:1px;">🕐 <span id="live-time" style="color:#33ddff;">--:--:--</span></span>
+    <span style="color:#90b8d0;letter-spacing:1px;">📅 <span id="live-date" style="color:#ffffff;">--</span></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div id="market-dot" style="width:8px;height:8px;border-radius:50%;background:#ff4466;animation:pulse 2s infinite;"></div>
+    <span id="market-status" style="color:#ff4466;font-weight:bold;letter-spacing:1px;">LOADING...</span>
+  </div>
+</div>
+<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
+<script>
+function updateMarketBar(){fetch("/api/server-time").then(r=>r.json()).then(d=>{
+  document.getElementById("live-time").textContent=d.time;
+  document.getElementById("live-date").textContent=d.date;
+  document.getElementById("market-status").textContent=d.market_status;
+  document.getElementById("market-status").style.color=d.status_color;
+  document.getElementById("market-dot").style.background=d.status_color;
+}).catch(()=>{});}
+updateMarketBar();setInterval(updateMarketBar,30000);
+</script>
 
 <div class="main">
 
