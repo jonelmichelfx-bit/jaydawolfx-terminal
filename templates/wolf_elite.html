@@ -192,6 +192,37 @@ updateMarketBar();setInterval(updateMarketBar,30000);
     </div>
   </div>
 
+
+  <!-- RESULTS TRACKER -->
+  <div id="tracker-section" style="display:none;margin-bottom:28px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;position:relative;">
+      <div style="height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);margin:-20px -24px 18px;border-radius:10px 10px 0 0;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div style="font-size:12px;color:var(--green);letter-spacing:2px;font-weight:bold;">📊 WOLF ELITE WIN RATE TRACKER</div>
+        <button onclick="loadTracker()" style="background:transparent;border:1px solid var(--border);color:var(--text3);padding:5px 12px;border-radius:4px;font-family:var(--font);font-size:10px;cursor:pointer;letter-spacing:1px;">🔄 REFRESH</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="tracker-stats">
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-size:24px;font-weight:bold;color:var(--green);" id="tr-winrate">-%</div>
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:4px;">WIN RATE</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-size:24px;font-weight:bold;color:var(--cyan);" id="tr-total">-</div>
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:4px;">TOTAL PICKS</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-size:24px;font-weight:bold;color:var(--green);" id="tr-wins">-</div>
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:4px;">WINS ✅</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-size:24px;font-weight:bold;color:var(--red);" id="tr-losses">-</div>
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:4px;">LOSSES ❌</div>
+        </div>
+      </div>
+      <div id="tracker-picks" style="font-size:12px;color:var(--text3);text-align:center;padding:10px;">Loading history...</div>
+    </div>
+  </div>
+
   <div class="week-bar">
     <div class="week-info">
       <span class="week-label">WEEK OF</span>
@@ -393,6 +424,57 @@ function renderPicks(data) {
 
   container.appendChild(grid);
 }
+
+
+
+async function loadTracker() {
+  try {
+    const res = await fetch('/api/tracker-stats');
+    const data = await res.json();
+    
+    document.getElementById('tracker-section').style.display = 'block';
+    document.getElementById('tr-winrate').textContent = data.win_rate + '%';
+    document.getElementById('tr-total').textContent = data.total;
+    document.getElementById('tr-wins').textContent = data.wins;
+    document.getElementById('tr-losses').textContent = data.losses;
+    
+    const picksEl = document.getElementById('tracker-picks');
+    if (!data.picks || data.picks.length === 0) {
+      picksEl.textContent = 'No picks tracked yet. Generate picks and mark results!';
+      return;
+    }
+    
+    let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    data.picks.slice().reverse().forEach(p => {
+      const isWin = p.result === 'WIN';
+      const isPending = p.result === 'PENDING';
+      const color = isWin ? '#00ff99' : isPending ? '#ffe033' : '#ff4466';
+      const icon = isWin ? '✅' : isPending ? '⏳' : '❌';
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:6px;border-left:3px solid ${color};">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">${icon}</span>
+          <span style="color:#ffffff;font-weight:bold;">${p.ticker}</span>
+          <span style="color:var(--text3);font-size:11px;">${p.week || p.date_added}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="color:var(--text2);font-size:11px;">Entry: ${p.entry} → Target: ${p.target}</span>
+          <span style="color:${color};font-weight:bold;font-size:12px;">${p.result}</span>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    picksEl.innerHTML = html;
+    
+  } catch(e) {
+    document.getElementById('tracker-section').style.display = 'block';
+    document.getElementById('tracker-picks').textContent = 'Could not load tracker.';
+  }
+}
+
+// Load tracker on page load
+window.addEventListener('load', () => {
+  setTimeout(loadTracker, 500);
+});
 
 function showAlert(msg) { const e=document.getElementById('alert'); e.textContent=msg; e.style.display='block'; }
 function hideAlert() { document.getElementById('alert').style.display='none'; }

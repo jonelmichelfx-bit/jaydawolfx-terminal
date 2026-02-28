@@ -41,7 +41,14 @@ def unauthorized():
 @app.route('/api/server-time')
 def server_time():
     from datetime import datetime, timedelta
-    now = datetime.now()
+    from datetime import timezone
+    import zoneinfo
+    try:
+        eastern = zoneinfo.ZoneInfo('America/New_York')
+        now = datetime.now(eastern)
+    except Exception:
+        from datetime import timedelta
+        now = datetime.utcnow() - timedelta(hours=5)
     
     # Calculate week range (Mon-Fri)
     day = now.weekday()  # 0=Mon, 6=Sun
@@ -73,7 +80,7 @@ def server_time():
     
     return jsonify({
         'date': now.strftime('%B %d, %Y'),
-        'time': now.strftime('%H:%M:%S EST'),
+        'time': now.strftime('%H:%M:%S') + (' EDT' if now.dst() else ' EST'),
         'day': now.strftime('%A'),
         'week_range': week_range,
         'market_status': market_status,
@@ -325,3 +332,71 @@ def health():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
+
+# ── Wolf Elite Results Tracker ────────────────────────
+@app.route('/api/track-pick', methods=['POST'])
+@login_required
+def track_pick():
+    """Save a Wolf Elite pick result."""
+    from models import db
+    data = request.get_json()
+    # Store in simple JSON file for now
+    import json, os
+    tracker_file = 'wolf_tracker.json'
+    
+    try:
+        if os.path.exists(tracker_file):
+            with open(tracker_file, 'r') as f:
+                tracker = json.load(f)
+        else:
+            tracker = {'picks': []}
+        
+        tracker['picks'].append({
+            'week': data.get('week'),
+            'ticker': data.get('ticker'),
+            'entry': data.get('entry'),
+            'target': data.get('target'),
+            'stop': data.get('stop'),
+            'result': data.get('result', 'PENDING'),
+            'pct_change': data.get('pct_change', 0),
+            'date_added': datetime.now().strftime('%Y-%m-%d')
+        })
+        
+        with open(tracker_file, 'w') as f:
+            json.dump(tracker, f)
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/tracker-stats', methods=['GET'])
+@login_required  
+def tracker_stats():
+    """Get Wolf Elite win rate stats."""
+    import json, os
+    tracker_file = 'wolf_tracker.json'
+    
+    try:
+        if not os.path.exists(tracker_file):
+            return jsonify({'total': 0, 'wins': 0, 'losses': 0, 'win_rate': 0, 'picks': []}), 200
+        
+        with open(tracker_file, 'r') as f:
+            tracker = json.load(f)
+        
+        picks = tracker.get('picks', [])
+        completed = [p for p in picks if p['result'] in ['WIN', 'LOSS']]
+        wins = len([p for p in completed if p['result'] == 'WIN'])
+        losses = len([p for p in completed if p['result'] == 'LOSS'])
+        win_rate = round((wins / len(completed) * 100) if completed else 0)
+        
+        return jsonify({
+            'total': len(picks),
+            'wins': wins,
+            'losses': losses, 
+            'win_rate': win_rate,
+            'picks': picks[-20:]  # Last 20
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
