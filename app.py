@@ -177,6 +177,11 @@ def ai_scanner():
 def ai_analysis():
     return render_template('analysis.html')
 
+@app.route('/wolf-elite')
+@login_required
+def wolf_elite():
+    return render_template('wolf_elite.html')
+
 # ────────────────────────────────────────────────────
 # API ROUTES — now protected with @analysis_gate
 # ────────────────────────────────────────────────────

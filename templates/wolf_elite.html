@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JAYDAWOLFX — Wolf Elite Weekly Picks</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+      --bg:#080c0f;--surface:#0f1923;--surface2:#141c24;--surface3:#1a2535;
+      --border:#2a3f52;--border2:#34506a;
+      --green:#00ff99;--red:#ff4466;--yellow:#ffe033;
+      --cyan:#33ddff;--purple:#a855f7;--orange:#ff7744;--gold:#ffd700;
+      --text:#ffffff;--text2:#c0d8e8;--text3:#90b8d0;
+      --font:'Share Tech Mono',monospace;
+    }
+    body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
+    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,153,0.012) 2px,rgba(0,255,153,0.012) 4px);pointer-events:none;z-index:0;}
+
+    /* NAV */
+    .nav{position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(8,12,15,0.97);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px);}
+    .nav-left{display:flex;align-items:center;gap:10px;}
+    .nav-title{color:var(--gold);font-weight:bold;letter-spacing:2px;font-size:14px;text-shadow:0 0 20px rgba(255,215,0,0.4);}
+    .nav-links{display:flex;align-items:center;gap:10px;}
+    .nav-btn{padding:7px 14px;border-radius:4px;font-family:var(--font);font-size:11px;font-weight:bold;letter-spacing:1px;text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}
+    .nav-back{background:transparent;border:1px solid var(--border);color:var(--text2);}
+    .nav-back:hover{border-color:var(--cyan);color:var(--cyan);}
+
+    /* MAIN */
+    .main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:80px 24px 60px;}
+
+    /* HERO */
+    .hero{text-align:center;margin-bottom:40px;padding:40px 24px;background:linear-gradient(135deg,rgba(255,215,0,0.05),rgba(168,85,247,0.05));border:1px solid rgba(255,215,0,0.15);border-radius:16px;position:relative;overflow:hidden;}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,215,0,0.08),transparent 70%);pointer-events:none;}
+    .hero-icon{font-size:56px;margin-bottom:14px;filter:drop-shadow(0 0 20px rgba(255,215,0,0.6));}
+    .hero-title{font-size:30px;font-weight:bold;color:var(--gold);letter-spacing:4px;text-shadow:0 0 30px rgba(255,215,0,0.4);margin-bottom:8px;}
+    .hero-sub{font-size:13px;color:var(--text3);letter-spacing:2px;margin-bottom:20px;}
+    .hero-badges{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
+    .hero-badge{background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.25);border-radius:20px;padding:5px 16px;font-size:11px;color:var(--gold);letter-spacing:1px;}
+
+    /* WEEK SELECTOR */
+    .week-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;}
+    .week-info{display:flex;align-items:center;gap:12px;}
+    .week-label{font-size:11px;color:var(--text3);letter-spacing:2px;}
+    .week-date{font-size:14px;color:var(--cyan);font-weight:bold;}
+    .btn-generate{background:linear-gradient(135deg,var(--gold),#cc9900);color:#000;padding:12px 24px;border:none;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:bold;letter-spacing:2px;cursor:pointer;transition:all 0.2s;}
+    .btn-generate:hover{box-shadow:0 0 25px rgba(255,215,0,0.5);transform:translateY(-1px);}
+    .btn-generate:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+    /* MARKET OUTLOOK */
+    .outlook-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:28px;display:none;}
+    .outlook-card.visible{display:block;}
+    .outlook-card::before{content:'';display:block;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:-20px -24px 18px;border-radius:10px 10px 0 0;}
+    .outlook-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+    .outlook-title{font-size:12px;color:var(--gold);letter-spacing:2px;font-weight:bold;}
+    .market-mood{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+    .mood-badge{padding:6px 16px;border-radius:20px;font-size:11px;font-weight:bold;letter-spacing:1px;}
+    .mood-bull{background:rgba(0,255,153,0.15);border:1px solid rgba(0,255,153,0.3);color:var(--green);}
+    .mood-bear{background:rgba(255,68,102,0.15);border:1px solid rgba(255,68,102,0.3);color:var(--red);}
+    .mood-neutral{background:rgba(255,224,51,0.1);border:1px solid rgba(255,224,51,0.3);color:var(--yellow);}
+    .outlook-text{font-size:13px;color:var(--text2);line-height:1.8;}
+
+    /* PICKS GRID */
+    .picks-grid{display:flex;flex-direction:column;gap:20px;}
+
+    /* PICK CARD */
+    .pick-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:transform 0.2s;}
+    .pick-card:hover{transform:translateX(4px);}
+    .pick-rank-bar{height:4px;}
+    .pick-header{padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+    .pick-left{display:flex;align-items:center;gap:16px;}
+    .pick-rank{font-size:30px;min-width:44px;}
+    .pick-ticker{font-size:28px;font-weight:bold;letter-spacing:2px;color:var(--green);}
+    .pick-price{font-size:16px;color:var(--gold);margin-top:2px;}
+    .pick-change{font-size:12px;margin-top:2px;}
+    .pick-company{font-size:13px;color:var(--text2);margin-top:3px;}
+    .pick-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+    .tag{display:inline-block;border-radius:20px;padding:3px 12px;font-size:10px;letter-spacing:1px;}
+    .tag-theme{background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#c084fc;}
+    .tag-action{background:rgba(0,255,153,0.15);border:1px solid rgba(0,255,153,0.4);color:var(--green);font-weight:bold;}
+    .tag-hold{background:rgba(255,224,51,0.1);border:1px solid rgba(255,224,51,0.3);color:var(--yellow);}
+    .pick-right{text-align:right;}
+    .score-ring{width:64px;height:64px;border-radius:50%;border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-left:auto;}
+    .score-num{font-size:20px;font-weight:bold;line-height:1;}
+    .score-lbl{font-size:8px;color:var(--text3);letter-spacing:1px;}
+
+    .pick-body{padding:20px 24px;}
+    .pick-thesis{font-size:13px;color:var(--text);line-height:1.8;margin-bottom:16px;padding:14px 16px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--purple);}
+
+    .pick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;}
+    .pick-box{background:var(--surface2);border-radius:8px;padding:13px 15px;}
+    .pick-box-label{font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:6px;}
+    .pick-box-value{font-size:13px;color:var(--text);line-height:1.6;font-weight:bold;}
+    .pick-box.catalyst{border-left:3px solid var(--gold);}
+    .pick-box.entry{border-left:3px solid var(--cyan);}
+    .pick-box.target{border-left:3px solid var(--green);}
+    .pick-box.stop{border-left:3px solid var(--red);}
+
+    /* OPTIONS PLAY */
+    .options-play{background:var(--surface3);border:1px solid rgba(168,85,247,0.25);border-radius:8px;padding:16px;margin-bottom:16px;}
+    .options-play-title{font-size:10px;color:var(--purple);letter-spacing:2px;margin-bottom:12px;}
+    .options-play-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .op-item{text-align:center;}
+    .op-label{font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:4px;}
+    .op-value{font-size:13px;font-weight:bold;color:var(--text);}
+    .op-value.call{color:var(--green);}
+    .op-value.put{color:var(--red);}
+
+    .pick-footer{display:flex;align-items:center;justify-content:space-between;padding-top:14px;border-top:1px solid var(--border);}
+    .timeframe-text{font-size:12px;color:var(--text3);}
+    .timeframe-text span{color:var(--cyan);}
+    .confidence-bar-wrap{flex:1;margin:0 16px;}
+    .confidence-bar-label{font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:1px;}
+    .confidence-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+    .confidence-bar-fill{height:100%;border-radius:3px;transition:width 1s ease;}
+
+    /* WIN RATE */
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;display:none;}
+    .stats-row.visible{display:grid;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;text-align:center;}
+    .stat-num{font-size:28px;font-weight:bold;color:var(--green);margin-bottom:4px;}
+    .stat-label{font-size:11px;color:var(--text3);letter-spacing:1px;}
+
+    /* LOADING */
+    .loading{text-align:center;padding:80px 20px;display:none;}
+    .loading.visible{display:block;}
+    .loading-wolf{font-size:50px;animation:bounce 1s ease-in-out infinite;margin-bottom:18px;}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+    .loading-title{font-size:16px;color:var(--gold);letter-spacing:3px;margin-bottom:8px;}
+    .loading-sub{font-size:12px;color:var(--text3);margin-bottom:24px;line-height:1.7;}
+    .loading-bar{width:240px;height:3px;background:var(--border);margin:0 auto;border-radius:3px;overflow:hidden;}
+    .loading-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--orange));animation:load 1.5s ease-in-out infinite;}
+    @keyframes load{0%{width:0;margin-left:0}50%{width:100%;margin-left:0}100%{width:0;margin-left:100%}}
+
+    .empty{text-align:center;padding:80px 20px;color:var(--text3);}
+    .empty-icon{font-size:52px;margin-bottom:16px;}
+    .empty-text{font-size:13px;letter-spacing:1px;line-height:2;}
+
+    .alert{padding:13px 16px;border-radius:6px;font-size:13px;margin-bottom:20px;display:none;}
+    .alert.error{background:rgba(255,68,102,0.1);border:1px solid rgba(255,68,102,0.3);color:var(--red);}
+    .disclaimer{margin-top:28px;padding:13px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text3);text-align:center;line-height:1.7;}
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-left">
+    <span style="font-size:20px;">🐺</span>
+    <span class="nav-title">🏆 WOLF ELITE WEEKLY PICKS</span>
+  </div>
+  <div class="nav-links">
+    <a href="/" class="nav-btn nav-back">← TERMINAL</a>
+    <a href="/ai-scanner" class="nav-btn" style="background:#7c3aed;color:white;">🤖 SCANNER</a>
+    <a href="/ai-analysis" class="nav-btn" style="background:transparent;border:1px solid #33ddff;color:#33ddff;">📊 ANALYSIS</a>
+  </div>
+</nav>
+
+<div class="main">
+
+  <div class="hero">
+    <div class="hero-icon">🏆</div>
+    <div class="hero-title">WOLF ELITE WEEKLY PICKS</div>
+    <div class="hero-sub">AI-POWERED TOP 5 STOCKS EVERY WEEK — WITH OPTIONS PLAYS</div>
+    <div class="hero-badges">
+      <span class="hero-badge">🤖 Claude AI Analysis</span>
+      <span class="hero-badge">📊 Real Market Data</span>
+      <span class="hero-badge">🎯 Entry + Target + Stop Loss</span>
+      <span class="hero-badge">⚡ Options Plays Included</span>
+    </div>
+  </div>
+
+  <div class="week-bar">
+    <div class="week-info">
+      <span class="week-label">WEEK OF</span>
+      <span class="week-date" id="week-date"></span>
+    </div>
+    <button class="btn-generate" id="gen-btn" onclick="generatePicks()">
+      🐺 GENERATE THIS WEEK'S PICKS
+    </button>
+  </div>
+
+  <div id="alert" class="alert error"></div>
+
+  <!-- STATS -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-picks">5</div>
+      <div class="stat-label">PICKS THIS WEEK</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-avg-score" style="color:var(--gold);">-</div>
+      <div class="stat-label">AVG CONFIDENCE SCORE</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-bullish" style="color:var(--cyan);">-</div>
+      <div class="stat-label">MARKET OUTLOOK</div>
+    </div>
+  </div>
+
+  <!-- MARKET OUTLOOK -->
+  <div class="outlook-card" id="outlook-card">
+    <div class="outlook-header">
+      <span style="font-size:20px;">🌍</span>
+      <span class="outlook-title">THIS WEEK'S MARKET OUTLOOK</span>
+    </div>
+    <div class="market-mood" id="market-mood"></div>
+    <div class="outlook-text" id="outlook-text"></div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading">
+    <div class="loading-wolf">🐺</div>
+    <div class="loading-title">WOLF AI IS SCANNING THE MARKET...</div>
+    <div class="loading-sub">
+      Analyzing macro trends, earnings calendar, sector momentum<br/>
+      Backtesting setups, calculating risk/reward, finding the best 5 plays<br/>
+      This may take 15-20 seconds...
+    </div>
+    <div class="loading-bar"><div class="loading-fill"></div></div>
+  </div>
+
+  <!-- PICKS -->
+  <div id="picks-container">
+    <div class="empty">
+      <div class="empty-icon">🐺</div>
+      <div class="empty-text">
+        CLICK "GENERATE THIS WEEK'S PICKS" ABOVE<br/>
+        WOLF AI WILL ANALYZE THE ENTIRE MARKET AND FIND<br/>
+        THE TOP 5 STOCKS TO TRADE THIS WEEK
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer" id="disclaimer" style="display:none">
+    ⚠️ Wolf Elite picks are AI-generated for informational purposes only. Not financial advice. Always do your own research. Never risk more than you can afford to lose. Past performance does not guarantee future results.
+  </div>
+
+</div>
+
+<script>
+const TODAY = new Date();
+const WEEK_START = getMonday(TODAY);
+document.getElementById('week-date').textContent = WEEK_START.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+function getMonday(d) {
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+}
+
+async function generatePicks() {
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('loading').classList.add('visible');
+  document.getElementById('picks-container').innerHTML = '';
+  document.getElementById('outlook-card').classList.remove('visible');
+  document.getElementById('stats-row').classList.remove('visible');
+  document.getElementById('disclaimer').style.display = 'none';
+  hideAlert();
+
+  try {
+    const res = await fetch('/scanner/weekly-picks', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+
+    document.getElementById('loading').classList.remove('visible');
+
+    if (!res.ok) { showAlert(data.error || 'Failed to generate picks.'); document.getElementById('gen-btn').disabled = false; return; }
+
+    renderPicks(data);
+    document.getElementById('gen-btn').disabled = false;
+    document.getElementById('disclaimer').style.display = 'block';
+
+  } catch(e) {
+    document.getElementById('loading').classList.remove('visible');
+    showAlert('Error: ' + e.message);
+    document.getElementById('gen-btn').disabled = false;
+  }
+}
+
+function renderPicks(data) {
+  // Market outlook
+  if (data.outlook) {
+    const moodEl = document.getElementById('market-mood');
+    const mood = data.outlook.mood || 'NEUTRAL';
+    const moodClass = mood.includes('BULL') ? 'mood-bull' : mood.includes('BEAR') ? 'mood-bear' : 'mood-neutral';
+    moodEl.innerHTML = `<span class="mood-badge ${moodClass}">${mood}</span>`;
+    if (data.outlook.vix) moodEl.innerHTML += `<span class="mood-badge mood-neutral">VIX: ${data.outlook.vix}</span>`;
+    document.getElementById('outlook-text').textContent = data.outlook.summary || '';
+    document.getElementById('outlook-card').classList.add('visible');
+    document.getElementById('stat-bullish').textContent = mood.split(' ')[0];
+  }
+
+  // Stats
+  const picks = data.picks || [];
+  const avgScore = picks.length ? Math.round(picks.reduce((s,p) => s + (p.score||0), 0) / picks.length) : 0;
+  document.getElementById('stat-avg-score').textContent = avgScore;
+  document.getElementById('stats-row').classList.add('visible');
+
+  // Render picks
+  const container = document.getElementById('picks-container');
+  const grid = document.createElement('div');
+  grid.className = 'picks-grid';
+
+  picks.forEach((p, i) => {
+    const rankEmoji = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || '#'+(i+1);
+    const barColors = ['#ffd700','#c0c0c0','#cd7f32','#00ff99','#33ddff'];
+    const barColor = barColors[i] || '#00ff99';
+    const scoreColor = p.score >= 85 ? '#00ff99' : p.score >= 70 ? '#ffd700' : '#ff6b6b';
+    const isBuy = p.action && p.action.includes('BUY');
+    const actionClass = isBuy ? 'tag-action' : 'tag-hold';
+    const changeUp = (p.change_pct || 0) >= 0;
+
+    const card = document.createElement('div');
+    card.className = 'pick-card';
+    card.innerHTML = `
+      <div class="pick-rank-bar" style="background:${barColor}"></div>
+      <div class="pick-header">
+        <div class="pick-left">
+          <div class="pick-rank" style="color:${barColor}">${rankEmoji}</div>
+          <div>
+            <div class="pick-ticker">${p.ticker}</div>
+            ${p.current_price ? `<div class="pick-price">$${p.current_price} <span class="${changeUp?'price-up':'price-dn'}" style="font-size:12px;">${changeUp?'+':''}${p.change_pct||0}%</span></div>` : ''}
+            <div class="pick-company">${p.company}</div>
+            <div class="pick-tags">
+              <span class="tag tag-theme">${p.theme}</span>
+              ${p.type ? `<span class="tag" style="background:rgba(51,221,255,0.1);border:1px solid rgba(51,221,255,0.2);color:#33ddff;">${p.type}</span>` : ''}
+              ${p.action ? `<span class="tag ${actionClass}">${p.action}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="pick-right">
+          <div class="score-ring" style="border-color:${scoreColor}">
+            <div class="score-num" style="color:${scoreColor}">${p.score}</div>
+            <div class="score-lbl">SCORE</div>
+          </div>
+        </div>
+      </div>
+      <div class="pick-body">
+        <div class="pick-thesis">${p.thesis}</div>
+        <div class="pick-grid">
+          <div class="pick-box catalyst"><div class="pick-box-label">⚡ WEEKLY CATALYST</div><div class="pick-box-value">${p.catalyst}</div></div>
+          <div class="pick-box entry"><div class="pick-box-label">📈 ENTRY ZONE</div><div class="pick-box-value">${p.entry}</div></div>
+          <div class="pick-box target"><div class="pick-box-label">🎯 PRICE TARGET</div><div class="pick-box-value" style="color:var(--green);">${p.price_target}</div></div>
+          <div class="pick-box stop"><div class="pick-box-label">🛑 STOP LOSS</div><div class="pick-box-value" style="color:var(--red);">${p.stop_loss}</div></div>
+        </div>
+        ${p.options_play ? `
+        <div class="options-play">
+          <div class="options-play-title">⚡ OPTIONS PLAY FOR THIS WEEK</div>
+          <div class="options-play-grid">
+            <div class="op-item"><div class="op-label">DIRECTION</div><div class="op-value ${p.options_play.direction?.toLowerCase()}">${p.options_play.direction||'-'}</div></div>
+            <div class="op-item"><div class="op-label">STRIKE</div><div class="op-value">$${p.options_play.strike||'-'}</div></div>
+            <div class="op-item"><div class="op-label">EXPIRY</div><div class="op-value" style="color:var(--yellow);">${p.options_play.expiry||'-'}</div></div>
+            <div class="op-item"><div class="op-label">ENTRY PRICE</div><div class="op-value" style="color:var(--gold);">${p.options_play.entry_price||'-'}</div></div>
+            <div class="op-item"><div class="op-label">TARGET</div><div class="op-value" style="color:var(--green);">${p.options_play.target||'-'}</div></div>
+            <div class="op-item"><div class="op-label">MAX RISK</div><div class="op-value" style="color:var(--red);">${p.options_play.max_risk||'-'}</div></div>
+          </div>
+        </div>` : ''}
+        <div class="pick-footer">
+          <div class="timeframe-text">⏱ HOLD: <span>${p.timeframe||'1 week'}</span></div>
+          <div class="confidence-bar-wrap">
+            <div class="confidence-bar-label">CONFIDENCE: ${p.score}/100</div>
+            <div class="confidence-bar"><div class="confidence-bar-fill" style="width:${p.score}%;background:${scoreColor};"></div></div>
+          </div>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  container.appendChild(grid);
+}
+
+function showAlert(msg) { const e=document.getElementById('alert'); e.textContent=msg; e.style.display='block'; }
+function hideAlert() { document.getElementById('alert').style.display='none'; }
+</script>
+</body>
+</html>

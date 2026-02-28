@@ -315,3 +315,106 @@ Respond ONLY with JSON (no markdown):
         return jsonify({'error': 'AI parse error. Try again.'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@scanner_bp.route('/weekly-picks', methods=['POST'])
+@login_required
+def weekly_picks():
+    """Wolf Elite weekly picks - top 5 stocks for the week with options plays."""
+    try:
+        from datetime import datetime, timedelta
+        import yfinance as yf
+
+        today = datetime.now().strftime('%B %d, %Y')
+        day_of_week = datetime.now().strftime('%A')
+
+        # Get real market snapshot
+        market = get_market_snapshot()
+        price_context = "\n".join([
+            f"{t}: ${i['price']} ({'+' if i['change_pct']>=0 else ''}{i['change_pct']}%)"
+            for t, i in market.items()
+        ])
+
+        prompt = f"""You are Wolf AI, an elite hedge fund analyst. Today is {today} ({day_of_week}).
+
+REAL CURRENT MARKET PRICES:
+{price_context}
+
+Generate the TOP 5 stock picks for THIS WEEK with complete analysis including options plays.
+
+Consider:
+- This week's macro events (Fed speakers, economic data, earnings)
+- Sector momentum and rotation
+- Technical setups ready to move this week
+- Options flow and unusual activity
+- Second-derivative plays most traders miss
+- Risk/reward for 1-5 day holds
+
+For each pick include a complete options play (specific strike, expiry this week or next week, entry price range).
+
+Respond ONLY with JSON (no markdown):
+{{
+  "outlook": {{
+    "mood": "BULLISH",
+    "vix": "estimated VIX level",
+    "summary": "2-3 sentence market outlook for this week"
+  }},
+  "picks": [
+    {{
+      "ticker": "NVDA",
+      "company": "NVIDIA Corporation",
+      "score": 92,
+      "action": "STRONG BUY",
+      "theme": "AI Infrastructure",
+      "type": "1st Derivative",
+      "thesis": "2-3 sentence explanation of why this is the best pick this week",
+      "catalyst": "Specific catalyst happening this week",
+      "entry": "$X - $X buy zone",
+      "price_target": "$X by Friday",
+      "stop_loss": "$X",
+      "timeframe": "3-5 days",
+      "options_play": {{
+        "direction": "CALL",
+        "strike": 950,
+        "expiry": "This Friday",
+        "entry_price": "$2.50-$3.50",
+        "target": "$6.00-$8.00",
+        "max_risk": "$2.50 per contract"
+      }}
+    }}
+  ]
+}}"""
+
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=3000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        text = message.content[0].text.strip()
+        if '```json' in text:
+            text = text.split('```json')[1].split('```')[0].strip()
+        elif '```' in text:
+            text = text.split('```')[1].split('```')[0].strip()
+
+        # Find JSON object
+        if not text.startswith('{'):
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if match:
+                text = match.group(0)
+
+        result = json.loads(text)
+
+        # Enrich with real prices
+        for pick in result.get('picks', []):
+            ticker = pick.get('ticker', '')
+            if ticker in market:
+                pick['current_price'] = market[ticker]['price']
+                pick['change_pct'] = market[ticker]['change_pct']
+
+        return jsonify(result), 200
+
+    except json.JSONDecodeError as e:
+        return jsonify({'error': 'AI parse error. Try again.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
