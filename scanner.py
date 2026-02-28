@@ -221,3 +221,36 @@ def refresh_scan():
         'date': today,
         'message': 'Scan refreshed'
     }), 200
+
+
+@scanner_bp.route('/analyze', methods=['POST'])
+@login_required
+def analyze():
+    """Generic AI analysis endpoint - called from browser."""
+    data = request.get_json()
+    prompt = data.get('prompt', '')
+    
+    if not prompt:
+        return jsonify({'error': 'No prompt provided.'}), 400
+
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        text = message.content[0].text.strip()
+        
+        if '```json' in text:
+            text = text.split('```json')[1].split('```')[0].strip()
+        elif '```' in text:
+            text = text.split('```')[1].split('```')[0].strip()
+        
+        stocks = json.loads(text)
+        return jsonify({'stocks': stocks}), 200
+        
+    except json.JSONDecodeError:
+        return jsonify({'error': 'AI response could not be parsed. Try again.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
