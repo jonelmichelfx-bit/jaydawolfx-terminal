@@ -101,11 +101,12 @@ def login():
     }), 200
 
 
-@auth_bp.route('/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
+    from flask import redirect, url_for
     logout_user()
-    return jsonify({'message': 'Logged out successfully.'}), 200
+    return redirect(url_for('login_page'))
 
 
 @auth_bp.route('/me', methods=['GET'])
