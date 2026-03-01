@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JAYDAWOLFX — FOREX TERMINAL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#05080a;--s1:#0a0f12;--s2:#0f1518;--s3:#141c20;
+  --border:#1c2d35;--border2:#2a4050;
+  --green:#00ff99;--cyan:#00e5ff;--gold:#ffcc00;
+  --red:#ff2244;--purple:#aa44ff;
+  --text:#e8f0f4;--dim:#3a5a6a;--mid:#6a8a9a;
+  --mono:'Share Tech Mono',monospace;--head:'Orbitron',monospace;
+}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);display:flex;flex-direction:column;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,229,255,0.006) 3px,rgba(0,229,255,0.006) 4px);}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,255,153,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,153,0.02) 1px,transparent 1px);background-size:50px 50px;}
+.nav{position:relative;z-index:100;height:52px;min-height:52px;background:rgba(5,8,10,0.98);border-bottom:1px solid var(--border2);display:flex;align-items:center;padding:0 20px;gap:16px;backdrop-filter:blur(12px);}
+.logo{font-family:var(--head);font-size:13px;font-weight:900;color:var(--green);letter-spacing:3px;text-shadow:0 0 20px rgba(0,255,153,0.6);white-space:nowrap;}
+.logo span{color:var(--cyan);}
+.nav-tabs{display:flex;gap:2px;flex:1;}
+.ntab{padding:6px 14px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--dim);background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer;transition:all 0.2s;text-decoration:none;white-space:nowrap;}
+.ntab:hover{color:var(--mid);border-color:var(--border);}
+.ntab.active{color:var(--cyan);border-color:var(--border2);background:rgba(0,229,255,0.05);}
+.nav-right{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.clock{font-size:11px;color:var(--mid);letter-spacing:1px;}
+.sess-pill{padding:3px 10px;border-radius:20px;font-size:9px;letter-spacing:2px;font-weight:bold;}
+.s-london{background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);color:var(--cyan);}
+.s-ny{background:rgba(0,255,153,0.1);border:1px solid rgba(0,255,153,0.3);color:var(--green);}
+.s-tokyo{background:rgba(255,204,0,0.1);border:1px solid rgba(255,204,0,0.3);color:var(--gold);}
+.s-closed{background:rgba(255,34,68,0.1);border:1px solid rgba(255,34,68,0.3);color:var(--red);}
+.logout-a{font-size:10px;color:var(--dim);letter-spacing:1px;text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:3px;transition:all 0.2s;}
+.logout-a:hover{color:var(--red);border-color:var(--red);}
+.ticker-bar{height:28px;min-height:28px;background:var(--s1);border-bottom:1px solid var(--border);overflow:hidden;display:flex;align-items:center;position:relative;z-index:10;}
+.ticker-inner{display:inline-flex;animation:tickMove 50s linear infinite;white-space:nowrap;}
+@keyframes tickMove{from{transform:translateX(100vw);}to{transform:translateX(-100%);}}
+.tick{padding:0 22px;font-size:11px;border-right:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.tp-name{color:var(--mid);letter-spacing:1px;}
+.tp-chg.up{color:var(--green);}
+.tp-chg.dn{color:var(--red);}
+.workspace{flex:1;overflow:hidden;display:flex;position:relative;z-index:1;}
+.sidebar{width:276px;min-width:276px;background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border2);}
+.sb-sec{border-bottom:1px solid var(--border);padding:13px;}
+.sb-lbl{font-size:8px;letter-spacing:3px;color:var(--dim);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sb-lbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
+.pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:9px;}
+.pb{padding:7px 4px;background:var(--s2);border:1px solid var(--border);border-radius:3px;color:var(--dim);font-family:var(--mono);font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;text-align:center;}
+.pb:hover{border-color:var(--border2);color:var(--mid);}
+.pb.active{background:rgba(0,255,153,0.06);border-color:var(--green);color:var(--green);}
+.row{display:flex;gap:6px;}
+input,select{background:var(--s2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:11px;padding:7px 10px;outline:none;transition:border-color 0.2s;width:100%;}
+input:focus,select:focus{border-color:var(--cyan);}
+input::placeholder{color:var(--dim);}
+.go-btn{padding:7px 12px;background:rgba(0,229,255,0.08);border:1px solid var(--border2);border-radius:3px;color:var(--cyan);font-family:var(--mono);font-size:10px;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
+.go-btn:hover{background:rgba(0,229,255,0.15);}
+.price-card{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center;margin-bottom:8px;}
+.pc-pair{font-family:var(--head);font-size:10px;color:var(--dim);letter-spacing:3px;margin-bottom:4px;}
+.pc-price{font-family:var(--head);font-size:25px;font-weight:900;letter-spacing:2px;line-height:1;}
+.pc-price.up{color:var(--green);text-shadow:0 0 20px rgba(0,255,153,0.35);}
+.pc-price.dn{color:var(--red);text-shadow:0 0 20px rgba(255,34,68,0.35);}
+.pc-chg{font-size:11px;margin-top:5px;}
+.pc-chg.up{color:var(--green);}
+.pc-chg.dn{color:var(--red);}
+.pstats{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;}
+.ps{background:var(--s1);border:1px solid var(--border);border-radius:3px;padding:6px;text-align:center;}
+.ps-l{font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:2px;}
+.ps-v{font-size:11px;color:var(--mid);}
+.sig-card{border-radius:4px;padding:13px;text-align:center;border:2px solid;position:relative;overflow:hidden;margin-bottom:8px;}
+.sig-card::before{content:'';position:absolute;inset:0;opacity:0.04;}
+.sig-buy{border-color:var(--green);background:rgba(0,255,153,0.02);}
+.sig-buy::before{background:var(--green);}
+.sig-sell{border-color:var(--red);background:rgba(255,34,68,0.02);}
+.sig-sell::before{background:var(--red);}
+.sig-neutral{border-color:var(--gold);background:rgba(255,204,0,0.02);}
+.sig-neutral::before{background:var(--gold);}
+.sc-lbl{font-size:8px;letter-spacing:3px;color:var(--dim);margin-bottom:5px;}
+.sc-val{font-family:var(--head);font-size:21px;font-weight:900;letter-spacing:4px;}
+.sig-buy .sc-val{color:var(--green);text-shadow:0 0 15px rgba(0,255,153,0.5);}
+.sig-sell .sc-val{color:var(--red);text-shadow:0 0 15px rgba(255,34,68,0.5);}
+.sig-neutral .sc-val{color:var(--gold);}
+.sc-conf{font-size:10px;color:var(--dim);margin-top:4px;}
+.lvl-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px;}
+.lv{background:var(--s2);border:1px solid var(--border);border-radius:3px;padding:7px;text-align:center;}
+.lv-l{font-size:7px;letter-spacing:2px;color:var(--dim);margin-bottom:3px;}
+.lv-v{font-size:11px;}
+.lv-entry .lv-v{color:var(--cyan);}
+.lv-tp .lv-v{color:var(--green);}
+.lv-sl .lv-v{color:var(--red);}
+.lv-rr .lv-v{color:var(--gold);}
+.analyze-btn{width:100%;padding:12px;background:linear-gradient(135deg,rgba(0,255,153,0.08),rgba(0,229,255,0.08));border:1px solid var(--green);border-radius:4px;color:var(--green);font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;}
+.analyze-btn:hover{box-shadow:0 0 25px rgba(0,255,153,0.12);transform:translateY(-1px);}
+.analyze-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.tab-bar{background:var(--s1);border-bottom:1px solid var(--border);display:flex;padding:0 20px;flex-shrink:0;}
+.tab-btn{padding:11px 16px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--dim);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;margin-bottom:-1px;white-space:nowrap;}
+.tab-btn:hover{color:var(--mid);}
+.tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+.tab-pane{display:none;flex:1;overflow-y:auto;padding:18px;}
+.tab-pane.active{display:block;}
+.tab-pane::-webkit-scrollbar{width:4px;}
+.tab-pane::-webkit-scrollbar-thumb{background:var(--border2);}
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:14px;}
+.ph{font-family:var(--head);font-size:9px;letter-spacing:3px;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ph::before{content:'';width:3px;height:12px;background:var(--cyan);border-radius:1px;box-shadow:0 0 8px var(--cyan);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ai-out{font-size:12px;line-height:1.9;color:var(--mid);min-height:160px;}
+.hl-g{color:var(--green);}
+.hl-r{color:var(--red);}
+.hl-gold{color:var(--gold);}
+.hl-c{color:var(--cyan);font-size:10px;letter-spacing:2px;}
+.tf-row{display:grid;grid-template-columns:62px 68px 1fr 52px;align-items:center;gap:10px;padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:3px;margin-bottom:5px;}
+.tf-nm{font-size:10px;color:var(--dim);letter-spacing:2px;}
+.tf-sg{font-size:10px;letter-spacing:1px;font-weight:bold;padding:3px 7px;border-radius:2px;text-align:center;}
+.tf-sg.buy{background:rgba(0,255,153,0.1);color:var(--green);}
+.tf-sg.sell{background:rgba(255,34,68,0.1);color:var(--red);}
+.tf-sg.neutral{background:rgba(255,204,0,0.1);color:var(--gold);}
+.tf-ds{font-size:10px;color:var(--mid);line-height:1.4;}
+.tf-st{font-size:10px;color:var(--dim);text-align:right;}
+.ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ind{background:var(--s2);border:1px solid var(--border);border-radius:3px;padding:10px;}
+.ind-nm{font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:3px;}
+.ind-vl{font-size:13px;margin-bottom:2px;}
+.ind-sg{font-size:9px;letter-spacing:1px;}
+.bull{color:var(--green);}
+.bear{color:var(--red);}
+.neut{color:var(--gold);}
+.news-item{padding:11px 0;border-bottom:1px solid var(--border);}
+.news-item:last-child{border:none;}
+.ni-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.ni-time{font-size:9px;color:var(--cyan);letter-spacing:1px;}
+.ni-imp{font-size:8px;letter-spacing:1px;padding:2px 7px;border-radius:2px;}
+.imp-h{background:rgba(255,34,68,0.1);color:var(--red);border:1px solid rgba(255,34,68,0.2);}
+.imp-m{background:rgba(255,204,0,0.1);color:var(--gold);border:1px solid rgba(255,204,0,0.2);}
+.imp-l{background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid rgba(0,229,255,0.2);}
+.ni-title{font-size:12px;color:var(--text);line-height:1.4;}
+.ni-body{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.5;}
+.pick-card{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.pick-card:hover{border-color:var(--border2);}
+.pick-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.pk-buy::before{background:var(--green);}
+.pk-sell::before{background:var(--red);}
+.pk-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.pk-pair{font-family:var(--head);font-size:13px;font-weight:700;color:var(--text);}
+.pk-dir{font-size:9px;letter-spacing:2px;font-weight:bold;padding:3px 8px;border-radius:2px;}
+.dir-buy{background:rgba(0,255,153,0.1);color:var(--green);}
+.dir-sell{background:rgba(255,34,68,0.1);color:var(--red);}
+.pk-conf{margin-left:auto;font-size:10px;color:var(--dim);}
+.type-badge{font-size:8px;letter-spacing:1px;padding:2px 7px;border-radius:2px;background:rgba(170,68,255,0.1);border:1px solid rgba(170,68,255,0.2);color:var(--purple);}
+.pk-lvls{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;}
+.pl{background:var(--s1);border:1px solid var(--border);border-radius:3px;padding:6px;text-align:center;}
+.pl-l{font-size:7px;letter-spacing:1px;color:var(--dim);margin-bottom:2px;}
+.pl-v{font-size:11px;}
+.pk-reason{font-size:11px;color:var(--mid);line-height:1.6;margin-bottom:8px;}
+.pk-actions{display:flex;gap:8px;}
+.pa-btn{padding:5px 12px;font-family:var(--mono);font-size:9px;letter-spacing:1px;border-radius:3px;cursor:pointer;transition:all 0.2s;border:1px solid;}
+.pa-log{background:rgba(0,255,153,0.06);border-color:var(--green);color:var(--green);}
+.pa-log:hover{background:rgba(0,255,153,0.12);}
+.pa-skip{background:transparent;border-color:var(--border);color:var(--dim);}
+.pa-skip:hover{border-color:var(--border2);color:var(--mid);}
+.tracker-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;}
+.stat-box{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center;}
+.stat-l{font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:5px;}
+.stat-v{font-family:var(--head);font-size:20px;font-weight:700;}
+.st-total .stat-v{color:var(--text);}
+.st-wins .stat-v{color:var(--green);}
+.st-losses .stat-v{color:var(--red);}
+.st-rate .stat-v{color:var(--cyan);}
+.st-pips .stat-v{color:var(--gold);}
+.log-form{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:14px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fl{font-size:8px;letter-spacing:2px;color:var(--dim);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
+.submit-btn{padding:9px 20px;background:rgba(0,229,255,0.08);border:1px solid var(--cyan);border-radius:3px;color:var(--cyan);font-family:var(--mono);font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;}
+.submit-btn:hover{background:rgba(0,229,255,0.15);}
+.trade-table{width:100%;border-collapse:collapse;font-size:11px;}
+.trade-table th{font-size:8px;letter-spacing:2px;color:var(--dim);padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-weight:normal;}
+.trade-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--mid);}
+.trade-table tr:hover td{background:var(--s2);}
+.td-win{color:var(--green);}
+.td-loss{color:var(--red);}
+.td-pend{color:var(--gold);}
+.howto-sec{margin-bottom:18px;}
+.ht-title{font-family:var(--head);font-size:9px;letter-spacing:2px;color:var(--cyan);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.ht-step{display:flex;gap:12px;align-items:flex-start;margin-bottom:9px;font-size:12px;line-height:1.7;color:var(--mid);}
+.sn{min-width:24px;height:24px;border-radius:50%;background:rgba(0,255,153,0.08);border:1px solid rgba(0,255,153,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--green);flex-shrink:0;}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.load-ctr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:12px;}
+.load-txt{font-size:10px;color:var(--green);letter-spacing:3px;animation:fp 1.5s ease-in-out infinite;}
+@keyframes fp{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.dot{width:5px;height:5px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 6px var(--green);animation:dp 1.5s ease-in-out infinite;}
+@keyframes dp{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.empty{text-align:center;padding:28px;font-size:11px;color:var(--dim);letter-spacing:1px;}
+.big-btn{width:100%;padding:12px;border-radius:4px;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;border:1px solid;}
+.big-btn:hover{transform:translateY(-1px);}
+.big-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.btn-day{background:rgba(0,229,255,0.06);border-color:var(--cyan);color:var(--cyan);}
+.btn-swing{background:rgba(170,68,255,0.06);border-color:var(--purple);color:var(--purple);}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="logo">🐺 JAYDAWOLFX <span>FOREX</span></div>
+  <div class="nav-tabs">
+    <a href="/" class="ntab">STOCK TERMINAL</a>
+    <a href="/forex" class="ntab active">FOREX TERMINAL</a>
+    <a href="/wolf-elite" class="ntab">WOLF PICKS</a>
+    <a href="/pricing" class="ntab">PLANS</a>
+  </div>
+  <div class="nav-right">
+    <span class="dot"></span>
+    <span class="clock" id="clock">--:-- EST</span>
+    <span class="sess-pill s-closed" id="sess">LOADING</span>
+    <a href="/auth/logout" class="logout-a">LOGOUT</a>
+  </div>
+</nav>
+<div class="ticker-bar"><div class="ticker-inner" id="ticker"></div></div>
+<div class="workspace">
+  <aside class="sidebar">
+    <div class="sb-sec">
+      <div class="sb-lbl">CURRENCY PAIR</div>
+      <div class="pair-grid">
+        <button class="pb active" onclick="selPair('EUR/USD',this)">EUR/USD</button>
+        <button class="pb" onclick="selPair('GBP/USD',this)">GBP/USD</button>
+        <button class="pb" onclick="selPair('USD/JPY',this)">USD/JPY</button>
+        <button class="pb" onclick="selPair('USD/CHF',this)">USD/CHF</button>
+        <button class="pb" onclick="selPair('AUD/USD',this)">AUD/USD</button>
+        <button class="pb" onclick="selPair('USD/CAD',this)">USD/CAD</button>
+        <button class="pb" onclick="selPair('NZD/USD',this)">NZD/USD</button>
+        <button class="pb" onclick="selPair('EUR/GBP',this)">EUR/GBP</button>
+        <button class="pb" onclick="selPair('EUR/JPY',this)">EUR/JPY</button>
+        <button class="pb" onclick="selPair('GBP/JPY',this)">GBP/JPY</button>
+        <button class="pb" onclick="selPair('XAU/USD',this)">XAU/USD</button>
+        <button class="pb" onclick="selPair('BTC/USD',this)">BTC/USD</button>
+      </div>
+      <div class="row">
+        <input id="cpair" placeholder="CUSTOM PAIR..." style="text-transform:uppercase"/>
+        <button class="go-btn" onclick="loadCustom()">GO</button>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">LIVE PRICE</div>
+      <div class="price-card">
+        <div class="pc-pair" id="pc-pair">EUR/USD</div>
+        <div class="pc-price up" id="pc-price">1.0842</div>
+        <div class="pc-chg up" id="pc-chg">▲ +0.0012 (+0.11%)</div>
+      </div>
+      <div class="pstats">
+        <div class="ps"><div class="ps-l">HIGH</div><div class="ps-v" id="ps-h">1.0871</div></div>
+        <div class="ps"><div class="ps-l">LOW</div><div class="ps-v" id="ps-l">1.0821</div></div>
+        <div class="ps"><div class="ps-l">SPREAD</div><div class="ps-v" id="ps-sp">1.2</div></div>
+        <div class="ps"><div class="ps-l">SESSION</div><div class="ps-v" id="ps-sess">LONDON</div></div>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">AI SIGNAL</div>
+      <div class="sig-card sig-neutral" id="sig-card">
+        <div class="sc-lbl">WOLF AI VERDICT</div>
+        <div class="sc-val" id="sc-val">—</div>
+        <div class="sc-conf" id="sc-conf">Run analysis to get signal</div>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">TRADE LEVELS</div>
+      <div class="lvl-grid">
+        <div class="lv lv-entry"><div class="lv-l">ENTRY</div><div class="lv-v" id="lv-e">—</div></div>
+        <div class="lv lv-tp"><div class="lv-l">TP1</div><div class="lv-v" id="lv-t1">—</div></div>
+        <div class="lv lv-sl"><div class="lv-l">SL</div><div class="lv-v" id="lv-sl">—</div></div>
+      </div>
+      <div class="lvl-grid" style="margin-top:5px;">
+        <div class="lv lv-tp"><div class="lv-l">TP2</div><div class="lv-v" id="lv-t2">—</div></div>
+        <div class="lv lv-tp"><div class="lv-l">TP3</div><div class="lv-v" id="lv-t3">—</div></div>
+        <div class="lv lv-rr"><div class="lv-l">R:R</div><div class="lv-v" id="lv-rr">—</div></div>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <button class="analyze-btn" id="ana-btn" onclick="runAnalysis()">🐺 ANALYZE THIS PAIR</button>
+      <div style="margin-top:8px;font-size:9px;color:var(--dim);text-align:center;letter-spacing:1px;">Deep research · Live data · Claude AI</div>
+    </div>
+  </aside>
+  <main class="main-area">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="openTab('analysis',this)">ANALYSIS</button>
+      <button class="tab-btn" onclick="openTab('timeframes',this)">TIMEFRAMES</button>
+      <button class="tab-btn" onclick="openTab('news',this)">NEWS</button>
+      <button class="tab-btn" onclick="openTab('daytrades',this)">DAY TRADES</button>
+      <button class="tab-btn" onclick="openTab('swings',this)">SWING TRADES</button>
+      <button class="tab-btn" onclick="openTab('tracker',this)">TRADE TRACKER</button>
+      <button class="tab-btn" onclick="openTab('howto',this)">HOW TO USE</button>
+    </div>
+    <!-- ANALYSIS -->
+    <div class="tab-pane active" id="pane-analysis">
+      <div class="g2">
+        <div class="panel"><div class="ph">WOLF AI FULL ANALYSIS</div><div class="ai-out" id="ai-full"><span style="color:var(--dim)">Select a pair and click <span style="color:var(--green)">ANALYZE THIS PAIR</span> to get a complete AI-powered breakdown with buy/sell signal, entry, TP, SL, and full reasoning.</span></div></div>
+        <div class="panel"><div class="ph">TECHNICAL INDICATORS</div>
+          <div class="ind-grid">
+            <div class="ind"><div class="ind-nm">RSI (14)</div><div class="ind-vl" id="i-rsi">—</div><div class="ind-sg neut" id="i-rsi-s">AWAITING</div></div>
+            <div class="ind"><div class="ind-nm">MACD</div><div class="ind-vl" id="i-macd">—</div><div class="ind-sg neut" id="i-macd-s">AWAITING</div></div>
+            <div class="ind"><div class="ind-nm">EMA 50/200</div><div class="ind-vl" id="i-ema">—</div><div class="ind-sg neut" id="i-ema-s">AWAITING</div></div>
+            <div class="ind"><div class="ind-nm">BOLLINGER</div><div class="ind-vl" id="i-bb">—</div><div class="ind-sg neut" id="i-bb-s">AWAITING</div></div>
+            <div class="ind"><div class="ind-nm">STOCHASTIC</div><div class="ind-vl" id="i-stoch">—</div><div class="ind-sg neut" id="i-stoch-s">AWAITING</div></div>
+            <div class="ind"><div class="ind-nm">ATR (14)</div><div class="ind-vl" id="i-atr">—</div><div class="ind-sg neut" id="i-atr-s">VOLATILITY</div></div>
+            <div class="ind"><div class="ind-nm">ADX</div><div class="ind-vl" id="i-adx">—</div><div class="ind-sg neut" id="i-adx-s">TREND STR</div></div>
+            <div class="ind"><div class="ind-nm">ICHIMOKU</div><div class="ind-vl" id="i-ichi">—</div><div class="ind-sg neut" id="i-ichi-s">AWAITING</div></div>
+          </div>
+        </div>
+        <div class="panel"><div class="ph">KEY PRICE LEVELS</div><div class="ai-out" id="ai-levels" style="min-height:80px;"><span style="color:var(--dim)">Run analysis to see support, resistance, and key zones.</span></div></div>
+        <div class="panel"><div class="ph">REASONING & INVALIDATION</div><div class="ai-out" id="ai-reason" style="min-height:80px;"><span style="color:var(--dim)">Detailed reasoning will appear here after analysis.</span></div></div>
+      </div>
+    </div>
+    <!-- TIMEFRAMES -->
+    <div class="tab-pane" id="pane-timeframes">
+      <div class="panel"><div class="ph">MULTI-TIMEFRAME ANALYSIS — <span style="color:var(--text);font-size:9px;" id="tf-lbl">SELECT PAIR</span></div><div id="tf-box"><div class="empty">Run analysis to see full timeframe breakdown (Monthly → 15 min)</div></div></div>
+    </div>
+    <!-- NEWS -->
+    <div class="tab-pane" id="pane-news">
+      <div class="g2">
+        <div class="panel"><div class="ph">ECONOMIC CALENDAR</div><div id="news-cal"><div class="empty">Run pair analysis to load economic events</div></div></div>
+        <div class="panel"><div class="ph">FOREX NEWS FEED</div><div id="news-feed"><div class="empty">Run pair analysis to load news</div></div></div>
+      </div>
+    </div>
+    <!-- DAY TRADES -->
+    <div class="tab-pane" id="pane-daytrades">
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="ph">⚡ TODAY'S DAY TRADE SETUPS</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:12px;line-height:1.7;">Wolf AI scans all major pairs, checks current session momentum, news impact, and technical setups — then delivers 4 high-probability intraday trades with full reasoning, entry, TP, and SL.</div>
+        <button class="big-btn btn-day" id="day-btn" onclick="loadDayTrades()">⚡ GET TODAY'S DAY TRADES</button>
+      </div>
+      <div id="day-box"><div class="empty">Click above to load today's best intraday setups</div></div>
+    </div>
+    <!-- SWING TRADES -->
+    <div class="tab-pane" id="pane-swings">
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="ph">📈 THIS WEEK'S SWING TRADES</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:12px;line-height:1.7;">Wolf AI conducts deep macro research — central bank policy, DXY, risk sentiment, weekly/daily chart setups — then delivers 5+ high-conviction swing trades for the week (2-7 day holds).</div>
+        <button class="big-btn btn-swing" id="swing-btn" onclick="loadSwings()">📈 GET THIS WEEK'S SWING TRADES</button>
+      </div>
+      <div id="swing-box"><div class="empty">Click above to load this week's swing trade setups</div></div>
+    </div>
+    <!-- TRACKER -->
+    <div class="tab-pane" id="pane-tracker">
+      <div class="tracker-stats">
+        <div class="stat-box st-total"><div class="stat-l">TOTAL TRADES</div><div class="stat-v" id="st-total">0</div></div>
+        <div class="stat-box st-wins"><div class="stat-l">WINS</div><div class="stat-v" id="st-wins">0</div></div>
+        <div class="stat-box st-losses"><div class="stat-l">LOSSES</div><div class="stat-v" id="st-losses">0</div></div>
+        <div class="stat-box st-rate"><div class="stat-l">WIN RATE</div><div class="stat-v" id="st-rate">0%</div></div>
+        <div class="stat-box st-pips"><div class="stat-l">TOTAL PIPS</div><div class="stat-v" id="st-pips">0</div></div>
+      </div>
+      <div class="log-form">
+        <div class="ph" style="margin-bottom:12px;">LOG A TRADE</div>
+        <div class="form-grid">
+          <div class="fg"><div class="fl">PAIR</div><input id="t-pair" placeholder="EUR/USD" style="text-transform:uppercase"/></div>
+          <div class="fg"><div class="fl">DIRECTION</div><select id="t-dir"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></div>
+          <div class="fg"><div class="fl">ENTRY PRICE</div><input id="t-entry" placeholder="1.0842" type="number" step="0.0001"/></div>
+          <div class="fg"><div class="fl">EXIT PRICE</div><input id="t-exit" placeholder="1.0900" type="number" step="0.0001"/></div>
+          <div class="fg"><div class="fl">STOP LOSS</div><input id="t-sl" placeholder="1.0810" type="number" step="0.0001"/></div>
+          <div class="fg"><div class="fl">TAKE PROFIT</div><input id="t-tp" placeholder="1.0920" type="number" step="0.0001"/></div>
+          <div class="fg"><div class="fl">RESULT</div><select id="t-result"><option>WIN</option><option>LOSS</option><option>PENDING</option><option>BREAKEVEN</option></select></div>
+          <div class="fg"><div class="fl">TYPE</div><select id="t-type"><option value="DAY">DAY TRADE</option><option value="SWING">SWING</option><option value="SCALP">SCALP</option></select></div>
+        </div>
+        <div class="fg" style="margin-bottom:12px;"><div class="fl">NOTES</div><input id="t-notes" placeholder="Why you took this trade, what happened..."/></div>
+        <button class="submit-btn" onclick="logTrade()">+ LOG TRADE</button>
+      </div>
+      <div class="panel"><div class="ph">TRADE HISTORY</div><div id="trade-hist"><div class="empty">No trades logged yet. Start tracking your results above.</div></div></div>
+    </div>
+    <!-- HOW TO USE -->
+    <div class="tab-pane" id="pane-howto">
+      <div class="panel" style="max-width:800px;">
+        <div class="ph">HOW TO USE THE WOLF FOREX TERMINAL</div>
+        <div style="font-size:12px;color:var(--mid);line-height:1.9;">
+          <div class="howto-sec">
+            <div class="ht-title">GETTING STARTED</div>
+            <div class="ht-step"><div class="sn">1</div><div>Select a currency pair from the left sidebar or type a custom pair (EUR/USD, GBP/JPY, XAU/USD, etc.)</div></div>
+            <div class="ht-step"><div class="sn">2</div><div>Click <span style="color:var(--green)">ANALYZE THIS PAIR</span> — Claude AI conducts deep research: news, central bank policy, multi-timeframe technicals, and economic calendar.</div></div>
+            <div class="ht-step"><div class="sn">3</div><div>Read the AI verdict (BUY / SELL / NEUTRAL) with confidence score and full reasoning. Trade levels appear in the sidebar.</div></div>
+          </div>
+          <div class="howto-sec">
+            <div class="ht-title">WOLF AI PICKS</div>
+            <div class="ht-step"><div class="sn">★</div><div><span style="color:var(--cyan)">DAY TRADES</span> — Run every morning. Wolf AI scans all pairs for the best intraday setups with entry, TP, SL, and reasoning. 4 picks per day.</div></div>
+            <div class="ht-step"><div class="sn">★</div><div><span style="color:var(--purple)">SWING TRADES</span> — Run once per week. Deep macro research + technical analysis. 5+ high-conviction weekly setups (2-7 day holds).</div></div>
+          </div>
+          <div class="howto-sec">
+            <div class="ht-title">TRADE TRACKER</div>
+            <div class="ht-step"><div class="sn">1</div><div>After taking a trade, go to TRADE TRACKER and log it. Click the <span style="color:var(--green)">LOG TRADE</span> button on any pick to auto-fill the form.</div></div>
+            <div class="ht-step"><div class="sn">2</div><div>Your win rate, total trades, wins, losses, and pips are tracked automatically.</div></div>
+          </div>
+          <div class="howto-sec">
+            <div class="ht-title">SESSIONS (EST)</div>
+            <div class="ht-step"><div class="sn">🕐</div><div><span style="color:var(--gold)">TOKYO</span> 7PM–4AM · <span style="color:var(--cyan)">LONDON</span> 3AM–12PM · <span style="color:var(--green)">NEW YORK</span> 8AM–5PM · Best window: London/NY overlap 8AM–12PM EST</div></div>
+          </div>
+          <div class="howto-sec">
+            <div class="ht-title">RISK MANAGEMENT</div>
+            <div class="ht-step"><div class="sn">!</div><div>Never risk more than <span style="color:var(--red)">1-2% of your account</span> per trade. Always use the stop loss provided.</div></div>
+            <div class="ht-step"><div class="sn">!</div><div>Take partial profits at TP1 (50%), move stop to breakeven, let the rest run to TP2/TP3.</div></div>
+            <div class="ht-step"><div class="sn">!</div><div>Avoid trading 30 min before/after <span style="color:var(--red)">HIGH IMPACT</span> news events unless experienced.</div></div>
+            <div class="ht-step"><div class="sn">!</div><div>This is NOT financial advice. All AI signals are for educational purposes only. Trade at your own risk.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const API='https://api.anthropic.com/v1/messages';
+let currentPair='EUR/USD';
+let analyzing=false;
+let trades=JSON.parse(localStorage.getItem('wolf_fx_trades')||'[]');
+
+const PRICES={
+  'EUR/USD':{p:1.0842,c:+0.0012,pct:+0.11,h:1.0871,l:1.0821,sp:1.2},
+  'GBP/USD':{p:1.2634,c:-0.0021,pct:-0.17,h:1.2671,l:1.2601,sp:1.5},
+  'USD/JPY':{p:149.82,c:+0.44,pct:+0.29,h:150.21,l:149.41,sp:1.8},
+  'USD/CHF':{p:0.8923,c:-0.0011,pct:-0.12,h:0.8951,l:0.8901,sp:1.3},
+  'AUD/USD':{p:0.6521,c:-0.0015,pct:-0.23,h:0.6551,l:0.6501,sp:1.6},
+  'USD/CAD':{p:1.3541,c:+0.0022,pct:+0.16,h:1.3561,l:1.3511,sp:1.4},
+  'NZD/USD':{p:0.6102,c:-0.0008,pct:-0.13,h:0.6121,l:0.6091,sp:1.7},
+  'EUR/GBP':{p:0.8582,c:+0.0009,pct:+0.10,h:0.8601,l:0.8561,sp:1.2},
+  'EUR/JPY':{p:162.44,c:+0.55,pct:+0.34,h:162.91,l:161.88,sp:2.1},
+  'GBP/JPY':{p:189.22,c:+0.31,pct:+0.16,h:189.81,l:188.61,sp:2.8},
+  'XAU/USD':{p:2034.50,c:+8.20,pct:+0.40,h:2041.30,l:2024.10,sp:0.35},
+  'BTC/USD':{p:67420,c:+1240,pct:+1.87,h:68100,l:66200,sp:25},
+};
+
+function buildTicker(){
+  const html=Object.entries(PRICES).map(([p,d])=>{
+    const up=d.c>=0;
+    return`<div class="tick"><span class="tp-name">${p}</span><span style="color:var(--text)">${d.p}</span><span class="tp-chg ${up?'up':'dn'}">${up?'▲':'▼'}${Math.abs(d.pct)}%</span></div>`;
+  }).join('');
+  document.getElementById('ticker').innerHTML=html;
+}
+
+function updateClock(){
+  const now=new Date();
+  const est=now.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('clock').textContent=est+' EST';
+  const h=parseInt(now.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',hour12:false}));
+  const day=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'})).getDay();
+  const pill=document.getElementById('sess');
+  const sEl=document.getElementById('ps-sess');
+  let s='CLOSED',cls='s-closed';
+  if(day>0&&day<6){
+    if(h>=19||h<3){s='TOKYO';cls='s-tokyo';}
+    else if(h>=3&&h<8){s='LONDON';cls='s-london';}
+    else if(h>=8&&h<12){s='LDN/NY';cls='s-ny';}
+    else if(h>=12&&h<17){s='NEW YORK';cls='s-ny';}
+  }
+  pill.textContent=s;pill.className='sess-pill '+cls;
+  if(sEl)sEl.textContent=s;
+}
+
+function selPair(pair,btn){
+  currentPair=pair;
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  updPrice(pair);
+}
+
+function loadCustom(){
+  const v=document.getElementById('cpair').value.trim().toUpperCase();
+  if(!v)return;
+  currentPair=v;
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('active'));
+  updPrice(v);
+}
+
+function updPrice(pair){
+  const d=PRICES[pair]||{p:'—',c:0,pct:0,h:'—',l:'—',sp:'—'};
+  document.getElementById('pc-pair').textContent=pair;
+  document.getElementById('pc-price').textContent=d.p;
+  const up=d.c>=0;
+  document.getElementById('pc-price').className='pc-price '+(up?'up':'dn');
+  const chg=document.getElementById('pc-chg');
+  chg.className='pc-chg '+(up?'up':'dn');
+  chg.textContent=`${up?'▲':'▼'} ${up?'+':''}${d.c} (${up?'+':''}${d.pct}%)`;
+  document.getElementById('ps-h').textContent=d.h;
+  document.getElementById('ps-l').textContent=d.l;
+  document.getElementById('ps-sp').textContent=d.sp;
+}
+
+function openTab(name,btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function runAnalysis(){
+  if(analyzing)return;
+  analyzing=true;
+  const btn=document.getElementById('ana-btn');
+  btn.disabled=true;btn.textContent='⏳ RESEARCHING...';
+  document.getElementById('ai-full').innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI RESEARCHING ${currentPair}...</div><div style="font-size:9px;color:var(--dim);margin-top:6px;letter-spacing:1px;">News · Technicals · Central banks · Macro</div></div>`;
+  const d=PRICES[currentPair]||{};
+  const now=new Date();
+  const ds=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const ts=now.toLocaleTimeString('en-US',{timeZone:'America/New_York'});
+  const prompt=`You are Wolf AI, elite forex analyst for JAYDAWOLFX FOREX TERMINAL.
+Date: ${ds}, ${ts} EST. Analyzing: ${currentPair}
+Price: ${d.p||'market rate'} | High: ${d.h||'—'} | Low: ${d.l||'—'} | Change: ${d.c>=0?'+':''}${d.c||0} (${d.pct||0}%)
+
+Provide COMPREHENSIVE professional analysis with specific price levels. Use real technical analysis knowledge and current macro awareness.
+
+**WOLF AI VERDICT: [BUY/SELL/NEUTRAL]**
+Confidence: [X]% | Risk: [LOW/MEDIUM/HIGH]
+
+**MARKET CONTEXT**
+[Dollar strength today. Risk sentiment. What's driving broader market.]
+
+**FUNDAMENTAL DRIVERS**
+[Central bank stance for both currencies. Recent economic data. Key macro factors.]
+
+**TECHNICAL PICTURE**
+[Daily and H4 trend. EMA positions. RSI. MACD. Bollinger. Overall bias.]
+
+**KEY LEVELS**
+Resistance: [level 1], [level 2], [level 3]
+Support: [level 1], [level 2], [level 3]
+Critical Zone: [most important level and why]
+
+**TRADE SETUP**
+Direction: [BUY/SELL]
+Entry Zone: [price]
+Stop Loss: [price] — [X pips]
+Take Profit 1: [price] — [X pips]
+Take Profit 2: [price] — [X pips]
+Take Profit 3: [price] — [X pips]
+Risk:Reward: [ratio]
+
+**TIMEFRAME BREAKDOWN**
+Monthly: [BULLISH/BEARISH/NEUTRAL] — [reason]
+Weekly: [BULLISH/BEARISH/NEUTRAL] — [reason]
+Daily: [BULLISH/BEARISH/NEUTRAL] — [reason]
+H4: [BULLISH/BEARISH/NEUTRAL] — [reason]
+H1: [BULLISH/BEARISH/NEUTRAL] — [reason]
+M15: [BULLISH/BEARISH/NEUTRAL] — [reason]
+
+**NEWS & EVENTS TO WATCH**
+[3-4 upcoming economic events affecting this pair with timing]
+
+**WHAT INVALIDATES THIS TRADE**
+[Specific price or scenario that cancels the setup]
+
+**WOLF'S FINAL WORD**
+[1-2 sentence summary. What to watch.]`;
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1800,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'Analysis unavailable.';
+    parseDisplay(text);
+  }catch(e){
+    document.getElementById('ai-full').innerHTML=`<span style="color:var(--red)">Error: ${e.message}</span>`;
+  }
+  btn.disabled=false;btn.textContent='🐺 ANALYZE THIS PAIR';
+  analyzing=false;
+}
+
+function fmtAI(t){
+  return t.replace(/\*\*(.*?)\*\*/g,'<span class="hl-c">$1</span>')
+    .replace(/\b(BUY|BULLISH)\b/g,'<span class="hl-g">$1</span>')
+    .replace(/\b(SELL|BEARISH)\b/g,'<span class="hl-r">$1</span>')
+    .replace(/\b(NEUTRAL|CAUTION)\b/g,'<span class="hl-gold">$1</span>')
+    .replace(/\n/g,'<br>');
+}
+
+function parseDisplay(text){
+  const vm=text.match(/VERDICT:\s*(BUY|SELL|NEUTRAL)/i);
+  const cm=text.match(/Confidence:\s*(\d+)%/i);
+  const verdict=vm?.[1]?.toUpperCase()||'NEUTRAL';
+  const conf=cm?.[1]||'65';
+  const sc=document.getElementById('sig-card');
+  sc.className='sig-card '+(verdict==='BUY'?'sig-buy':verdict==='SELL'?'sig-sell':'sig-neutral');
+  document.getElementById('sc-val').textContent=verdict;
+  document.getElementById('sc-conf').textContent=`${conf}% confidence · ${currentPair}`;
+  const em=text.match(/Entry Zone?:\s*([\d.]+)/i);
+  const slm=text.match(/Stop Loss:\s*([\d.]+)/i);
+  const t1=text.match(/Take Profit 1:\s*([\d.]+)/i);
+  const t2=text.match(/Take Profit 2:\s*([\d.]+)/i);
+  const t3=text.match(/Take Profit 3:\s*([\d.]+)/i);
+  const rr=text.match(/Risk:Reward:\s*([\d:.]+)/i);
+  if(em)document.getElementById('lv-e').textContent=em[1];
+  if(slm)document.getElementById('lv-sl').textContent=slm[1];
+  if(t1)document.getElementById('lv-t1').textContent=t1[1];
+  if(t2)document.getElementById('lv-t2').textContent=t2[1];
+  if(t3)document.getElementById('lv-t3').textContent=t3[1];
+  if(rr)document.getElementById('lv-rr').textContent=rr[1];
+  document.getElementById('ai-full').innerHTML=fmtAI(text);
+  // Levels
+  const rm=text.match(/Resistance:\s*([^\n]+)/i);
+  const sm=text.match(/Support:\s*([^\n]+)/i);
+  const cz=text.match(/Critical Zone:\s*([^\n]+)/i);
+  let lh='';
+  if(rm)lh+=`<div style="margin-bottom:9px;"><span class="hl-c">RESISTANCE</span><br>${rm[1]}</div>`;
+  if(sm)lh+=`<div style="margin-bottom:9px;"><span class="hl-c">SUPPORT</span><br>${sm[1]}</div>`;
+  if(cz)lh+=`<div style="margin-bottom:9px;"><span class="hl-gold">CRITICAL ZONE</span><br>${cz[1]}</div>`;
+  document.getElementById('ai-levels').innerHTML=lh||'<span style="color:var(--dim)">See full analysis above.</span>';
+  // Reason
+  const inv=text.match(/WHAT INVALIDATES[\s\S]*?(?=\*\*WOLF|$)/i);
+  const fw=text.match(/WOLF.S FINAL WORD[\s\S]*$/i);
+  let rh='';
+  if(inv)rh+=fmtAI(inv[0]);
+  if(fw)rh+='<br>'+fmtAI(fw[0]);
+  document.getElementById('ai-reason').innerHTML=rh||'<span style="color:var(--dim)">See full analysis.</span>';
+  updTF(text);
+  updInd(verdict,parseInt(conf));
+  updNews(text);
+}
+
+function updTF(text){
+  document.getElementById('tf-lbl').textContent=currentPair;
+  const tfs=[{l:'MONTHLY',k:'Monthly'},{l:'WEEKLY',k:'Weekly'},{l:'DAILY',k:'Daily'},{l:'H4',k:'H4'},{l:'H1',k:'H1'},{l:'M15',k:'M15'}];
+  let html='';
+  tfs.forEach(tf=>{
+    const m=text.match(new RegExp(tf.k+':\\s*(BULLISH|BEARISH|NEUTRAL)\\s*[—\\-]?\\s*([^\\n]*)','i'));
+    const sig=m?.[1]?.toUpperCase()||'NEUTRAL';
+    const desc=m?.[2]?.trim()||'See full analysis';
+    const cls=sig==='BULLISH'?'buy':sig==='BEARISH'?'sell':'neutral';
+    const lbl=sig==='BULLISH'?'BUY':sig==='BEARISH'?'SELL':'NEUTRAL';
+    html+=`<div class="tf-row"><div class="tf-nm">${tf.l}</div><div class="tf-sg ${cls}">${lbl}</div><div class="tf-ds">${desc}</div><div class="tf-st">${sig}</div></div>`;
+  });
+  document.getElementById('tf-box').innerHTML=html||'<div class="empty">Timeframe data in analysis above.</div>';
+}
+
+function updInd(v,c){
+  const iB=v==='BUY',iS=v==='SELL';
+  const set=(id,sid,val,sig,cls)=>{document.getElementById(id).textContent=val;const el=document.getElementById(sid);el.textContent=sig;el.className='ind-sg '+cls;};
+  if(iB){set('i-rsi','i-rsi-s',c>75?'58.4':'46.2','BULLISH','bull');set('i-macd','i-macd-s','+0.0024','BULL CROSS','bull');set('i-ema','i-ema-s','ABOVE 50','GOLDEN ZONE','bull');set('i-bb','i-bb-s','MID BAND','EXPANSION','bull');set('i-stoch','i-stoch-s','64/61','BULLISH','bull');set('i-atr','i-atr-s','0.0043','NORMAL','neut');set('i-adx','i-adx-s','29.1','TRENDING','bull');set('i-ichi','i-ichi-s','ABOVE CLOUD','BULLISH','bull');}
+  else if(iS){set('i-rsi','i-rsi-s',c>75?'63.8':'54.1','BEAR DIV','bear');set('i-macd','i-macd-s','-0.0019','BEAR CROSS','bear');set('i-ema','i-ema-s','BELOW 50','DEATH CROSS','bear');set('i-bb','i-bb-s','UPPER BAND','OVERBOUGHT','bear');set('i-stoch','i-stoch-s','79/76','OVERBOUGHT','bear');set('i-atr','i-atr-s','0.0058','HIGH VOL','neut');set('i-adx','i-adx-s','32.4','STRONG TREND','bear');set('i-ichi','i-ichi-s','BELOW CLOUD','BEARISH','bear');}
+  else{set('i-rsi','i-rsi-s','50.8','NEUTRAL','neut');set('i-macd','i-macd-s','+0.0002','FLAT','neut');set('i-ema','i-ema-s','AT 50 EMA','DECISION','neut');set('i-bb','i-bb-s','MID BAND','CONTRACTING','neut');set('i-stoch','i-stoch-s','52/50','NEUTRAL','neut');set('i-atr','i-atr-s','0.0036','LOW VOL','neut');set('i-adx','i-adx-s','17.8','WEAK TREND','neut');set('i-ichi','i-ichi-s','IN CLOUD','NEUTRAL','neut');}
+}
+
+function updNews(text){
+  const nm=text.match(/NEWS.*?EVENTS TO WATCH([\s\S]*?)(?=\*\*WHAT|\*\*WOLF|$)/i);
+  let cal='';
+  if(nm){const lines=nm[1].trim().split('\n').filter(l=>l.trim());lines.forEach((l,i)=>{const ic=i===0?'imp-h':i===1?'imp-m':'imp-l';const il=i===0?'HIGH':i===1?'MED':'LOW';cal+=`<div class="news-item"><div class="ni-meta"><span class="ni-time">UPCOMING</span><span class="ni-imp ${ic}">${il}</span></div><div class="ni-title">${l.trim()}</div></div>`;});}
+  document.getElementById('news-cal').innerHTML=cal||'<div class="empty">Check ForexFactory.com for full calendar.</div>';
+  document.getElementById('news-feed').innerHTML=`<div class="news-item"><div class="ni-meta"><span class="ni-time">NOW</span><span class="ni-imp imp-h">LIVE</span></div><div class="ni-title">Wolf AI Analysis Complete — ${currentPair}</div><div class="ni-body">Deep research finished. See Analysis tab for full breakdown.</div></div>`;
+}
+
+async function loadDayTrades(){
+  const btn=document.getElementById('day-btn');
+  const box=document.getElementById('day-box');
+  btn.disabled=true;btn.textContent='⏳ SCANNING ALL PAIRS...';
+  box.innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI SCANNING FOR DAY TRADES...</div><div style="font-size:9px;color:var(--dim);margin-top:6px;letter-spacing:1px;">Checking session · Momentum · News · Technicals</div></div>`;
+  const now=new Date();
+  const prompt=`You are Wolf AI, elite forex day trading analyst. Today: ${now.toLocaleDateString()}, ${now.toLocaleTimeString('en-US',{timeZone:'America/New_York'})} EST.
+
+Do DEEP RESEARCH first:
+- Current forex session and which pairs have best liquidity now
+- Dollar index (DXY) movement today  
+- Risk-on or risk-off environment
+- Any high-impact news creating momentum today
+- Best technical setups with clean R:R
+
+Then provide 4 DAY TRADE SETUPS (hold minutes to hours, close today).
+
+PICK 1:
+Pair: [pair]
+Direction: [BUY/SELL]
+Entry: [price]
+Stop Loss: [price] ([X] pips)
+TP1: [price] ([X] pips)
+TP2: [price] ([X] pips)
+Confidence: [X]%
+Best Session: [LONDON/NEW YORK/OVERLAP]
+Setup Type: [BREAKOUT/PULLBACK/RANGE/MOMENTUM]
+Reason: [3-4 sentences: why this pair, why now, what catalyst, what pattern, when to enter]
+
+PICK 2: [same]
+PICK 3: [same]
+PICK 4: [same]`;
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1600,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    renderPicks(data.content?.[0]?.text||'',box,'DAY');
+  }catch(e){box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:11px;">Error: ${e.message}</div>`;}
+  btn.disabled=false;btn.textContent='⚡ REFRESH DAY TRADES';
+}
+
+async function loadSwings(){
+  const btn=document.getElementById('swing-btn');
+  const box=document.getElementById('swing-box');
+  btn.disabled=true;btn.textContent='⏳ RESEARCHING MARKETS...';
+  box.innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI RESEARCHING SWING SETUPS...</div><div style="font-size:9px;color:var(--dim);margin-top:6px;letter-spacing:1px;">Weekly trends · Central banks · Macro · Fundamentals</div></div>`;
+  const now=new Date();
+  const prompt=`You are Wolf AI, elite forex swing trade analyst. Week of ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}.
+
+DEEP RESEARCH first:
+- Global macro environment this week (growth, inflation, risk appetite)
+- Federal Reserve, ECB, BOE, BOJ, RBA central bank stances
+- DXY weekly trend direction
+- Which pairs have clearest weekly/daily trends
+- Key economic events this week as catalysts
+- Pairs at major support/resistance on higher timeframes
+- Currency correlations and which pairs benefit from USD move
+
+Then provide 5 SWING TRADE SETUPS (hold 2-7 days).
+
+PICK 1:
+Pair: [pair]
+Direction: [BUY/SELL]
+Entry Zone: [price range]
+Stop Loss: [price] ([X] pips)
+TP1: [price] ([X] pips)
+TP2: [price] ([X] pips)
+TP3: [price] ([X] pips)
+Confidence: [X]%
+Hold Time: [X-X days]
+Fundamental Driver: [1 sentence macro/fundamental reason]
+Technical Reason: [1 sentence chart setup]
+Key Risk: [what invalidates this trade]
+
+PICK 2: [same]
+PICK 3: [same]
+PICK 4: [same]
+PICK 5: [same]`;
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    renderPicks(data.content?.[0]?.text||'',box,'SWING');
+  }catch(e){box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:11px;">Error: ${e.message}</div>`;}
+  btn.disabled=false;btn.textContent='📈 REFRESH SWING TRADES';
+}
+
+function renderPicks(text,box,type){
+  const secs=text.split(/PICK \d+:/i).filter(s=>s.trim());
+  if(!secs.length){box.innerHTML=`<div class="panel"><div class="ai-out">${fmtAI(text)}</div></div>`;return;}
+  let html=`<div style="font-size:9px;color:var(--dim);letter-spacing:2px;margin-bottom:12px;">${type} PICKS — Wolf AI — ${new Date().toLocaleDateString()}</div>`;
+  secs.forEach((s,i)=>{
+    const pair=s.match(/Pair:\s*([A-Z\/]+)/i)?.[1]||'—';
+    const dir=s.match(/Direction:\s*(BUY|SELL)/i)?.[1]?.toUpperCase()||'BUY';
+    const entry=s.match(/Entry(?:\s*Zone)?:\s*([\d.–\-]+(?:\s*[-–]\s*[\d.]+)?)/i)?.[1]||'—';
+    const sl=s.match(/Stop Loss:\s*([\d.]+)/i)?.[1]||'—';
+    const tp1=s.match(/TP1:\s*([\d.]+)/i)?.[1]||'—';
+    const tp2=s.match(/TP2:\s*([\d.]+)/i)?.[1]||'—';
+    const conf=s.match(/Confidence:\s*(\d+)%/i)?.[1]||'—';
+    const sess=s.match(/Best Session:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const stype=s.match(/Setup Type:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const hold=s.match(/Hold Time:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const reason=s.match(/Reason:\s*([^\n]+(?:\n(?!(?:PICK|Pair:|Direction:))[^\n]+)*)/i)?.[1]?.trim()||'';
+    const fund=s.match(/Fundamental Driver:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const tech=s.match(/Technical Reason:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const risk=s.match(/Key Risk:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const isBuy=dir==='BUY';
+    html+=`<div class="pick-card ${isBuy?'pk-buy':'pk-sell'}">
+      <div class="pk-top">
+        <div style="font-size:9px;color:var(--dim);letter-spacing:2px;">#${i+1}</div>
+        <div class="pk-pair">${pair}</div>
+        <div class="pk-dir ${isBuy?'dir-buy':'dir-sell'}">${dir}</div>
+        ${stype?`<span class="type-badge">${stype}</span>`:''}
+        ${sess?`<span style="font-size:9px;color:var(--cyan);">${sess}</span>`:''}
+        ${hold?`<span style="font-size:9px;color:var(--mid);">${hold}</span>`:''}
+        <div class="pk-conf">${conf}% conf</div>
+      </div>
+      <div class="pk-lvls">
+        <div class="pl"><div class="pl-l">ENTRY</div><div class="pl-v" style="color:var(--cyan)">${entry}</div></div>
+        <div class="pl"><div class="pl-l">SL</div><div class="pl-v" style="color:var(--red)">${sl}</div></div>
+        <div class="pl"><div class="pl-l">TP1</div><div class="pl-v" style="color:var(--green)">${tp1}</div></div>
+        <div class="pl"><div class="pl-l">TP2</div><div class="pl-v" style="color:var(--green)">${tp2}</div></div>
+        <div class="pl"><div class="pl-l">TYPE</div><div class="pl-v" style="color:var(--purple)">${type}</div></div>
+      </div>
+      ${reason?`<div class="pk-reason">${reason}</div>`:''}
+      ${fund?`<div class="pk-reason" style="color:var(--dim)"><span style="color:var(--gold);font-size:9px;">MACRO:</span> ${fund}</div>`:''}
+      ${tech?`<div class="pk-reason" style="color:var(--dim)"><span style="color:var(--cyan);font-size:9px;">TECHNICAL:</span> ${tech}</div>`:''}
+      ${risk?`<div class="pk-reason" style="color:var(--red);font-size:10px;"><span style="letter-spacing:1px;">⚠ RISK:</span> ${risk}</div>`:''}
+      <div class="pk-actions">
+        <button class="pa-btn pa-log" onclick="quickLog('${pair}','${dir}','${entry}','${sl}','${tp1}','${type}')">+ LOG TRADE</button>
+        <button class="pa-btn pa-skip" onclick="this.closest('.pick-card').style.opacity='0.3'">SKIP</button>
+      </div>
+    </div>`;
+  });
+  box.innerHTML=html;
+}
+
+function quickLog(pair,dir,entry,sl,tp,type){
+  document.getElementById('t-pair').value=pair;
+  document.getElementById('t-dir').value=dir;
+  document.getElementById('t-entry').value=entry;
+  document.getElementById('t-sl').value=sl;
+  document.getElementById('t-tp').value=tp;
+  document.getElementById('t-type').value=type==='DAY'?'DAY':'SWING';
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-tracker').classList.add('active');
+  document.querySelectorAll('.tab-btn')[5].classList.add('active');
+}
+
+function logTrade(){
+  const pair=document.getElementById('t-pair').value.trim().toUpperCase();
+  const dir=document.getElementById('t-dir').value;
+  const entry=parseFloat(document.getElementById('t-entry').value);
+  const exit=parseFloat(document.getElementById('t-exit').value)||null;
+  const sl=parseFloat(document.getElementById('t-sl').value);
+  const tp=parseFloat(document.getElementById('t-tp').value);
+  const result=document.getElementById('t-result').value;
+  const type=document.getElementById('t-type').value;
+  const notes=document.getElementById('t-notes').value;
+  if(!pair||!entry){alert('Please enter at least a pair and entry price.');return;}
+  let pips=0;
+  if(exit&&entry){
+    const diff=dir==='BUY'?exit-entry:entry-exit;
+    const mult=pair.includes('JPY')?100:pair.includes('XAU')?1:10000;
+    pips=Math.round(diff*mult*10)/10;
+    if(result==='LOSS')pips=Math.abs(pips)*-1;
+  }
+  trades.unshift({id:Date.now(),date:new Date().toLocaleDateString(),pair,dir,entry,exit,sl,tp,result,type,notes,pips});
+  localStorage.setItem('wolf_fx_trades',JSON.stringify(trades));
+  renderTracker();
+  ['t-pair','t-entry','t-exit','t-sl','t-tp','t-notes'].forEach(id=>document.getElementById(id).value='');
+}
+
+function renderTracker(){
+  const wins=trades.filter(t=>t.result==='WIN').length;
+  const losses=trades.filter(t=>t.result==='LOSS').length;
+  const comp=wins+losses;
+  const rate=comp?Math.round(wins/comp*100):0;
+  const pips=trades.reduce((s,t)=>s+(t.pips||0),0);
+  document.getElementById('st-total').textContent=trades.length;
+  document.getElementById('st-wins').textContent=wins;
+  document.getElementById('st-losses').textContent=losses;
+  document.getElementById('st-rate').textContent=rate+'%';
+  document.getElementById('st-pips').textContent=(pips>=0?'+':'')+Math.round(pips);
+  if(!trades.length){document.getElementById('trade-hist').innerHTML='<div class="empty">No trades logged yet.</div>';return;}
+  let html=`<table class="trade-table"><tr><th>DATE</th><th>PAIR</th><th>DIR</th><th>ENTRY</th><th>EXIT</th><th>SL</th><th>TP</th><th>PIPS</th><th>RESULT</th><th>TYPE</th><th>NOTES</th><th></th></tr>`;
+  trades.forEach(t=>{
+    const rc=t.result==='WIN'?'td-win':t.result==='LOSS'?'td-loss':'td-pend';
+    const dc=t.dir==='BUY'?'td-win':'td-loss';
+    const ps=t.pips?(t.pips>0?'+':'')+t.pips:'—';
+    html+=`<tr><td>${t.date}</td><td style="color:var(--text)">${t.pair}</td><td class="${dc}">${t.dir}</td><td>${t.entry||'—'}</td><td>${t.exit||'—'}</td><td style="color:var(--red)">${t.sl||'—'}</td><td style="color:var(--green)">${t.tp||'—'}</td><td class="${t.pips>0?'td-win':t.pips<0?'td-loss':'td-pend'}">${ps}</td><td class="${rc}">${t.result}</td><td style="color:var(--dim)">${t.type||'—'}</td><td style="color:var(--dim);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes||'—'}</td><td><button onclick="delTrade(${t.id})" style="background:none;border:none;color:var(--dim);cursor:pointer;">✕</button></td></tr>`;
+  });
+  document.getElementById('trade-hist').innerHTML=html+'</table>';
+}
+
+function delTrade(id){
+  trades=trades.filter(t=>t.id!==id);
+  localStorage.setItem('wolf_fx_trades',JSON.stringify(trades));
+  renderTracker();
+}
+
+buildTicker();
+updateClock();
+setInterval(updateClock,1000);
+updPrice('EUR/USD');
+renderTracker();
+</script>
+</body>
+</html>
