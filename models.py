@@ -14,7 +14,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     
     # Subscription
-    plan = db.Column(db.String(20), default='trial')  # trial, basic, pro, expired
+    plan = db.Column(db.String(20), default='trial')  # trial, basic, elite, expired
     trial_start = db.Column(db.DateTime, default=datetime.utcnow)
     trial_end = db.Column(db.DateTime)
     subscription_start = db.Column(db.DateTime)
@@ -67,20 +67,14 @@ class User(UserMixin, db.Model):
     def has_active_subscription(self):
         if self.plan == 'trial' and self.is_trial_active:
             return True
-        if self.plan in ('basic', 'pro'):
-            if self.subscription_end and datetime.utcnow() < self.subscription_end:
-                return True
-        return False
+
 
     @property
     def effective_plan(self):
         """Returns the actual plan considering trial/expiry state."""
         if self.plan == 'trial':
             return 'trial' if self.is_trial_active else 'expired'
-        if self.plan in ('basic', 'pro'):
-            if self.subscription_end and datetime.utcnow() > self.subscription_end:
-                return 'expired'
-            return self.plan
+
         return 'expired'
 
     @property
@@ -88,10 +82,7 @@ class User(UserMixin, db.Model):
         plan = self.effective_plan
         if plan == 'expired':
             return 0
-        if plan in ('trial', 'basic'):
-            return 5
-        if plan == 'pro':
-            return None  # Unlimited
+
         return 0
 
     def can_run_analysis(self):
@@ -110,8 +101,7 @@ class User(UserMixin, db.Model):
             return True, None
         if self.analyses_today >= limit:
             plan = self.effective_plan
-            if plan == 'basic':
-                return False, f"Daily limit reached ({limit}/day on Basic). Upgrade to Pro for unlimited analyses."
+
             return False, f"Daily limit reached ({limit}/day). Your trial allows 5 analyses per day."
         return True, None
 
@@ -141,8 +131,7 @@ class User(UserMixin, db.Model):
             'trial_days_remaining': self.trial_days_remaining,
             'analyses_today': self.analyses_today,
             'daily_limit': self.daily_analysis_limit,
-            'has_journal': self.effective_plan == 'pro',
-            'has_alerts': self.effective_plan == 'pro',
+
         }
 
     def __repr__(self):

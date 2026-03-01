@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import LoginManager, current_user, login_required
 from models import db, User
 from auth import auth_bp
-from decorators import analysis_gate
+from decorators import analysis_gate, basic_required, elite_required
+import stripe
 import numpy as np
 from scipy.stats import norm
 import os
@@ -21,6 +22,15 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_DURATION'] = 60 * 60 * 24 * 30  # 30 days
 app.config['PERMANENT_SESSION_LIFETIME'] = 60 * 60 * 24 * 30  # 30 days
 app.config['SESSION_PERMANENT'] = True
+
+# ── Stripe ───────────────────────────────────────────
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
+
+STRIPE_PRICES = {
+    'basic': os.environ.get('STRIPE_BASIC_PRICE_ID', 'price_REPLACE_BASIC'),
+    'elite': os.environ.get('STRIPE_ELITE_PRICE_ID', 'price_REPLACE_ELITE'),
+}
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
 # ── Extensions ───────────────────────────────────────
 db.init_app(app)
@@ -52,14 +62,11 @@ def server_time():
         from datetime import timedelta
         now = datetime.utcnow() - timedelta(hours=5)
     
-    # Calculate week range (Mon-Fri)
-    day = now.weekday()  # 0=Mon, 6=Sun
+    day = now.weekday()
     monday = now - timedelta(days=day)
     friday = monday + timedelta(days=4)
-    
     week_range = f"{monday.strftime('%b %d')} — {friday.strftime('%b %d, %Y')}"
     
-    # Market status
     hour = now.hour
     minute = now.minute
     is_weekday = day < 5
@@ -68,17 +75,13 @@ def server_time():
     after_hours = is_weekday and hour >= 16 and hour < 20
     
     if market_open:
-        market_status = 'MARKET OPEN'
-        status_color = '#00ff99'
+        market_status = 'MARKET OPEN'; status_color = '#00ff99'
     elif pre_market:
-        market_status = 'PRE-MARKET'
-        status_color = '#ffe033'
+        market_status = 'PRE-MARKET'; status_color = '#ffe033'
     elif after_hours:
-        market_status = 'AFTER HOURS'
-        status_color = '#ff7744'
+        market_status = 'AFTER HOURS'; status_color = '#ff7744'
     else:
-        market_status = 'MARKET CLOSED'
-        status_color = '#ff4466'
+        market_status = 'MARKET CLOSED'; status_color = '#ff4466'
     
     return jsonify({
         'date': now.strftime('%B %d, %Y'),
@@ -216,27 +219,104 @@ def login_page():
     return render_template('auth.html')
 
 @app.route('/pricing')
-@login_required
 def pricing():
     return render_template('pricing.html')
 
+# ── Basic plan required ($29/mo) ─────────────────────
 @app.route('/ai-scanner')
 @login_required
+@basic_required
 def ai_scanner():
     return render_template('scanner.html')
 
+# ── Wolf Elite required ($150/mo) ────────────────────
 @app.route('/ai-analysis')
 @login_required
+@elite_required
 def ai_analysis():
     return render_template('analysis.html')
 
 @app.route('/wolf-elite')
 @login_required
+@elite_required
 def wolf_elite():
     return render_template('wolf_elite.html')
 
 # ────────────────────────────────────────────────────
-# API ROUTES — now protected with @analysis_gate
+# STRIPE CHECKOUT
+# ────────────────────────────────────────────────────
+
+@app.route('/create-checkout-session', methods=['POST'])
+@login_required
+def create_checkout_session():
+    plan = request.form.get('plan')
+    if plan not in ('basic', 'elite'):
+        flash('Invalid plan selected.', 'danger')
+        return redirect(url_for('pricing'))
+    try:
+        checkout = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            mode='subscription',
+            line_items=[{'price': STRIPE_PRICES[plan], 'quantity': 1}],
+            success_url=url_for('payment_success', plan=plan, _external=True),
+            cancel_url=url_for('pricing', _external=True),
+            client_reference_id=str(current_user.id),
+            metadata={'plan': plan, 'user_id': str(current_user.id)},
+        )
+        return redirect(checkout.url, code=303)
+    except Exception as e:
+        flash(f'Payment error: {str(e)}', 'danger')
+        return redirect(url_for('pricing'))
+
+@app.route('/payment-success')
+@login_required
+def payment_success():
+    plan = request.args.get('plan', 'basic')
+    # Update the user's plan in DB
+    current_user.plan = plan
+    db.session.commit()
+    flash(f"🐺 You're now on Wolf Elite {'Elite' if plan == 'elite' else 'Basic'}! Let's get it.", 'success')
+    return redirect(url_for('index'))
+
+@app.route('/stripe-webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get('Stripe-Signature')
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except Exception:
+        return 'Invalid signature', 400
+
+    if event['type'] == 'checkout.session.completed':
+        data    = event['data']['object']
+        user_id = data.get('metadata', {}).get('user_id')
+        plan    = data.get('metadata', {}).get('plan', 'basic')
+        try:
+            user = User.query.get(int(user_id))
+            if user:
+                user.plan = plan
+                user.stripe_customer_id    = data.get('customer')
+                user.stripe_subscription_id = data.get('subscription')
+                db.session.commit()
+                print(f'[Webhook] User {user_id} upgraded to {plan}')
+        except Exception as e:
+            print(f'[Webhook] DB error: {e}')
+
+    elif event['type'] == 'customer.subscription.deleted':
+        stripe_customer_id = event['data']['object'].get('customer')
+        try:
+            user = User.query.filter_by(stripe_customer_id=stripe_customer_id).first()
+            if user:
+                user.plan = 'trial'
+                db.session.commit()
+                print(f'[Webhook] Subscription cancelled for {stripe_customer_id}')
+        except Exception as e:
+            print(f'[Webhook] DB error: {e}')
+
+    return 'OK', 200
+
+# ────────────────────────────────────────────────────
+# API ROUTES
 # ────────────────────────────────────────────────────
 
 @app.route('/api/autofill', methods=['POST'])
@@ -332,28 +412,19 @@ def simulate():
 def health():
     return jsonify({'status': 'online', 'terminal': 'JAYDAWOLFX OPTIONS TERMINAL 🐺'}), 200
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-
-
 # ── Wolf Elite Results Tracker ────────────────────────
 @app.route('/api/track-pick', methods=['POST'])
 @login_required
 def track_pick():
-    """Save a Wolf Elite pick result."""
-    from models import db
-    data = request.get_json()
-    # Store in simple JSON file for now
     import json, os
+    data = request.get_json()
     tracker_file = 'wolf_tracker.json'
-    
     try:
         if os.path.exists(tracker_file):
             with open(tracker_file, 'r') as f:
                 tracker = json.load(f)
         else:
             tracker = {'picks': []}
-        
         tracker['picks'].append({
             'week': data.get('week'),
             'ticker': data.get('ticker'),
@@ -364,41 +435,34 @@ def track_pick():
             'pct_change': data.get('pct_change', 0),
             'date_added': datetime.now().strftime('%Y-%m-%d')
         })
-        
         with open(tracker_file, 'w') as f:
             json.dump(tracker, f)
-        
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/tracker-stats', methods=['GET'])
 @login_required  
 def tracker_stats():
-    """Get Wolf Elite win rate stats."""
     import json, os
     tracker_file = 'wolf_tracker.json'
-    
     try:
         if not os.path.exists(tracker_file):
             return jsonify({'total': 0, 'wins': 0, 'losses': 0, 'win_rate': 0, 'picks': []}), 200
-        
         with open(tracker_file, 'r') as f:
             tracker = json.load(f)
-        
         picks = tracker.get('picks', [])
         completed = [p for p in picks if p['result'] in ['WIN', 'LOSS']]
         wins = len([p for p in completed if p['result'] == 'WIN'])
         losses = len([p for p in completed if p['result'] == 'LOSS'])
         win_rate = round((wins / len(completed) * 100) if completed else 0)
-        
         return jsonify({
-            'total': len(picks),
-            'wins': wins,
-            'losses': losses, 
-            'win_rate': win_rate,
-            'picks': picks[-20:]  # Last 20
+            'total': len(picks), 'wins': wins,
+            'losses': losses, 'win_rate': win_rate,
+            'picks': picks[-20:]
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)

@@ -1,70 +1,110 @@
 from functools import wraps
+from flask import redirect, url_for, flash, session
+from datetime import datetime
+
+# ─────────────────────────────────────────────
+#  Plan hierarchy:  trial < basic < elite
+# ─────────────────────────────────────────────
+PLAN_RANK = {
+    "trial": 0,
+    "basic": 1,
+    "elite": 2,
+}
+
+def _get_user_plan():
+    """
+    Returns the effective plan string for the current session user.
+    Expected session keys (set at login/subscription webhook):
+        session['plan']          → 'trial' | 'basic' | 'elite'
+        session['trial_end']     → datetime  (only for trial users)
+        session['logged_in']     → True
+    """
+    if not session.get("logged_in"):
+        return None
+
+    plan = session.get("plan", "trial")
+
+    # Check trial expiry
+    if plan == "trial":
+        trial_end = session.get("trial_end")
+        if trial_end and datetime.utcnow() > trial_end:
+            return "expired"
+
+    return plan
+
+
+def _require_plan(min_plan: str, redirect_target: str = "pricing"):
+    """Factory that creates a decorator requiring at least `min_plan`."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            plan = _get_user_plan()
+
+            if plan is None:
+                flash("Please log in to access this page.", "warning")
+                return redirect(url_for("login"))
+
+            if plan == "expired":
+                flash("Your free trial has expired. Upgrade to continue.", "warning")
+                return redirect(url_for(redirect_target))
+
+            if PLAN_RANK.get(plan, -1) < PLAN_RANK[min_plan]:
+                flash(
+                    f"This feature requires the "
+                    f"{'Wolf Elite' if min_plan == 'elite' else 'Basic'} plan. "
+                    f"Upgrade to unlock it! 🐺",
+                    "upgrade",
+                )
+                return redirect(url_for(redirect_target))
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+# ─────────────────────────────────────────────
+#  Public decorators — use these on your routes
+# ─────────────────────────────────────────────
+
+def login_required(f):
+    """Any logged-in user (including active trial)."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        plan = _get_user_plan()
+        if plan is None:
+            flash("Please log in.", "warning")
+            return redirect(url_for("login"))
+        if plan == "expired":
+            flash("Your free trial has expired. Upgrade to continue.", "warning")
+            return redirect(url_for("pricing"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Trial: Greeks calculator only
+trial_required = login_required   # alias — any active session works
+
+# Basic ($29/mo): Greeks + AI Scanner
+basic_required = _require_plan("basic")
+
+# Wolf Elite ($150/mo): Everything
+elite_required = _require_plan("elite")
+
+# ─────────────────────────────────────────────
+#  analysis_gate — used on API routes
+#  Blocks if trial expired or not logged in
+#  (returns JSON error instead of redirect)
+# ─────────────────────────────────────────────
 from flask import jsonify
-from flask_login import current_user, login_required
-
-
-def subscription_required(f):
-    """Decorator: requires active subscription (trial or paid)."""
-    @wraps(f)
-    @login_required
-    def decorated(*args, **kwargs):
-        if not current_user.has_active_subscription:
-            plan = current_user.effective_plan
-            if plan == 'expired' and current_user.plan == 'trial':
-                return jsonify({
-                    'error': 'Your 20-day free trial has ended.',
-                    'action': 'upgrade',
-                    'message': 'Subscribe for $20/month (Basic) or $40/month (Pro) to keep trading. 🐺',
-                    'plans': {
-                        'basic': {'price': 20, 'analyses_per_day': 5},
-                        'pro': {'price': 40, 'analyses_per_day': 'unlimited', 'extras': ['trade_journal', 'alerts']}
-                    }
-                }), 402
-            return jsonify({
-                'error': 'Subscription required.',
-                'action': 'upgrade',
-            }), 402
-        return f(*args, **kwargs)
-    return decorated
-
-
-def pro_required(f):
-    """Decorator: requires Pro plan."""
-    @wraps(f)
-    @login_required
-    def decorated(*args, **kwargs):
-        if current_user.effective_plan != 'pro':
-            return jsonify({
-                'error': 'This feature requires the Pro plan.',
-                'action': 'upgrade_to_pro',
-                'message': 'Upgrade to Pro ($40/month) for unlimited analyses, trade journal, and alerts. 🐺',
-            }), 403
-        return f(*args, **kwargs)
-    return decorated
-
+from flask_login import current_user
 
 def analysis_gate(f):
-    """Decorator: checks subscription + daily analysis limit."""
+    """Protects API routes — returns JSON error instead of redirect."""
     @wraps(f)
-    @login_required
-    def decorated(*args, **kwargs):
-        can_run, error = current_user.can_run_analysis()
-        if not can_run:
-            return jsonify({
-                'error': error,
-                'action': 'upgrade',
-                'analyses_today': current_user.analyses_today,
-                'daily_limit': current_user.daily_analysis_limit,
-            }), 402
-        
-        # Run the analysis
-        result = f(*args, **kwargs)
-        
-        # Only record if successful (2xx response)
-        if hasattr(result, 'status_code') and 200 <= result.status_code < 300:
-            current_user.record_analysis()
-        elif isinstance(result, tuple) and len(result) == 2 and 200 <= result[1] < 300:
-            current_user.record_analysis()
-        
-        return result
-    return decorated
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Please log in to access this feature.', 'action': 'login'}), 401
+        if current_user.effective_plan == 'expired':
+            return jsonify({'error': 'Your trial has expired. Upgrade to continue.', 'action': 'upgrade'}), 403
+        return f(*args, **kwargs)
+    return decorated_function

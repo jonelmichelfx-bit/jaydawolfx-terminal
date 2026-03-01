@@ -1,276 +1,294 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>JAYDAWOLFX — Choose Your Plan</title>
+  <title>Pricing — Wolf Elite Options Terminal</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --bg: #0a0a0f;
-      --surface: #12121a;
-      --surface2: #1a1a26;
-      --border: #2a2a3e;
-      --accent: #00ff88;
-      --accent2: #7c3aed;
-      --red: #ff4757;
-      --gold: #ffd700;
-      --text: #e0e0f0;
-      --text-dim: #6b7280;
-      --font: 'Courier New', monospace;
+      --bg:     #080c0f;
+      --green:  #00ff99;
+      --cyan:   #33ddff;
+      --text:   #ffffff;
+      --border: #2a3f52;
+      --card:   #0d1821;
+      --gold:   #ffd700;
     }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font);
+      font-family: 'Segoe UI', system-ui, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
+      padding: 60px 20px 80px;
     }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
+
+    /* ── Header ── */
+    .logo {
+      font-size: 1.1rem;
+      color: var(--cyan);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
     }
-    .container {
-      position: relative;
-      z-index: 1;
-      max-width: 900px;
-      width: 100%;
-    }
-    .header {
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       text-align: center;
-      margin-bottom: 48px;
+      margin-bottom: 10px;
     }
-    .wolf { font-size: 48px; margin-bottom: 12px; }
-    .title {
-      font-size: 24px;
-      font-weight: bold;
-      color: var(--accent);
-      letter-spacing: 4px;
-      text-shadow: 0 0 20px rgba(0,255,136,0.5);
-    }
-    .subtitle { color: var(--text-dim); font-size: 13px; margin-top: 8px; letter-spacing: 1px; }
-
-    /* Trial banner */
-    .trial-banner {
-      background: rgba(0,255,136,0.08);
-      border: 1px solid rgba(0,255,136,0.2);
-      border-radius: 6px;
-      padding: 14px 20px;
+    .subtitle {
+      color: #8ba3b8;
+      font-size: 1rem;
+      margin-bottom: 50px;
       text-align: center;
-      margin-bottom: 32px;
-      font-size: 13px;
-      color: var(--accent);
     }
 
-    /* Plans grid */
-    .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-
-    .plan-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
+    /* ── Flash messages ── */
+    .flash-upgrade {
+      background: linear-gradient(135deg, #1a2a1a, #0d1821);
+      border: 1px solid var(--green);
       border-radius: 8px;
-      padding: 32px;
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.2s;
-    }
-    .plan-card:hover { transform: translateY(-4px); }
-    .plan-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-    }
-    .plan-card.basic::before { background: linear-gradient(90deg, transparent, var(--gold), transparent); }
-    .plan-card.pro::before { background: linear-gradient(90deg, transparent, var(--accent), transparent); }
-    .plan-card.pro { border-color: rgba(0,255,136,0.3); }
-
-    .plan-badge {
-      display: inline-block;
-      font-size: 10px;
-      letter-spacing: 2px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      margin-bottom: 16px;
-    }
-    .basic .plan-badge { background: rgba(255,215,0,0.1); color: var(--gold); border: 1px solid rgba(255,215,0,0.3); }
-    .pro .plan-badge { background: rgba(0,255,136,0.1); color: var(--accent); border: 1px solid rgba(0,255,136,0.3); }
-
-    .plan-name { font-size: 22px; font-weight: bold; margin-bottom: 8px; }
-    .basic .plan-name { color: var(--gold); }
-    .pro .plan-name { color: var(--accent); }
-
-    .plan-price { font-size: 40px; font-weight: bold; margin-bottom: 4px; }
-    .plan-price span { font-size: 16px; color: var(--text-dim); }
-    .plan-desc { color: var(--text-dim); font-size: 12px; margin-bottom: 24px; }
-
-    .features { list-style: none; margin-bottom: 28px; }
-    .features li {
-      font-size: 13px;
-      color: var(--text-dim);
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .features li:last-child { border-bottom: none; }
-    .features li .check { color: var(--accent); }
-    .features li .x { color: var(--red); }
-
-    .btn {
+      padding: 14px 20px;
+      margin-bottom: 30px;
+      color: var(--green);
+      font-size: 0.95rem;
+      max-width: 700px;
       width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 4px;
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 2px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-basic {
-      background: transparent;
-      border: 1px solid var(--gold);
-      color: var(--gold);
-    }
-    .btn-basic:hover { background: rgba(255,215,0,0.1); }
-    .btn-pro {
-      background: var(--accent);
-      color: var(--bg);
-    }
-    .btn-pro:hover { background: #00cc6e; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .back-link {
       text-align: center;
-      margin-top: 20px;
     }
-    .back-link a {
-      color: var(--text-dim);
-      text-decoration: none;
-      font-size: 12px;
+
+    /* ── Cards grid ── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: transform 0.2s, border-color 0.2s;
+      position: relative;
+    }
+    .card:hover { transform: translateY(-4px); }
+
+    .card.trial  { border-color: #2a3f52; }
+    .card.basic  { border-color: var(--cyan); box-shadow: 0 0 30px rgba(51,221,255,0.08); }
+    .card.elite  { border-color: var(--gold); box-shadow: 0 0 40px rgba(255,215,0,0.12); }
+
+    .badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 16px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge-cyan { background: var(--cyan); color: #080c0f; }
+    .badge-gold { background: var(--gold); color: #080c0f; }
+
+    .plan-name {
+      font-size: 1.4rem;
+      font-weight: 700;
       letter-spacing: 1px;
     }
-    .back-link a:hover { color: var(--accent); }
+    .card.trial  .plan-name { color: var(--text); }
+    .card.basic  .plan-name { color: var(--cyan); }
+    .card.elite  .plan-name { color: var(--gold); }
 
-    .alert {
-      padding: 12px 16px;
-      border-radius: 4px;
-      font-size: 13px;
-      margin-bottom: 20px;
-      display: none;
+    .price-block { display: flex; align-items: baseline; gap: 4px; }
+    .price-dollar { font-size: 2.6rem; font-weight: 800; }
+    .price-period { color: #8ba3b8; font-size: 0.9rem; }
+    .card.trial .price-dollar  { color: var(--green); }
+    .card.basic .price-dollar  { color: var(--cyan); }
+    .card.elite .price-dollar  { color: var(--gold); }
+
+    .features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+    .features li { font-size: 0.92rem; color: #c8dae6; display: flex; align-items: flex-start; gap: 8px; }
+    .features li::before { content: "✓"; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .card.trial  .features li::before { color: var(--green); }
+    .card.basic  .features li::before { color: var(--cyan); }
+    .card.elite  .features li::before { color: var(--gold); }
+
+    .locked { color: #3a5060 !important; }
+    .locked::before { content: "🔒" !important; }
+
+    .btn {
+      display: block;
       text-align: center;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.5px;
     }
-    .alert.error { background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.3); color: var(--red); display: block; }
-    .alert.success { background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); color: var(--accent); display: block; }
+    .btn:hover { opacity: 0.88; transform: scale(1.02); }
+    .btn:active { transform: scale(0.98); }
 
-    @media (max-width: 600px) {
-      .plans { grid-template-columns: 1fr; }
+    .btn-trial { background: linear-gradient(135deg, var(--green), #00cc77); color: #080c0f; }
+    .btn-basic { background: linear-gradient(135deg, var(--cyan), #1199cc); color: #080c0f; }
+    .btn-elite { background: linear-gradient(135deg, var(--gold), #e6a800); color: #080c0f; }
+    .btn-current { background: #1a2a3a; color: #8ba3b8; cursor: default; }
+    .btn-current:hover { opacity: 1; transform: none; }
+
+    .note { font-size: 0.78rem; color: #4a6a80; text-align: center; }
+
+    /* ── FAQ strip ── */
+    .faq {
+      max-width: 700px;
+      width: 100%;
+      margin-top: 60px;
+      border-top: 1px solid var(--border);
+      padding-top: 40px;
     }
+    .faq h2 { color: var(--cyan); margin-bottom: 24px; font-size: 1.2rem; text-align: center; }
+    .faq-item { margin-bottom: 20px; }
+    .faq-item strong { color: var(--text); font-size: 0.95rem; }
+    .faq-item p { color: #8ba3b8; font-size: 0.88rem; margin-top: 6px; line-height: 1.6; }
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <div class="wolf">🐺</div>
-    <div class="title">CHOOSE YOUR PLAN</div>
-    <div class="subtitle">JAYDAWOLFX OPTIONS TERMINAL</div>
-  </div>
 
-  <div class="trial-banner">
-    🔥 You're currently on a free trial — upgrade anytime to keep full access
-  </div>
+  <div class="logo">🐺 Wolf Elite Options Terminal</div>
+  <h1>Choose Your Edge</h1>
+  <p class="subtitle">Start free. Scale when you're ready. Cancel anytime.</p>
 
-  <div id="alert" class="alert"></div>
+  {% with messages = get_flashed_messages(category_filter=["upgrade"]) %}
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="flash-upgrade">⚡ {{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
-  <div class="plans">
-    <!-- BASIC -->
-    <div class="plan-card basic">
-      <div class="plan-badge">BASIC</div>
-      <div class="plan-name">Basic Wolf</div>
-      <div class="plan-price">$20<span>/month</span></div>
-      <div class="plan-desc">Perfect for active traders</div>
+  <div class="pricing-grid">
+
+    <!-- ── FREE TRIAL ── -->
+    <div class="card trial">
+      <div class="plan-name">Free Trial</div>
+      <div class="price-block">
+        <span class="price-dollar">$0</span>
+        <span class="price-period">/ 20 days</span>
+      </div>
       <ul class="features">
-        <li><span class="check">✓</span> 5 analyses per day</li>
-        <li><span class="check">✓</span> Greeks calculator</li>
-        <li><span class="check">✓</span> P&L chart</li>
-        <li><span class="check">✓</span> Live data via yfinance</li>
-        <li><span class="check">✓</span> Position calculator</li>
-        <li><span class="x">✗</span> Trade journal</li>
-        <li><span class="x">✗</span> Price alerts</li>
-        <li><span class="x">✗</span> Unlimited analyses</li>
+        <li>Greeks Calculator (full access)</li>
+        <li class="locked">AI Scanner</li>
+        <li class="locked">AI Chart Analysis</li>
+        <li class="locked">Wolf Elite Weekly Picks</li>
       </ul>
-      <button class="btn btn-basic" onclick="subscribe('basic')">GET BASIC</button>
+      {% if session.get('plan') == 'trial' %}
+        <a href="{{ url_for('index') }}" class="btn btn-current">Current Plan</a>
+      {% elif not session.get('logged_in') %}
+        <a href="{{ url_for('signup') }}" class="btn btn-trial">Start Free Trial</a>
+      {% else %}
+        <a href="{{ url_for('index') }}" class="btn btn-trial">Go to App →</a>
+      {% endif %}
+      <p class="note">No credit card required</p>
     </div>
 
-    <!-- PRO -->
-    <div class="plan-card pro">
-      <div class="plan-badge">PRO 🐺</div>
-      <div class="plan-name">Alpha Wolf</div>
-      <div class="plan-price">$40<span>/month</span></div>
-      <div class="plan-desc">For the serious trader</div>
+    <!-- ── BASIC ── -->
+    <div class="card basic">
+      <div class="badge badge-cyan">MOST POPULAR</div>
+      <div class="plan-name">Basic</div>
+      <div class="price-block">
+        <span class="price-dollar">$29</span>
+        <span class="price-period">/ month</span>
+      </div>
       <ul class="features">
-        <li><span class="check">✓</span> UNLIMITED analyses</li>
-        <li><span class="check">✓</span> Greeks calculator</li>
-        <li><span class="check">✓</span> P&L chart</li>
-        <li><span class="check">✓</span> Live data via yfinance</li>
-        <li><span class="check">✓</span> Position calculator</li>
-        <li><span class="check">✓</span> Trade journal</li>
-        <li><span class="check">✓</span> Price alerts</li>
-        <li><span class="check">✓</span> Priority support</li>
+        <li>Greeks Calculator</li>
+        <li>AI Scanner — Swing + Day Trader</li>
+        <li class="locked">AI Chart Analysis</li>
+        <li class="locked">Wolf Elite Weekly Picks</li>
       </ul>
-      <button class="btn btn-pro" onclick="subscribe('pro')">GO PRO 🐺</button>
+      {% if session.get('plan') == 'basic' %}
+        <a href="{{ url_for('index') }}" class="btn btn-current">Current Plan</a>
+      {% else %}
+        <form action="{{ url_for('create_checkout_session') }}" method="POST">
+          <input type="hidden" name="plan" value="basic"/>
+          <button type="submit" class="btn btn-basic">Upgrade to Basic →</button>
+        </form>
+      {% endif %}
+      <p class="note">Billed monthly · Cancel anytime</p>
+    </div>
+
+    <!-- ── WOLF ELITE ── -->
+    <div class="card elite">
+      <div class="badge badge-gold">🐺 WOLF ELITE</div>
+      <div class="plan-name">Wolf Elite</div>
+      <div class="price-block">
+        <span class="price-dollar">$150</span>
+        <span class="price-period">/ month</span>
+      </div>
+      <ul class="features">
+        <li>Everything in Basic</li>
+        <li>AI Chart Analysis</li>
+        <li>Wolf Elite Weekly Picks + Tracker</li>
+        <li>Priority support</li>
+        <li>Early access to Forex Terminal 🔜</li>
+      </ul>
+      {% if session.get('plan') == 'elite' %}
+        <a href="{{ url_for('index') }}" class="btn btn-current">Current Plan ✓</a>
+      {% else %}
+        <form action="{{ url_for('create_checkout_session') }}" method="POST">
+          <input type="hidden" name="plan" value="elite"/>
+          <button type="submit" class="btn btn-elite">Go Wolf Elite →</button>
+        </form>
+      {% endif %}
+      <p class="note">Billed monthly · Cancel anytime</p>
+    </div>
+
+  </div>
+
+  <!-- ── FAQ ── -->
+  <div class="faq">
+    <h2>Common Questions</h2>
+    <div class="faq-item">
+      <strong>Can I try before I pay?</strong>
+      <p>Yes — new accounts get a 20-day free trial with access to the Greeks Calculator. No credit card required to start.</p>
+    </div>
+    <div class="faq-item">
+      <strong>What happens when my trial ends?</strong>
+      <p>You'll be redirected here to choose a plan. Your data and settings are saved — nothing is lost.</p>
+    </div>
+    <div class="faq-item">
+      <strong>Can I upgrade or downgrade anytime?</strong>
+      <p>Yes. Upgrades take effect immediately. Downgrades apply at the end of your current billing cycle.</p>
+    </div>
+    <div class="faq-item">
+      <strong>What is the Forex Terminal?</strong>
+      <p>A full-featured Forex trading dashboard with AI signals — currently in development. Wolf Elite subscribers get early access when it launches.</p>
     </div>
   </div>
 
-  <div class="back-link">
-    <a href="/">← BACK TO TERMINAL</a>
-  </div>
-</div>
-
-<script>
-  async function subscribe(plan) {
-    const btns = document.querySelectorAll('.btn');
-    btns.forEach(b => b.disabled = true);
-
-    try {
-      const res = await fetch('/payments/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      });
-      const data = await res.json();
-
-      if (res.ok && data.url) {
-        window.location.href = data.url;
-      } else {
-        showAlert(data.error || 'Something went wrong.', 'error');
-        btns.forEach(b => b.disabled = false);
-      }
-    } catch (e) {
-      showAlert('Connection error. Try again.', 'error');
-      btns.forEach(b => b.disabled = false);
-    }
-  }
-
-  function showAlert(msg, type) {
-    const el = document.getElementById('alert');
-    el.textContent = msg;
-    el.className = `alert ${type}`;
-  }
-</script>
 </body>
 </html>
