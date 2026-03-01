@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
+import anthropic
 from flask_login import LoginManager, current_user, login_required
 from models import db, User
 from auth import auth_bp
