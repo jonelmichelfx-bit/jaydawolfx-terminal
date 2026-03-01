@@ -1,166 +1,102 @@
-from flask import Blueprint, request, jsonify, session
+# auth.py — Wolf Elite Options Terminal
+# Blueprint: /auth — handles login, signup, logout
+# encoding: utf-8
+
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User
-from datetime import datetime
-import re
+from datetime import datetime, timedelta
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
-
-
-def validate_email(email):
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
+auth = Blueprint('auth', __name__)
 
 
-def validate_password(password):
-    """Min 8 chars, at least one number."""
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters."
-    if not any(c.isdigit() for c in password):
-        return False, "Password must contain at least one number."
-    return True, None
+# ─────────────────────────────────────────────
+# LOGIN PAGE  (GET)
+# ─────────────────────────────────────────────
+@auth.route('/login', methods=['GET', 'POST'])
+def login_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        email    = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+
+        user = User.query.filter_by(email=email).first()
+
+        if not user or not check_password_hash(user.password_hash, password):
+            flash('Invalid email or password.', 'error')
+            return redirect(url_for('auth.login_page'))
+
+        # Check trial expiry
+        if user.plan == 'trial':
+            trial_end = user.created_at + timedelta(days=20)
+            if datetime.utcnow() > trial_end:
+                user.plan = 'expired'
+                db.session.commit()
+                flash('Your 20-day trial has expired. Please upgrade to continue.', 'warning')
+                return redirect(url_for('auth.login_page'))
+
+        login_user(user, remember=True)
+        session.permanent = True
+
+        next_page = request.args.get('next')
+        return redirect(next_page or url_for('index'))
+
+    return render_template('login.html')
 
 
-@auth_bp.route('/signup', methods=['POST'])
+# ─────────────────────────────────────────────
+# SIGNUP PAGE  (GET + POST)
+# ─────────────────────────────────────────────
+@auth.route('/signup', methods=['GET', 'POST'])
 def signup():
-    data = request.get_json()
-    
-    # Validation
-    email = data.get('email', '').strip().lower()
-    username = data.get('username', '').strip()
-    password = data.get('password', '')
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
 
-    if not email or not username or not password:
-        return jsonify({'error': 'All fields are required.'}), 400
+    if request.method == 'POST':
+        email     = request.form.get('email', '').strip().lower()
+        password  = request.form.get('password', '')
+        password2 = request.form.get('password2', '')
 
-    if not validate_email(email):
-        return jsonify({'error': 'Invalid email address.'}), 400
+        if not email or not password:
+            flash('Email and password are required.', 'error')
+            return redirect(url_for('auth.signup'))
 
-    if len(username) < 3 or len(username) > 30:
-        return jsonify({'error': 'Username must be 3-30 characters.'}), 400
+        if password != password2:
+            flash('Passwords do not match.', 'error')
+            return redirect(url_for('auth.signup'))
 
-    if not re.match(r'^[a-zA-Z0-9_]+$', username):
-        return jsonify({'error': 'Username can only contain letters, numbers, and underscores.'}), 400
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            flash('An account with that email already exists.', 'error')
+            return redirect(url_for('auth.signup'))
 
-    valid, pw_error = validate_password(password)
-    if not valid:
-        return jsonify({'error': pw_error}), 400
+        new_user = User(
+            email         = email,
+            password_hash = generate_password_hash(password),
+            plan          = 'trial',
+            created_at    = datetime.utcnow()
+        )
+        db.session.add(new_user)
+        db.session.commit()
 
-    # Check duplicates
-    if User.query.filter_by(email=email).first():
-        return jsonify({'error': 'An account with this email already exists.'}), 409
+        login_user(new_user, remember=True)
+        session.permanent = True
+        flash('Welcome to Wolf Elite! Your 20-day trial has started.', 'success')
+        return redirect(url_for('index'))
 
-    if User.query.filter_by(username=username).first():
-        return jsonify({'error': 'Username already taken.'}), 409
-
-    # Create user
-    user = User(email=email, username=username, password=password)
-    db.session.add(user)
-    db.session.commit()
-
-    login_user(user, remember=True)
-    user.last_login = datetime.utcnow()
-    db.session.commit()
-
-    return jsonify({
-        'message': f'Welcome to JAYDAWOLFX, {user.username}! Your 20-day free trial has started. 🐺',
-        'user': user.to_dict(),
-        'trial_end': user.trial_end.isoformat(),
-    }), 201
+    return render_template('signup.html')
 
 
-@auth_bp.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    
-    identifier = data.get('identifier', '').strip()  # email or username
-    password = data.get('password', '')
-    remember = data.get('remember', False)
-
-    if not identifier or not password:
-        return jsonify({'error': 'Email/username and password are required.'}), 400
-
-    # Find user by email or username
-    user = User.query.filter(
-        (User.email == identifier.lower()) | (User.username == identifier)
-    ).first()
-
-    if not user or not user.check_password(password):
-        return jsonify({'error': 'Invalid credentials.'}), 401
-
-    if not user.is_active:
-        return jsonify({'error': 'This account has been deactivated.'}), 403
-
-    login_user(user, remember=remember)
-    user.last_login = datetime.utcnow()
-    db.session.commit()
-
-    return jsonify({
-        'message': f'Welcome back, {user.username}! 🐺',
-        'user': user.to_dict(),
-    }), 200
-
-
-@auth_bp.route('/logout', methods=['GET', 'POST'])
+# ─────────────────────────────────────────────
+# LOGOUT  (GET + POST — both work)
+# ─────────────────────────────────────────────
+@auth.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
-    from flask import redirect, url_for
     logout_user()
-    return redirect(url_for('login_page'))
-
-
-@auth_bp.route('/me', methods=['GET'])
-@login_required
-def me():
-    return jsonify({'user': current_user.to_dict()}), 200
-
-
-@auth_bp.route('/change-password', methods=['POST'])
-@login_required
-def change_password():
-    data = request.get_json()
-    current_password = data.get('current_password', '')
-    new_password = data.get('new_password', '')
-
-    if not current_user.check_password(current_password):
-        return jsonify({'error': 'Current password is incorrect.'}), 401
-
-    valid, pw_error = validate_password(new_password)
-    if not valid:
-        return jsonify({'error': pw_error}), 400
-
-    current_user.set_password(new_password)
-    db.session.commit()
-
-    return jsonify({'message': 'Password updated successfully.'}), 200
-
-
-@auth_bp.route('/status', methods=['GET'])
-@login_required
-def subscription_status():
-    user = current_user
-    plan = user.effective_plan
-    
-    status = {
-        'plan': plan,
-        'username': user.username,
-        'email': user.email,
-    }
-
-    if plan == 'trial':
-        status['trial_days_remaining'] = user.trial_days_remaining
-        status['trial_end'] = user.trial_end.isoformat()
-        status['message'] = f'{user.trial_days_remaining} days remaining in your free trial.'
-    elif plan == 'expired':
-        status['message'] = 'Your trial has expired. Subscribe to continue trading. 🐺💰'
-    elif plan == 'basic':
-        status['message'] = 'Basic Plan — 5 analyses/day'
-        status['subscription_end'] = user.subscription_end.isoformat() if user.subscription_end else None
-    elif plan == 'pro':
-        status['message'] = 'Pro Plan — Unlimited. You\'re a wolf. 🐺'
-        status['subscription_end'] = user.subscription_end.isoformat() if user.subscription_end else None
-
-    status['analyses_today'] = user.analyses_today
-    status['daily_limit'] = user.daily_analysis_limit
-
-    return jsonify(status), 200
+    session.clear()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('auth.login_page'))
