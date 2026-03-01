@@ -212,7 +212,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 </style>
 </head>
 <body>
-<nav style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#080c0f;border-bottom:1px solid #2a3f52;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span style="font-size:20px;">🐺</span><span style="color:#00ff99;font-weight:bold;letter-spacing:2px;font-size:13px;">WOLF ELITE</span></div><div style="display:flex;align-items:center;gap:10px;"><span style="color:#ffffff;font-size:12px;">WELCOME, <strong style="color:#33ddff;">{{ current_user.username|upper }}</strong></span><a href="/ai-scanner" style="background:#7c3aed;color:white;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">🤖 AI SCANNER <a href="/ai-analysis" style="background:transparent;border:1px solid #33ddff;color:#33ddff;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">📊 CHART ANALYSIS</a></a><a href="/pricing" style="background:transparent;border:1px solid #00ff99;color:#00ff99;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">💰 UPGRADE</a><a href="/logout" style="background:transparent;border:1px solid #ff4466;color:#ff4466;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">🚪<a href="/wolf-elite" style="background:linear-gradient(135deg,#ffd700,#cc9900);color:#000;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">🏆 WOLF ELITE</a> SIGN OUT</a></div></nav><div style="height:52px;"></div>s
+<nav style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#080c0f;border-bottom:1px solid #2a3f52;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:20px;">🐺</span>
+    <span style="color:#00ff99;font-weight:bold;letter-spacing:2px;font-size:13px;">WOLF ELITE</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="color:#ffffff;font-size:12px;">WELCOME, <strong style="color:#33ddff;">{{ current_user.username|upper }}</strong></span>
+    <a href="/ai-scanner" style="background:#7c3aed;color:white;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">🤖 AI SCANNER</a>
+    <a href="/ai-analysis" style="background:transparent;border:1px solid #33ddff;color:#33ddff;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">📊 CHART ANALYSIS</a>
+    <a href="/wolf-elite" style="background:linear-gradient(135deg,#ffd700,#cc9900);color:#000;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">🏆 WOLF ELITE</a>
+    <a href="/pricing" style="background:transparent;border:1px solid #00ff99;color:#00ff99;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">💰 UPGRADE</a>
+    <a href="/auth/logout" style="background:transparent;border:1px solid #ff4466;color:#ff4466;padding:7px 14px;border-radius:4px;font-size:11px;font-weight:bold;text-decoration:none;">🚪 SIGN OUT</a>
+  </div>
+</nav>
+<div style="height:52px;"></div><div style="height:52px;"></div>s
 
 <div class="alert-banner" id="alertBanner">⚠ THETA DECAY ALERT — EXCEEDS YOUR THRESHOLD</div>
 
