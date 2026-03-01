@@ -94,7 +94,6 @@ def signup():
 # LOGOUT  (GET + POST — both work)
 # ─────────────────────────────────────────────
 @auth.route('/logout', methods=['GET', 'POST'])
-@login_required
 def logout():
     logout_user()
     session.clear()
