@@ -9,95 +9,93 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
   --bg:#080c0f;--surface:#0d1318;--surface2:#121920;--border:#2a3f52;
-  --green:#00ff99;--cyan:#33ddff;--gold:#ffd700;--red:#ff3355;--purple:#bb44ff;
-  --text:#ffffff;--text-mid:#aabbcc;--text-dim:#4a6a7a;
+  --green:#00ff99;--cyan:#33ddff;--gold:#ffd700;--red:#ff3355;--purple:#cc55ff;--orange:#ff8800;
+  --text:#ffffff;--text-mid:#ccdde8;--text-dim:#5a7a8a;
   --mono:'Share Tech Mono',monospace;--head:'Orbitron',monospace;
 }
 html,body{height:100%;overflow:hidden;}
 body{background:var(--bg);color:var(--text);font-family:var(--mono);display:flex;flex-direction:column;}
-body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,153,0.008) 3px,rgba(0,255,153,0.008) 4px);}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,255,153,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,153,0.03) 1px,transparent 1px);background-size:50px 50px;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,153,0.007) 3px,rgba(0,255,153,0.007) 4px);}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,255,153,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,153,0.025) 1px,transparent 1px);background-size:50px 50px;}
 .nav{position:relative;z-index:100;height:54px;min-height:54px;background:rgba(8,12,15,0.97);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;backdrop-filter:blur(12px);}
-.logo{font-family:var(--head);font-size:14px;font-weight:900;color:var(--green);letter-spacing:3px;text-shadow:0 0 20px rgba(0,255,153,0.6);white-space:nowrap;}
+.logo{font-family:var(--head);font-size:15px;font-weight:900;color:var(--green);letter-spacing:3px;text-shadow:0 0 25px rgba(0,255,153,0.7);white-space:nowrap;}
 .logo span{color:var(--cyan);}
 .nav-tabs{display:flex;gap:2px;flex:1;}
-.ntab{padding:6px 14px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer;transition:all 0.2s;text-decoration:none;white-space:nowrap;}
+.ntab{padding:6px 14px;font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--text-dim);background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer;transition:all 0.2s;text-decoration:none;white-space:nowrap;}
 .ntab:hover{color:var(--text-mid);border-color:var(--border);}
 .ntab.active{color:var(--cyan);border-color:var(--border);background:rgba(51,221,255,0.05);}
 .nav-right{display:flex;align-items:center;gap:12px;margin-left:auto;}
-.clock{font-size:11px;color:var(--text-mid);letter-spacing:1px;}
-.sess-pill{padding:3px 10px;border-radius:20px;font-size:9px;letter-spacing:2px;font-weight:bold;}
-.s-london{background:rgba(51,221,255,0.1);border:1px solid rgba(51,221,255,0.3);color:var(--cyan);}
-.s-ny{background:rgba(0,255,153,0.1);border:1px solid rgba(0,255,153,0.3);color:var(--green);}
-.s-tokyo{background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);color:var(--gold);}
-.s-closed{background:rgba(255,51,85,0.1);border:1px solid rgba(255,51,85,0.3);color:var(--red);}
-.logout-a{font-size:10px;color:var(--text-dim);letter-spacing:1px;text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:3px;transition:all 0.2s;}
+.clock{font-size:12px;color:var(--text-mid);letter-spacing:1px;}
+.sess-pill{padding:4px 12px;border-radius:20px;font-size:10px;letter-spacing:2px;font-weight:bold;}
+.s-london{background:rgba(51,221,255,0.1);border:1px solid rgba(51,221,255,0.4);color:var(--cyan);}
+.s-ny{background:rgba(0,255,153,0.1);border:1px solid rgba(0,255,153,0.4);color:var(--green);}
+.s-tokyo{background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.4);color:var(--gold);}
+.s-closed{background:rgba(255,51,85,0.1);border:1px solid rgba(255,51,85,0.4);color:var(--red);}
+.logout-a{font-size:11px;color:var(--text-dim);letter-spacing:1px;text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:3px;transition:all 0.2s;}
 .logout-a:hover{color:var(--red);border-color:var(--red);}
-.ticker-bar{height:30px;min-height:30px;background:var(--surface);border-bottom:1px solid var(--border);overflow:hidden;display:flex;align-items:center;position:relative;z-index:10;}
+.ticker-bar{height:32px;min-height:32px;background:var(--surface);border-bottom:1px solid var(--border);overflow:hidden;display:flex;align-items:center;position:relative;z-index:10;}
 .ticker-inner{display:inline-flex;animation:tickMove 50s linear infinite;white-space:nowrap;}
 @keyframes tickMove{from{transform:translateX(100vw);}to{transform:translateX(-100%);}}
-.tick{padding:0 22px;font-size:11px;border-right:1px solid var(--border);display:flex;align-items:center;gap:8px;}
-.tp-name{color:var(--text-mid);letter-spacing:1px;}
+.tick{padding:0 22px;font-size:12px;border-right:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.tp-name{color:var(--text-mid);letter-spacing:1px;font-weight:bold;}
 .tp-price{color:var(--text);}
 .tp-chg.up{color:var(--green);}
 .tp-chg.dn{color:var(--red);}
 .workspace{flex:1;overflow:hidden;display:flex;position:relative;z-index:1;}
-.sidebar{width:280px;min-width:280px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+.sidebar{width:290px;min-width:290px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
 .sidebar::-webkit-scrollbar{width:3px;}
 .sidebar::-webkit-scrollbar-thumb{background:var(--border);}
 .sb-sec{border-bottom:1px solid var(--border);padding:14px;}
-.sb-lbl{font-size:8px;letter-spacing:3px;color:var(--text-dim);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sb-lbl{font-size:9px;letter-spacing:3px;color:var(--cyan);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
 .sb-lbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
 .pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:9px;}
-.pb{padding:7px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-family:var(--mono);font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;text-align:center;}
-.pb:hover{border-color:var(--cyan);color:var(--text-mid);}
-.pb.active{background:rgba(0,255,153,0.08);border-color:var(--green);color:var(--green);}
+.pb{padding:8px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text-mid);font-family:var(--mono);font-size:11px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;text-align:center;}
+.pb:hover{border-color:var(--cyan);color:var(--cyan);}
+.pb.active{background:rgba(0,255,153,0.1);border-color:var(--green);color:var(--green);text-shadow:0 0 8px rgba(0,255,153,0.4);}
 .row{display:flex;gap:6px;}
-input,select{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:11px;padding:7px 10px;outline:none;transition:border-color 0.2s;width:100%;}
+input,select{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;transition:border-color 0.2s;width:100%;}
 input:focus,select:focus{border-color:var(--cyan);}
 input::placeholder{color:var(--text-dim);}
-.go-btn{padding:7px 12px;background:rgba(51,221,255,0.08);border:1px solid var(--border);border-radius:3px;color:var(--cyan);font-family:var(--mono);font-size:10px;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
-.go-btn:hover{background:rgba(51,221,255,0.15);}
-.price-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center;margin-bottom:8px;}
-.pc-pair{font-family:var(--head);font-size:10px;color:var(--text-dim);letter-spacing:3px;margin-bottom:4px;}
-.pc-price{font-family:var(--head);font-size:26px;font-weight:900;letter-spacing:2px;line-height:1;}
-.pc-price.up{color:var(--green);text-shadow:0 0 20px rgba(0,255,153,0.4);}
-.pc-price.dn{color:var(--red);text-shadow:0 0 20px rgba(255,51,85,0.4);}
-.pc-chg{font-size:11px;margin-top:5px;}
+.go-btn{padding:8px 14px;background:rgba(51,221,255,0.1);border:1px solid var(--cyan);border-radius:3px;color:var(--cyan);font-family:var(--mono);font-size:11px;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
+.go-btn:hover{background:rgba(51,221,255,0.2);}
+.price-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px;text-align:center;margin-bottom:8px;}
+.pc-pair{font-family:var(--head);font-size:11px;color:var(--cyan);letter-spacing:3px;margin-bottom:6px;}
+.pc-price{font-family:var(--head);font-size:28px;font-weight:900;letter-spacing:2px;line-height:1;}
+.pc-price.up{color:var(--green);text-shadow:0 0 20px rgba(0,255,153,0.5);}
+.pc-price.dn{color:var(--red);text-shadow:0 0 20px rgba(255,51,85,0.5);}
+.pc-chg{font-size:13px;margin-top:6px;font-weight:bold;}
 .pc-chg.up{color:var(--green);}
 .pc-chg.dn{color:var(--red);}
 .pstats{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;}
-.ps{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:6px;text-align:center;}
-.ps-l{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px;}
-.ps-v{font-size:11px;color:var(--text-mid);}
-.sig-card{border-radius:4px;padding:13px;text-align:center;border:2px solid;position:relative;overflow:hidden;margin-bottom:8px;}
-.sig-card::before{content:'';position:absolute;inset:0;opacity:0.05;}
+.ps{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:7px;text-align:center;}
+.ps-l{font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:3px;}
+.ps-v{font-size:13px;color:var(--text-mid);}
+.sig-card{border-radius:4px;padding:14px;text-align:center;border:2px solid;position:relative;overflow:hidden;margin-bottom:8px;}
 .sig-buy{border-color:var(--green);background:rgba(0,255,153,0.02);}
-.sig-buy::before{background:var(--green);}
 .sig-sell{border-color:var(--red);background:rgba(255,51,85,0.02);}
-.sig-sell::before{background:var(--red);}
 .sig-neutral{border-color:var(--gold);background:rgba(255,215,0,0.02);}
-.sig-neutral::before{background:var(--gold);}
-.sc-lbl{font-size:8px;letter-spacing:3px;color:var(--text-dim);margin-bottom:5px;}
-.sc-val{font-family:var(--head);font-size:22px;font-weight:900;letter-spacing:4px;}
-.sig-buy .sc-val{color:var(--green);text-shadow:0 0 15px rgba(0,255,153,0.5);}
-.sig-sell .sc-val{color:var(--red);text-shadow:0 0 15px rgba(255,51,85,0.5);}
+.sc-lbl{font-size:9px;letter-spacing:3px;color:var(--text-dim);margin-bottom:6px;}
+.sc-val{font-family:var(--head);font-size:24px;font-weight:900;letter-spacing:4px;}
+.sig-buy .sc-val{color:var(--green);text-shadow:0 0 20px rgba(0,255,153,0.6);}
+.sig-sell .sc-val{color:var(--red);text-shadow:0 0 20px rgba(255,51,85,0.6);}
 .sig-neutral .sc-val{color:var(--gold);}
-.sc-conf{font-size:10px;color:var(--text-dim);margin-top:4px;}
+.sc-conf{font-size:11px;color:var(--text-mid);margin-top:5px;}
 .lvl-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px;}
-.lv{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:7px;text-align:center;}
-.lv-l{font-size:7px;letter-spacing:2px;color:var(--text-dim);margin-bottom:3px;}
-.lv-v{font-size:11px;}
+.lv{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:8px;text-align:center;}
+.lv-l{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:3px;}
+.lv-v{font-size:13px;font-weight:bold;}
 .lv-entry .lv-v{color:var(--cyan);}
 .lv-tp .lv-v{color:var(--green);}
 .lv-sl .lv-v{color:var(--red);}
 .lv-rr .lv-v{color:var(--gold);}
-.analyze-btn{width:100%;padding:13px;background:linear-gradient(135deg,rgba(0,255,153,0.1),rgba(51,221,255,0.1));border:1px solid var(--green);border-radius:4px;color:var(--green);font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;}
-.analyze-btn:hover{box-shadow:0 0 25px rgba(0,255,153,0.2);transform:translateY(-1px);}
+.analyze-btn{width:100%;padding:14px;background:linear-gradient(135deg,rgba(0,255,153,0.12),rgba(51,221,255,0.12));border:1px solid var(--green);border-radius:4px;color:var(--green);font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;}
+.analyze-btn:hover{box-shadow:0 0 30px rgba(0,255,153,0.25);transform:translateY(-1px);}
 .analyze-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
 .main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-.tab-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 20px;flex-shrink:0;}
-.tab-btn{padding:12px 16px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;margin-bottom:-1px;white-space:nowrap;}
+.tab-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 10px;flex-shrink:0;overflow-x:auto;}
+.tab-bar::-webkit-scrollbar{height:2px;}
+.tab-bar::-webkit-scrollbar-thumb{background:var(--border);}
+.tab-btn{padding:13px 14px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;margin-bottom:-1px;white-space:nowrap;}
 .tab-btn:hover{color:var(--text-mid);}
 .tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan);}
 .tab-pane{display:none;flex:1;overflow-y:auto;padding:20px;}
@@ -105,65 +103,77 @@ input::placeholder{color:var(--text-dim);}
 .tab-pane::-webkit-scrollbar{width:4px;}
 .tab-pane::-webkit-scrollbar-thumb{background:var(--border);}
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:18px;margin-bottom:14px;}
-.ph{font-family:var(--head);font-size:9px;letter-spacing:3px;color:var(--cyan);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.ph::before{content:'';width:3px;height:12px;background:var(--cyan);border-radius:1px;box-shadow:0 0 8px var(--cyan);}
+.ph{font-family:var(--head);font-size:10px;letter-spacing:3px;color:var(--cyan);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.ph::before{content:'';width:3px;height:14px;background:var(--cyan);border-radius:1px;box-shadow:0 0 10px var(--cyan);}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.ai-out{font-size:12px;line-height:1.9;color:var(--text-mid);min-height:160px;}
-.hl-g{color:var(--green);}
-.hl-r{color:var(--red);}
-.hl-gold{color:var(--gold);}
-.hl-c{color:var(--cyan);font-size:10px;letter-spacing:2px;}
-.tf-row{display:grid;grid-template-columns:65px 68px 1fr 55px;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;margin-bottom:5px;}
-.tf-nm{font-size:10px;color:var(--text-dim);letter-spacing:2px;}
-.tf-sg{font-size:10px;letter-spacing:1px;font-weight:bold;padding:3px 7px;border-radius:2px;text-align:center;}
-.tf-sg.buy{background:rgba(0,255,153,0.1);color:var(--green);}
-.tf-sg.sell{background:rgba(255,51,85,0.1);color:var(--red);}
-.tf-sg.neutral{background:rgba(255,215,0,0.1);color:var(--gold);}
-.tf-ds{font-size:10px;color:var(--text-mid);line-height:1.4;}
-.tf-st{font-size:10px;color:var(--text-dim);text-align:right;}
+.ai-out{font-size:13px;line-height:2;color:var(--text-mid);min-height:160px;}
+.hl-g{color:var(--green);font-weight:bold;}
+.hl-r{color:var(--red);font-weight:bold;}
+.hl-gold{color:var(--gold);font-weight:bold;}
+.hl-c{color:var(--cyan);font-size:11px;letter-spacing:2px;}
+.hl-o{color:var(--orange);font-weight:bold;}
+.tf-row{display:grid;grid-template-columns:70px 72px 1fr 60px;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;margin-bottom:6px;}
+.tf-nm{font-size:12px;color:var(--text-mid);letter-spacing:2px;font-weight:bold;}
+.tf-sg{font-size:11px;letter-spacing:1px;font-weight:bold;padding:4px 8px;border-radius:2px;text-align:center;}
+.tf-sg.buy{background:rgba(0,255,153,0.12);color:var(--green);}
+.tf-sg.sell{background:rgba(255,51,85,0.12);color:var(--red);}
+.tf-sg.neutral{background:rgba(255,215,0,0.12);color:var(--gold);}
+.tf-ds{font-size:12px;color:var(--text-mid);line-height:1.5;}
+.tf-st{font-size:11px;color:var(--text-dim);text-align:right;}
 .ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.ind{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:10px;}
-.ind-nm{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:3px;}
-.ind-vl{font-size:13px;color:var(--text);margin-bottom:2px;}
-.ind-sg{font-size:9px;letter-spacing:1px;}
+.ind{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:11px;}
+.ind-nm{font-size:9px;letter-spacing:2px;color:var(--cyan);margin-bottom:4px;}
+.ind-vl{font-size:15px;color:var(--text);margin-bottom:3px;font-weight:bold;}
+.ind-sg{font-size:10px;letter-spacing:1px;font-weight:bold;}
 .bull{color:var(--green);}
 .bear{color:var(--red);}
 .neut{color:var(--gold);}
-.news-item{padding:11px 0;border-bottom:1px solid var(--border);}
+.news-item{padding:12px 0;border-bottom:1px solid var(--border);}
 .news-item:last-child{border:none;}
-.ni-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
-.ni-time{font-size:9px;color:var(--cyan);letter-spacing:1px;}
-.ni-imp{font-size:8px;letter-spacing:1px;padding:2px 7px;border-radius:2px;}
-.imp-h{background:rgba(255,51,85,0.1);color:var(--red);border:1px solid rgba(255,51,85,0.2);}
-.imp-m{background:rgba(255,215,0,0.1);color:var(--gold);border:1px solid rgba(255,215,0,0.2);}
-.imp-l{background:rgba(51,221,255,0.1);color:var(--cyan);border:1px solid rgba(51,221,255,0.2);}
-.ni-title{font-size:12px;color:var(--text);line-height:1.4;}
-.ni-body{font-size:11px;color:var(--text-dim);margin-top:4px;line-height:1.5;}
-.pick-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden;transition:border-color 0.2s;}
-.pick-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
-.pk-buy::before{background:var(--green);}
-.pk-sell::before{background:var(--red);}
-.pk-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
-.pk-pair{font-family:var(--head);font-size:13px;font-weight:700;color:var(--text);}
-.pk-dir{font-size:9px;letter-spacing:2px;font-weight:bold;padding:3px 8px;border-radius:2px;}
-.dir-buy{background:rgba(0,255,153,0.1);color:var(--green);}
-.dir-sell{background:rgba(255,51,85,0.1);color:var(--red);}
-.pk-conf{margin-left:auto;font-size:10px;color:var(--text-dim);}
-.type-badge{font-size:8px;letter-spacing:1px;padding:2px 7px;border-radius:2px;background:rgba(187,68,255,0.1);border:1px solid rgba(187,68,255,0.2);color:var(--purple);}
-.pk-lvls{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;}
-.pl{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:6px;text-align:center;}
-.pl-l{font-size:7px;letter-spacing:1px;color:var(--text-dim);margin-bottom:2px;}
-.pl-v{font-size:11px;color:var(--text);}
-.pk-reason{font-size:12px;color:var(--text-mid);line-height:1.7;margin-bottom:8px;}
+.ni-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.ni-time{font-size:10px;color:var(--cyan);letter-spacing:1px;font-weight:bold;}
+.ni-imp{font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:2px;font-weight:bold;}
+.imp-h{background:rgba(255,51,85,0.15);color:var(--red);border:1px solid rgba(255,51,85,0.3);}
+.imp-m{background:rgba(255,215,0,0.15);color:var(--gold);border:1px solid rgba(255,215,0,0.3);}
+.imp-l{background:rgba(51,221,255,0.15);color:var(--cyan);border:1px solid rgba(51,221,255,0.3);}
+.imp-war{background:rgba(255,136,0,0.15);color:var(--orange);border:1px solid rgba(255,136,0,0.3);}
+.ni-title{font-size:13px;color:var(--text);line-height:1.5;font-weight:bold;}
+.ni-body{font-size:12px;color:var(--text-mid);margin-top:5px;line-height:1.6;}
+.pick-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;}
+.pick-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+.pk-buy::before{background:var(--green);box-shadow:0 0 10px rgba(0,255,153,0.5);}
+.pk-sell::before{background:var(--red);box-shadow:0 0 10px rgba(255,51,85,0.5);}
+.pk-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.pk-pair{font-family:var(--head);font-size:15px;font-weight:700;color:var(--text);}
+.pk-dir{font-size:10px;letter-spacing:2px;font-weight:bold;padding:4px 10px;border-radius:2px;}
+.dir-buy{background:rgba(0,255,153,0.12);color:var(--green);border:1px solid rgba(0,255,153,0.3);}
+.dir-sell{background:rgba(255,51,85,0.12);color:var(--red);border:1px solid rgba(255,51,85,0.3);}
+.pk-conf{margin-left:auto;font-size:11px;color:var(--text-mid);}
+.type-badge{font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:2px;background:rgba(204,85,255,0.12);border:1px solid rgba(204,85,255,0.3);color:var(--purple);}
+.guaranteed-badge{font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:2px;background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);color:var(--gold);font-weight:bold;}
+.pk-lvls{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;}
+.pl{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:7px;text-align:center;}
+.pl-l{font-size:8px;letter-spacing:1px;color:var(--text-dim);margin-bottom:3px;}
+.pl-v{font-size:12px;font-weight:bold;}
+.pk-reason{font-size:13px;color:var(--text-mid);line-height:1.8;margin-bottom:8px;}
 .pk-actions{display:flex;gap:8px;}
-.pa-btn{padding:6px 14px;font-family:var(--mono);font-size:9px;letter-spacing:1px;border-radius:3px;cursor:pointer;transition:all 0.2s;border:1px solid;}
-.pa-log{background:rgba(0,255,153,0.08);border-color:var(--green);color:var(--green);}
-.pa-log:hover{background:rgba(0,255,153,0.15);}
+.pa-btn{padding:7px 16px;font-family:var(--mono);font-size:10px;letter-spacing:1px;border-radius:3px;cursor:pointer;transition:all 0.2s;border:1px solid;font-weight:bold;}
+.pa-log{background:rgba(0,255,153,0.1);border-color:var(--green);color:var(--green);}
+.pa-log:hover{background:rgba(0,255,153,0.2);}
 .pa-skip{background:transparent;border-color:var(--border);color:var(--text-dim);}
+.conflict-card{background:var(--surface2);border:1px solid var(--border);border-left:4px solid var(--orange);border-radius:4px;padding:16px;margin-bottom:12px;}
+.cc-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.cc-title{font-size:14px;font-weight:bold;color:var(--text);}
+.cc-body{font-size:13px;color:var(--text-mid);line-height:1.8;margin-bottom:10px;}
+.cc-pairs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.cc-pair{font-size:11px;padding:3px 10px;border-radius:2px;border:1px solid;font-weight:bold;}
+.cc-bull{background:rgba(0,255,153,0.08);border-color:var(--green);color:var(--green);}
+.cc-bear{background:rgba(255,51,85,0.08);border-color:var(--red);color:var(--red);}
+.cc-neut{background:rgba(255,215,0,0.08);border-color:var(--gold);color:var(--gold);}
 .tracker-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;}
-.stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center;}
-.stat-l{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:5px;}
-.stat-v{font-family:var(--head);font-size:20px;font-weight:700;}
+.stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px;text-align:center;}
+.stat-l{font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;}
+.stat-v{font-family:var(--head);font-size:22px;font-weight:700;}
 .st-total .stat-v{color:var(--text);}
 .st-wins .stat-v{color:var(--green);}
 .st-losses .stat-v{color:var(--red);}
@@ -171,33 +181,35 @@ input::placeholder{color:var(--text-dim);}
 .st-pips .stat-v{color:var(--gold);}
 .log-form{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:14px;}
 .fg{display:flex;flex-direction:column;gap:5px;}
-.fl{font-size:8px;letter-spacing:2px;color:var(--text-dim);}
+.fl{font-size:9px;letter-spacing:2px;color:var(--cyan);}
 .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
-.submit-btn{padding:10px 20px;background:rgba(51,221,255,0.08);border:1px solid var(--cyan);border-radius:3px;color:var(--cyan);font-family:var(--mono);font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;}
-.submit-btn:hover{background:rgba(51,221,255,0.15);}
-.trade-table{width:100%;border-collapse:collapse;font-size:11px;}
-.trade-table th{font-size:8px;letter-spacing:2px;color:var(--text-dim);padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-weight:normal;}
-.trade-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-mid);}
+.submit-btn{padding:11px 20px;background:rgba(51,221,255,0.1);border:1px solid var(--cyan);border-radius:3px;color:var(--cyan);font-family:var(--mono);font-size:11px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;font-weight:bold;}
+.submit-btn:hover{background:rgba(51,221,255,0.2);}
+.trade-table{width:100%;border-collapse:collapse;font-size:12px;}
+.trade-table th{font-size:9px;letter-spacing:2px;color:var(--cyan);padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;font-weight:normal;}
+.trade-table td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text-mid);}
 .trade-table tr:hover td{background:var(--surface2);}
-.td-win{color:var(--green);}
-.td-loss{color:var(--red);}
+.td-win{color:var(--green);font-weight:bold;}
+.td-loss{color:var(--red);font-weight:bold;}
 .td-pend{color:var(--gold);}
-.ht-title{font-family:var(--head);font-size:9px;letter-spacing:2px;color:var(--cyan);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
-.ht-step{display:flex;gap:12px;align-items:flex-start;margin-bottom:9px;font-size:12px;line-height:1.7;color:var(--text-mid);}
-.sn{min-width:24px;height:24px;border-radius:50%;background:rgba(0,255,153,0.08);border:1px solid rgba(0,255,153,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--green);flex-shrink:0;}
-.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
+.ht-title{font-family:var(--head);font-size:10px;letter-spacing:2px;color:var(--cyan);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.ht-step{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;font-size:13px;line-height:1.8;color:var(--text-mid);}
+.sn{min-width:26px;height:26px;border-radius:50%;background:rgba(0,255,153,0.1);border:1px solid rgba(0,255,153,0.4);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--green);flex-shrink:0;font-weight:bold;}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.load-ctr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:12px;}
-.load-txt{font-size:10px;color:var(--green);letter-spacing:3px;animation:fp 1.5s ease-in-out infinite;}
+.load-ctr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:14px;}
+.load-txt{font-size:11px;color:var(--green);letter-spacing:3px;animation:fp 1.5s ease-in-out infinite;}
 @keyframes fp{0%,100%{opacity:1;}50%{opacity:0.3;}}
-.dot{width:5px;height:5px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 6px var(--green);animation:dp 1.5s ease-in-out infinite;}
+.dot{width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;box-shadow:0 0 8px var(--green);animation:dp 1.5s ease-in-out infinite;}
 @keyframes dp{0%,100%{opacity:1;}50%{opacity:0.3;}}
-.empty{text-align:center;padding:28px;font-size:11px;color:var(--text-dim);letter-spacing:1px;}
-.big-btn{width:100%;padding:13px;border-radius:4px;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;border:1px solid;}
+.empty{text-align:center;padding:30px;font-size:13px;color:var(--text-dim);letter-spacing:1px;}
+.big-btn{width:100%;padding:14px;border-radius:4px;font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;border:1px solid;}
 .big-btn:hover{transform:translateY(-1px);}
 .big-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
-.btn-day{background:rgba(51,221,255,0.06);border-color:var(--cyan);color:var(--cyan);}
-.btn-swing{background:rgba(187,68,255,0.06);border-color:var(--purple);color:var(--purple);}
+.btn-day{background:rgba(51,221,255,0.08);border-color:var(--cyan);color:var(--cyan);}
+.btn-swing{background:rgba(204,85,255,0.08);border-color:var(--purple);color:var(--purple);}
+.btn-gold{background:rgba(255,215,0,0.08);border-color:var(--gold);color:var(--gold);}
+.btn-orange{background:rgba(255,136,0,0.08);border-color:var(--orange);color:var(--orange);}
 </style>
 </head>
 <body>
@@ -277,7 +289,7 @@ input::placeholder{color:var(--text-dim);}
     </div>
     <div class="sb-sec">
       <button class="analyze-btn" id="ana-btn" onclick="runAnalysis()">🐺 ANALYZE THIS PAIR</button>
-      <div style="margin-top:8px;font-size:9px;color:var(--text-dim);text-align:center;letter-spacing:1px;">Deep research · Live data · Claude AI</div>
+      <div style="margin-top:8px;font-size:10px;color:var(--text-dim);text-align:center;letter-spacing:1px;">Deep research · Live data · Claude AI</div>
     </div>
   </aside>
   <main class="main-area">
@@ -287,13 +299,16 @@ input::placeholder{color:var(--text-dim);}
       <button class="tab-btn" onclick="openTab('news',this)">NEWS</button>
       <button class="tab-btn" onclick="openTab('daytrades',this)">DAY TRADES</button>
       <button class="tab-btn" onclick="openTab('swings',this)">SWING TRADES</button>
+      <button class="tab-btn" onclick="openTab('guaranteed',this)" style="color:var(--gold);">🏆 TOP 3 GUARANTEED</button>
+      <button class="tab-btn" onclick="openTab('conflict',this)" style="color:var(--orange);">⚔️ WORLD CONFLICT</button>
       <button class="tab-btn" onclick="openTab('tracker',this)">TRADE TRACKER</button>
       <button class="tab-btn" onclick="openTab('howto',this)">HOW TO USE</button>
     </div>
+
     <!-- ANALYSIS -->
     <div class="tab-pane active" id="pane-analysis">
       <div class="g2">
-        <div class="panel"><div class="ph">WOLF AI FULL ANALYSIS</div><div class="ai-out" id="ai-full"><span style="color:var(--text-dim)">Select a pair and click <span style="color:var(--green)">ANALYZE THIS PAIR</span>. Wolf AI thinks like a professional forex trader — checking macro, central banks, DXY, news, market structure, and technicals before giving you a BUY, SELL, or STAY OUT verdict with entry, TP, and SL.</span></div></div>
+        <div class="panel"><div class="ph">WOLF AI FULL ANALYSIS</div><div class="ai-out" id="ai-full"><span style="color:var(--text-dim)">Select a pair and click <span style="color:var(--green);font-weight:bold;">ANALYZE THIS PAIR</span>. Wolf AI checks macro, central banks, DXY, technicals, news, and market structure before giving a BUY, SELL, or STAY OUT verdict.</span></div></div>
         <div class="panel"><div class="ph">TECHNICAL INDICATORS</div>
           <div class="ind-grid">
             <div class="ind"><div class="ind-nm">RSI (14)</div><div class="ind-vl" id="i-rsi">—</div><div class="ind-sg neut" id="i-rsi-s">AWAITING</div></div>
@@ -307,38 +322,63 @@ input::placeholder{color:var(--text-dim);}
           </div>
         </div>
         <div class="panel"><div class="ph">KEY PRICE LEVELS</div><div class="ai-out" id="ai-levels" style="min-height:80px;"><span style="color:var(--text-dim)">Support, resistance, and key zones appear here after analysis.</span></div></div>
-        <div class="panel"><div class="ph">REASONING & INVALIDATION</div><div class="ai-out" id="ai-reason" style="min-height:80px;"><span style="color:var(--text-dim)">What makes this trade valid and what would cancel it appears here.</span></div></div>
+        <div class="panel"><div class="ph">REASONING & INVALIDATION</div><div class="ai-out" id="ai-reason" style="min-height:80px;"><span style="color:var(--text-dim)">What makes this trade valid and what cancels it appears here.</span></div></div>
       </div>
     </div>
+
     <!-- TIMEFRAMES -->
     <div class="tab-pane" id="pane-timeframes">
-      <div class="panel"><div class="ph">MULTI-TIMEFRAME ANALYSIS — <span style="color:var(--text);font-size:9px;" id="tf-lbl">SELECT PAIR & RUN ANALYSIS</span></div><div id="tf-box"><div class="empty">Run analysis to see full timeframe breakdown from Monthly down to 15 min</div></div></div>
+      <div class="panel"><div class="ph">MULTI-TIMEFRAME ANALYSIS — <span style="color:var(--text);font-size:10px;" id="tf-lbl">SELECT PAIR & RUN ANALYSIS</span></div><div id="tf-box"><div class="empty">Run analysis to see full timeframe breakdown Monthly → M15</div></div></div>
     </div>
+
     <!-- NEWS -->
     <div class="tab-pane" id="pane-news">
       <div class="g2">
-        <div class="panel"><div class="ph">ECONOMIC CALENDAR</div><div id="news-cal"><div class="empty">Run pair analysis to load upcoming economic events</div></div></div>
-        <div class="panel"><div class="ph">FOREX NEWS FEED</div><div id="news-feed"><div class="empty">Run pair analysis to load latest news for this pair</div></div></div>
+        <div class="panel"><div class="ph">ECONOMIC CALENDAR</div><div id="news-cal"><div class="empty">Run pair analysis to load economic events</div></div></div>
+        <div class="panel"><div class="ph">FOREX NEWS FEED</div><div id="news-feed"><div class="empty">Run pair analysis to load latest news</div></div></div>
       </div>
     </div>
+
     <!-- DAY TRADES -->
     <div class="tab-pane" id="pane-daytrades">
       <div class="panel" style="margin-bottom:14px;">
         <div class="ph">⚡ TODAY'S DAY TRADE SETUPS</div>
-        <div style="font-size:12px;color:var(--text-mid);margin-bottom:14px;line-height:1.8;">Wolf AI thinks like a real day trader — checks current session, which pairs have momentum, news catalysts, DXY direction, and cleanest technical setups. Delivers 4 high-probability intraday trades with full reasoning.</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:14px;line-height:1.9;">Wolf AI checks current session, momentum, news catalysts, DXY, and technicals — then delivers 4 high-probability intraday trades with full reasoning.</div>
         <button class="big-btn btn-day" id="day-btn" onclick="loadDayTrades()">⚡ GET TODAY'S DAY TRADES</button>
       </div>
       <div id="day-box"><div class="empty">Click above to load today's best intraday setups</div></div>
     </div>
+
     <!-- SWING TRADES -->
     <div class="tab-pane" id="pane-swings">
       <div class="panel" style="margin-bottom:14px;">
         <div class="ph">📈 THIS WEEK'S SWING TRADES</div>
-        <div style="font-size:12px;color:var(--text-mid);margin-bottom:14px;line-height:1.8;">Wolf AI conducts deep macro research — Fed, ECB, BOE, BOJ policy, DXY weekly trend, risk sentiment, weekly/daily chart setups — then delivers 5 high-conviction swing trades for the week (2-7 day holds).</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:14px;line-height:1.9;">Deep macro research — Fed, ECB, BOE, BOJ policy, DXY weekly trend, risk sentiment — delivers 5 high-conviction swing trades for the week (2-7 day holds).</div>
         <button class="big-btn btn-swing" id="swing-btn" onclick="loadSwings()">📈 GET THIS WEEK'S SWING TRADES</button>
       </div>
       <div id="swing-box"><div class="empty">Click above to load this week's swing trade setups</div></div>
     </div>
+
+    <!-- TOP 3 GUARANTEED -->
+    <div class="tab-pane" id="pane-guaranteed">
+      <div class="panel" style="margin-bottom:14px;border-color:rgba(255,215,0,0.25);">
+        <div class="ph" style="color:var(--gold);">🏆 TOP 3 GUARANTEED — LONDON & NY SESSION</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:14px;line-height:1.9;">Wolf AI scans ALL major pairs and finds the <span style="color:var(--gold);font-weight:bold;">3 highest conviction setups</span> most likely to move during London open (3AM-12PM EST) and NY session (8AM-5PM EST). Only picks where 5+ factors align make the list.</div>
+        <button class="big-btn btn-gold" id="guaranteed-btn" onclick="loadGuaranteed()">🏆 GET TOP 3 GUARANTEED TRADES</button>
+      </div>
+      <div id="guaranteed-box"><div class="empty">Click above to get Wolf AI's 3 highest conviction trades for London & NY sessions</div></div>
+    </div>
+
+    <!-- WORLD CONFLICT MONITOR -->
+    <div class="tab-pane" id="pane-conflict">
+      <div class="panel" style="margin-bottom:14px;border-color:rgba(255,136,0,0.25);">
+        <div class="ph" style="color:var(--orange);">⚔️ WORLD CONFLICT MONITOR</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:14px;line-height:1.9;">Wolf AI analyzes current global conflicts — USA/Iran, Russia/Ukraine, Middle East — and tells you exactly how each one affects forex pairs. Includes safe haven flows, oil impact, and which pairs to trade or avoid.</div>
+        <button class="big-btn btn-orange" id="conflict-btn" onclick="loadConflict()">⚔️ ANALYZE WORLD CONFLICTS & FX IMPACT</button>
+      </div>
+      <div id="conflict-box"><div class="empty">Click above to see how world conflicts are affecting forex markets right now</div></div>
+    </div>
+
     <!-- TRACKER -->
     <div class="tab-pane" id="pane-tracker">
       <div class="tracker-stats">
@@ -365,29 +405,29 @@ input::placeholder{color:var(--text-dim);}
       </div>
       <div class="panel"><div class="ph">TRADE HISTORY</div><div id="trade-hist"><div class="empty">No trades logged yet.</div></div></div>
     </div>
+
     <!-- HOW TO USE -->
     <div class="tab-pane" id="pane-howto">
-      <div class="panel" style="max-width:800px;">
+      <div class="panel" style="max-width:820px;">
         <div class="ph">HOW TO USE THE WOLF FOREX TERMINAL</div>
-        <div style="font-size:12px;color:var(--text-mid);line-height:1.9;">
+        <div style="font-size:13px;color:var(--text-mid);line-height:1.9;">
           <div style="margin-bottom:18px;"><div class="ht-title">GETTING STARTED</div>
-            <div class="ht-step"><div class="sn">1</div><div>Select a currency pair from the sidebar or type a custom pair.</div></div>
-            <div class="ht-step"><div class="sn">2</div><div>Click <span style="color:var(--green)">ANALYZE THIS PAIR</span>. Wolf AI goes through 9 steps: macro → DXY → central banks → economic data → market structure → key levels → technicals → news → trade setup.</div></div>
-            <div class="ht-step"><div class="sn">3</div><div>Read the BUY / SELL / NEUTRAL verdict. Entry, TP1/2/3, and Stop Loss appear in the sidebar automatically.</div></div>
+            <div class="ht-step"><div class="sn">1</div><div>Select a pair and click <span style="color:var(--green);font-weight:bold;">ANALYZE THIS PAIR</span> for a 9-step professional analysis covering macro → central banks → DXY → structure → technicals → trade setup.</div></div>
+            <div class="ht-step"><div class="sn">2</div><div>BUY/SELL/NEUTRAL verdict appears in the sidebar with Entry, TP1/2/3, and Stop Loss automatically.</div></div>
           </div>
           <div style="margin-bottom:18px;"><div class="ht-title">WOLF AI PICKS</div>
-            <div class="ht-step"><div class="sn">★</div><div><span style="color:var(--cyan)">DAY TRADES</span> — Run every morning for 4 intraday setups. Best used during London and NY sessions.</div></div>
-            <div class="ht-step"><div class="sn">★</div><div><span style="color:var(--purple)">SWING TRADES</span> — Run Monday morning. 5 high-conviction trades for the week (2-7 day holds).</div></div>
-            <div class="ht-step"><div class="sn">★</div><div>Every pick has a <span style="color:var(--green)">LOG TRADE</span> button to auto-fill the Trade Tracker.</div></div>
+            <div class="ht-step"><div class="sn">★</div><div><span style="color:var(--cyan);font-weight:bold;">DAY TRADES</span> — Run every morning. 4 intraday setups with full reasoning.</div></div>
+            <div class="ht-step"><div class="sn">★</div><div><span style="color:var(--purple);font-weight:bold;">SWING TRADES</span> — Run Monday morning. 5 weekly setups (2-7 day holds).</div></div>
+            <div class="ht-step"><div class="sn">★</div><div><span style="color:var(--gold);font-weight:bold;">TOP 3 GUARANTEED</span> — Wolf AI's highest conviction picks for London & NY sessions only. Only 3 picks — the absolute best.</div></div>
+            <div class="ht-step"><div class="sn">★</div><div><span style="color:var(--orange);font-weight:bold;">WORLD CONFLICT MONITOR</span> — How USA/Iran, Russia/Ukraine, and other conflicts are moving pairs right now.</div></div>
           </div>
           <div style="margin-bottom:18px;"><div class="ht-title">SESSIONS (EST)</div>
-            <div class="ht-step"><div class="sn">🕐</div><div><span style="color:var(--gold)">TOKYO</span> 7PM–4AM · <span style="color:var(--cyan)">LONDON</span> 3AM–12PM · <span style="color:var(--green)">NEW YORK</span> 8AM–5PM</div></div>
-            <div class="ht-step"><div class="sn">🔥</div><div>Best window: <span style="color:var(--green)">London/NY overlap 8AM–12PM EST</span> — highest volatility of the day.</div></div>
+            <div class="ht-step"><div class="sn">🕐</div><div><span style="color:var(--gold);font-weight:bold;">TOKYO</span> 7PM–4AM · <span style="color:var(--cyan);font-weight:bold;">LONDON</span> 3AM–12PM · <span style="color:var(--green);font-weight:bold;">NEW YORK</span> 8AM–5PM</div></div>
+            <div class="ht-step"><div class="sn">🔥</div><div>Best time: <span style="color:var(--green);font-weight:bold;">London/NY overlap 8AM–12PM EST</span> — highest volatility of the day.</div></div>
           </div>
           <div><div class="ht-title">RISK MANAGEMENT</div>
-            <div class="ht-step"><div class="sn">!</div><div>Never risk more than <span style="color:var(--red)">1-2% of your account</span> per trade.</div></div>
-            <div class="ht-step"><div class="sn">!</div><div>Take <span style="color:var(--green)">50% profit at TP1</span>, move stop to breakeven, let the rest run.</div></div>
-            <div class="ht-step"><div class="sn">!</div><div>Avoid trading 30 min before/after <span style="color:var(--red)">HIGH IMPACT</span> news.</div></div>
+            <div class="ht-step"><div class="sn">!</div><div>Never risk more than <span style="color:var(--red);font-weight:bold;">1-2% of your account</span> per trade — even on guaranteed setups.</div></div>
+            <div class="ht-step"><div class="sn">!</div><div>Take <span style="color:var(--green);font-weight:bold;">50% at TP1</span>, move stop to breakeven, let the rest run.</div></div>
             <div class="ht-step"><div class="sn">!</div><div>This is NOT financial advice. All AI signals are for educational purposes only.</div></div>
           </div>
         </div>
@@ -395,11 +435,11 @@ input::placeholder{color:var(--text-dim);}
     </div>
   </main>
 </div>
+
 <script>
 let currentPair='EUR/USD';
 let analyzing=false;
 let trades=JSON.parse(localStorage.getItem('wolf_fx_trades')||'[]');
-
 const PRICES={
   'EUR/USD':{p:1.0842,c:+0.0012,pct:+0.11,h:1.0871,l:1.0821,sp:1.2},
   'GBP/USD':{p:1.2634,c:-0.0021,pct:-0.17,h:1.2671,l:1.2601,sp:1.5},
@@ -415,23 +455,18 @@ const PRICES={
   'BTC/USD':{p:67420,c:+1240,pct:+1.87,h:68100,l:66200,sp:25},
 };
 
-// ─── CALL BACKEND (not Anthropic directly) ───────
-async function callAI(prompt, maxTokens=2000) {
-  const res = await fetch('/api/forex-analyze', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({prompt, max_tokens: maxTokens})
-  });
-  if(!res.ok) throw new Error('Server error: ' + res.status);
-  const data = await res.json();
-  if(data.error) throw new Error(data.error);
+async function callAI(prompt,maxTokens=2000){
+  const res=await fetch('/api/forex-analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,max_tokens:maxTokens})});
+  if(!res.ok)throw new Error('Server error '+res.status);
+  const data=await res.json();
+  if(data.error)throw new Error(data.error);
   return data.content;
 }
 
 function buildTicker(){
   document.getElementById('ticker').innerHTML=Object.entries(PRICES).map(([p,d])=>{
     const up=d.c>=0;
-    return`<div class="tick"><span class="tp-name">${p}</span><span class="tp-price">${d.p}</span><span class="tp-chg ${up?'up':'dn'}">${up?'▲':'▼'}${Math.abs(d.pct)}%</span></div>`;
+    return`<div class="tick"><span class="tp-name">${p}</span><span class="tp-price"> ${d.p}</span><span class="tp-chg ${up?'up':'dn'}"> ${up?'▲':'▼'}${Math.abs(d.pct)}%</span></div>`;
   }).join('');
 }
 
@@ -442,7 +477,7 @@ function updateClock(){
   const day=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'})).getDay();
   const pill=document.getElementById('sess'),sEl=document.getElementById('ps-sess');
   let s='CLOSED',cls='s-closed';
-  if(day>0&&day<6){if(h>=19||h<3){s='TOKYO';cls='s-tokyo';}else if(h>=3&&h<8){s='LONDON';cls='s-london';}else if(h>=8&&h<12){s='LDN/NY';cls='s-ny';}else if(h>=12&&h<17){s='NEW YORK';cls='s-ny';}}
+  if(day>0&&day<6){if(h>=19||h<3){s='TOKYO';cls='s-tokyo';}else if(h>=3&&h<8){s='LONDON';cls='s-london';}else if(h>=8&&h<12){s='LDN/NY OVERLAP';cls='s-ny';}else if(h>=12&&h<17){s='NEW YORK';cls='s-ny';}}
   pill.textContent=s;pill.className='sess-pill '+cls;if(sEl)sEl.textContent=s;
 }
 
@@ -455,7 +490,8 @@ function selPair(pair,btn){
 
 function loadCustom(){
   const v=document.getElementById('cpair').value.trim().toUpperCase();
-  if(!v)return;currentPair=v;
+  if(!v)return;
+  currentPair=v;
   document.querySelectorAll('.pb').forEach(b=>b.classList.remove('active'));
   updPrice(v);
 }
@@ -481,43 +517,52 @@ function openTab(name,btn){
   btn.classList.add('active');
 }
 
+function fmt(t){
+  return t.replace(/\*\*(.*?)\*\*/g,'<span class="hl-c">$1</span>')
+    .replace(/\b(BUY|BULLISH)\b/g,'<span class="hl-g">$1</span>')
+    .replace(/\b(SELL|BEARISH)\b/g,'<span class="hl-r">$1</span>')
+    .replace(/\b(NEUTRAL|CAUTION|STAY OUT)\b/g,'<span class="hl-gold">$1</span>')
+    .replace(/\b(HIGH IMPACT|CONFLICT|WAR)\b/g,'<span class="hl-o">$1</span>')
+    .replace(/\n/g,'<br>');
+}
+
 async function runAnalysis(){
-  if(analyzing)return;analyzing=true;
+  if(analyzing)return;
+  analyzing=true;
   const btn=document.getElementById('ana-btn');
   btn.disabled=true;btn.textContent='⏳ RESEARCHING...';
-  document.getElementById('ai-full').innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI ANALYZING ${currentPair}...</div><div style="font-size:9px;color:var(--text-dim);margin-top:6px;letter-spacing:1px;">Macro · Central banks · DXY · Technicals · News · Structure</div></div>`;
+  document.getElementById('ai-full').innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI ANALYZING ${currentPair}...</div><div style="font-size:10px;color:var(--text-dim);margin-top:6px;letter-spacing:1px;">Macro · Central banks · DXY · Technicals · News · Structure</div></div>`;
   const d=PRICES[currentPair]||{};
   const now=new Date();
-
-  const prompt=`You are Wolf AI — a professional forex trader with 15 years experience analyzing ${currentPair} right now.
+  const prompt=`You are Wolf AI, a professional forex trader with 15 years experience. Analyze ${currentPair} right now like you are about to place a real trade.
 
 Date/Time: ${now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}, ${now.toLocaleTimeString('en-US',{timeZone:'America/New_York'})} EST
-Price: ${d.p||'at market'} | High: ${d.h||'—'} | Low: ${d.l||'—'} | Change: ${d.c>=0?'+':''}${d.c||0} (${d.pct||0}%)
+Price: ${d.p||'at market'} | High: ${d.h||'?'} | Low: ${d.l||'?'} | Change: ${d.c>=0?'+':''}${d.c||0} (${d.pct||0}%)
 
-Analyze this pair like a real professional trader checking everything before entering a trade. Go through each step:
+Go through every step a real trader checks before entering:
 
 **WOLF AI VERDICT: [BUY/SELL/NEUTRAL]**
 Confidence: [X]% | Risk: [LOW/MEDIUM/HIGH] | Best For: [DAY TRADE/SWING/BOTH]
 
 **STEP 1 — MACRO & RISK ENVIRONMENT**
-[Global risk environment. Risk-on or risk-off. What macro theme is dominating markets right now.]
+[Global risk environment today. Risk-on or risk-off. Dominant macro theme. Any geopolitical tensions affecting this pair.]
 
 **STEP 2 — DOLLAR INDEX (DXY)**
-[DXY direction and strength this week. What it means for this specific pair.]
+[DXY direction and strength this week. What it means for this pair.]
 
 **STEP 3 — CENTRAL BANK ANALYSIS**
-[Both central banks stance. Who is hawkish vs dovish. How divergence creates directional bias.]
+[Both central banks stance. Hawkish vs dovish. How divergence creates a bias.]
 
 **STEP 4 — RECENT ECONOMIC DATA**
-[Key recent releases affecting this pair. How they changed the outlook.]
+[Key recent data affecting this pair and how it changed the outlook.]
 
 **STEP 5 — MARKET STRUCTURE**
-[Weekly trend. Daily trend. H4 structure. Higher highs/lows or lower highs/lows. Range or trend.]
+[Weekly trend. Daily trend. H4 structure. Trending or ranging.]
 
 **STEP 6 — KEY LEVELS**
 Major Resistance: [level] — [why important]
 Major Support: [level] — [why important]
-Critical Zone: [the single most important level right now]
+Critical Zone: [most important level right now]
 Current Position: [near support, resistance, or mid-range]
 
 **STEP 7 — TECHNICAL CONFLUENCE**
@@ -530,7 +575,7 @@ Ichimoku: [cloud position]
 Overall Technical Bias: [BULLISH/BEARISH/NEUTRAL]
 
 **STEP 8 — NEWS & EVENTS TO WATCH**
-[3-4 specific upcoming events for these currencies with timing. Flag HIGH IMPACT events.]
+[3-4 specific upcoming events with timing. Flag HIGH IMPACT. Include geopolitical risk.]
 
 **STEP 9 — TRADE SETUP**
 Direction: [BUY/SELL or STAY OUT]
@@ -550,26 +595,18 @@ H1: [BULLISH/BEARISH/NEUTRAL] — [reason]
 M15: [BULLISH/BEARISH/NEUTRAL] — [entry signal]
 
 **WHAT INVALIDATES THIS TRADE**
-[Exact price that breaks the setup. Be specific.]
+[Exact price level that breaks the setup.]
 
 **WOLF'S FINAL WORD**
-[2-3 sentences. Most important thing about this pair right now. Would a veteran trade it today?]`;
+[2-3 sentences. Most important thing about this pair. Would a veteran trader take this today?]`;
 
   try{
-    const text = await callAI(prompt, 2000);
+    const text=await callAI(prompt,2000);
     parseDisplay(text);
   }catch(e){
-    document.getElementById('ai-full').innerHTML=`<span style="color:var(--red)">Error: ${e.message}</span>`;
+    document.getElementById('ai-full').innerHTML=`<span style="color:var(--red);font-size:13px;">Error: ${e.message}</span>`;
   }
   btn.disabled=false;btn.textContent='🐺 ANALYZE THIS PAIR';analyzing=false;
-}
-
-function fmt(t){
-  return t.replace(/\*\*(.*?)\*\*/g,'<span class="hl-c">$1</span>')
-    .replace(/\b(BUY|BULLISH)\b/g,'<span class="hl-g">$1</span>')
-    .replace(/\b(SELL|BEARISH)\b/g,'<span class="hl-r">$1</span>')
-    .replace(/\b(NEUTRAL|CAUTION|STAY OUT)\b/g,'<span class="hl-gold">$1</span>')
-    .replace(/\n/g,'<br>');
 }
 
 function parseDisplay(text){
@@ -599,17 +636,17 @@ function parseDisplay(text){
   const cz=text.match(/Critical Zone:\s*([^\n]+)/i);
   const cp=text.match(/Current Position:\s*([^\n]+)/i);
   let lh='';
-  if(rm)lh+=`<div style="margin-bottom:10px;"><span class="hl-r" style="font-size:9px;letter-spacing:2px;">RESISTANCE</span><br><span style="color:var(--text)">${rm[1].trim()}</span></div>`;
-  if(sm)lh+=`<div style="margin-bottom:10px;"><span class="hl-g" style="font-size:9px;letter-spacing:2px;">SUPPORT</span><br><span style="color:var(--text)">${sm[1].trim()}</span></div>`;
-  if(cz)lh+=`<div style="margin-bottom:10px;"><span class="hl-gold" style="font-size:9px;letter-spacing:2px;">CRITICAL ZONE</span><br><span style="color:var(--text)">${cz[1].trim()}</span></div>`;
-  if(cp)lh+=`<div style="margin-bottom:10px;"><span class="hl-c" style="font-size:9px;letter-spacing:2px;">CURRENT POSITION</span><br><span style="color:var(--text-mid)">${cp[1].trim()}</span></div>`;
+  if(rm)lh+=`<div style="margin-bottom:11px;"><span class="hl-r" style="font-size:10px;letter-spacing:2px;">RESISTANCE</span><br><span style="color:var(--text);font-size:13px;">${rm[1].trim()}</span></div>`;
+  if(sm)lh+=`<div style="margin-bottom:11px;"><span class="hl-g" style="font-size:10px;letter-spacing:2px;">SUPPORT</span><br><span style="color:var(--text);font-size:13px;">${sm[1].trim()}</span></div>`;
+  if(cz)lh+=`<div style="margin-bottom:11px;"><span class="hl-gold" style="font-size:10px;letter-spacing:2px;">CRITICAL ZONE</span><br><span style="color:var(--text);font-size:13px;">${cz[1].trim()}</span></div>`;
+  if(cp)lh+=`<div style="margin-bottom:11px;"><span class="hl-c">CURRENT POSITION</span><br><span style="color:var(--text-mid);font-size:13px;">${cp[1].trim()}</span></div>`;
   document.getElementById('ai-levels').innerHTML=lh||'<span style="color:var(--text-dim)">See full analysis above.</span>';
   const inv=text.match(/WHAT INVALIDATES[\s\S]*?(?=\*\*WOLF|$)/i);
   const fw=text.match(/WOLF.S FINAL WORD[\s\S]*$/i);
   let rh='';
   if(inv)rh+=fmt(inv[0]);
   if(fw)rh+='<br>'+fmt(fw[0]);
-  document.getElementById('ai-reason').innerHTML=rh||'<span style="color:var(--text-dim)">See full analysis.</span>';
+  document.getElementById('ai-reason').innerHTML=rh||fmt(text.slice(-500));
   updTF(text);updInd(verdict,parseInt(conf));updNews(text);
 }
 
@@ -625,34 +662,41 @@ function updTF(text){
     const lbl=sig==='BULLISH'?'BUY':sig==='BEARISH'?'SELL':'NEUTRAL';
     html+=`<div class="tf-row"><div class="tf-nm">${tf.l}</div><div class="tf-sg ${cls}">${lbl}</div><div class="tf-ds">${desc}</div><div class="tf-st">${sig}</div></div>`;
   });
-  document.getElementById('tf-box').innerHTML=html||'<div class="empty">Timeframe data in analysis above.</div>';
+  document.getElementById('tf-box').innerHTML=html||'<div class="empty">Timeframe data in full analysis above.</div>';
 }
 
 function updInd(v,c){
   const iB=v==='BUY',iS=v==='SELL';
   const set=(id,sid,val,sig,cls)=>{document.getElementById(id).textContent=val;const el=document.getElementById(sid);el.textContent=sig;el.className='ind-sg '+cls;};
   if(iB){set('i-rsi','i-rsi-s',c>75?'58.4':'46.2','BULLISH MOMENTUM','bull');set('i-macd','i-macd-s','+0.0024','BULLISH CROSS','bull');set('i-ema','i-ema-s','ABOVE 50','GOLDEN ZONE','bull');set('i-bb','i-bb-s','MID BAND','EXPANSION','bull');set('i-stoch','i-stoch-s','64/61','BULLISH','bull');set('i-atr','i-atr-s','0.0043','NORMAL RANGE','neut');set('i-adx','i-adx-s','29.1','TRENDING','bull');set('i-ichi','i-ichi-s','ABOVE CLOUD','BULLISH','bull');}
-  else if(iS){set('i-rsi','i-rsi-s',c>75?'63.8':'54.1','BEARISH DIV','bear');set('i-macd','i-macd-s','-0.0019','BEARISH CROSS','bear');set('i-ema','i-ema-s','BELOW 50','DEATH CROSS','bear');set('i-bb','i-bb-s','UPPER BAND','OVERBOUGHT','bear');set('i-stoch','i-stoch-s','79/76','OVERBOUGHT','bear');set('i-atr','i-atr-s','0.0058','HIGH VOL','neut');set('i-adx','i-adx-s','32.4','STRONG TREND','bear');set('i-ichi','i-ichi-s','BELOW CLOUD','BEARISH','bear');}
+  else if(iS){set('i-rsi','i-rsi-s','63.8','BEARISH DIV','bear');set('i-macd','i-macd-s','-0.0019','BEARISH CROSS','bear');set('i-ema','i-ema-s','BELOW 50','DEATH CROSS','bear');set('i-bb','i-bb-s','UPPER BAND','OVERBOUGHT','bear');set('i-stoch','i-stoch-s','79/76','OVERBOUGHT','bear');set('i-atr','i-atr-s','0.0058','HIGH VOL','neut');set('i-adx','i-adx-s','32.4','STRONG TREND','bear');set('i-ichi','i-ichi-s','BELOW CLOUD','BEARISH','bear');}
   else{set('i-rsi','i-rsi-s','50.8','NEUTRAL','neut');set('i-macd','i-macd-s','+0.0002','FLAT','neut');set('i-ema','i-ema-s','AT 50 EMA','DECISION','neut');set('i-bb','i-bb-s','MID BAND','CONTRACTING','neut');set('i-stoch','i-stoch-s','52/50','NEUTRAL','neut');set('i-atr','i-atr-s','0.0036','LOW VOL','neut');set('i-adx','i-adx-s','17.8','WEAK TREND','neut');set('i-ichi','i-ichi-s','IN CLOUD','NEUTRAL','neut');}
 }
 
 function updNews(text){
   const nm=text.match(/STEP 8.*?EVENTS TO WATCH([\s\S]*?)(?=\*\*STEP 9|\*\*TIMEFRAME|$)/i);
   let cal='';
-  if(nm){const lines=nm[1].trim().split('\n').filter(l=>l.trim());lines.forEach((l,i)=>{const ic=l.toUpperCase().includes('HIGH')||i===0?'imp-h':l.toUpperCase().includes('MED')?'imp-m':'imp-l';const il=l.toUpperCase().includes('HIGH')||i===0?'HIGH':l.toUpperCase().includes('MED')?'MED':'LOW';cal+=`<div class="news-item"><div class="ni-meta"><span class="ni-time">UPCOMING</span><span class="ni-imp ${ic}">${il} IMPACT</span></div><div class="ni-title">${l.replace(/^[-•*\d.]+\s*/,'').trim()}</div></div>`;});}
-  document.getElementById('news-cal').innerHTML=cal||`<div class="news-item"><div class="ni-title" style="color:var(--text-dim)">Run analysis to load economic events for this pair.</div></div>`;
-  document.getElementById('news-feed').innerHTML=`<div class="news-item"><div class="ni-meta"><span class="ni-time">JUST NOW</span><span class="ni-imp imp-h">LIVE</span></div><div class="ni-title">Wolf AI Analysis Complete — ${currentPair}</div><div class="ni-body">Full 9-step professional analysis done. Check Analysis tab for full breakdown.</div></div>`;
+  if(nm){
+    const lines=nm[1].trim().split('\n').filter(l=>l.trim());
+    lines.forEach((l,i)=>{
+      const ic=l.toUpperCase().includes('HIGH')||i===0?'imp-h':l.toUpperCase().includes('WAR')||l.toUpperCase().includes('CONFLICT')?'imp-war':'imp-m';
+      const il=l.toUpperCase().includes('HIGH')||i===0?'HIGH IMPACT':l.toUpperCase().includes('WAR')?'GEOPOLITICAL':'MED IMPACT';
+      cal+=`<div class="news-item"><div class="ni-meta"><span class="ni-time">UPCOMING</span><span class="ni-imp ${ic}">${il}</span></div><div class="ni-title">${l.replace(/^[-•*\d.]+\s*/,'').trim()}</div></div>`;
+    });
+  }
+  document.getElementById('news-cal').innerHTML=cal||`<div class="empty">Run analysis to load economic events.</div>`;
+  document.getElementById('news-feed').innerHTML=`<div class="news-item"><div class="ni-meta"><span class="ni-time">JUST NOW</span><span class="ni-imp imp-h">LIVE</span></div><div class="ni-title">Wolf AI Analysis Complete — ${currentPair}</div><div class="ni-body">Full 9-step analysis done. See Analysis tab for complete breakdown.</div></div>`;
 }
 
 async function loadDayTrades(){
   const btn=document.getElementById('day-btn');
   const box=document.getElementById('day-box');
   btn.disabled=true;btn.textContent='⏳ SCANNING ALL PAIRS...';
-  box.innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI SCANNING FOR DAY TRADES...</div><div style="font-size:9px;color:var(--text-dim);margin-top:6px;letter-spacing:1px;">Session · Momentum · News · Technicals · Structure</div></div>`;
+  box.innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI SCANNING FOR DAY TRADES...</div></div>`;
   const now=new Date();
-  const prompt=`You are Wolf AI, a professional forex day trader. ${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}, ${now.toLocaleTimeString('en-US',{timeZone:'America/New_York'})} EST.
+  const prompt=`You are Wolf AI, professional forex day trader. ${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}, ${now.toLocaleTimeString('en-US',{timeZone:'America/New_York'})} EST.
 
-Think like a real day trader before picking: What session is active? Which pairs have momentum and liquidity right now? Is DXY trending up or down today? Risk-on or risk-off? Any news creating opportunity? Which setups have the cleanest R:R?
+Think like a real day trader before picking: What session is active? Which pairs have momentum and liquidity now? DXY up or down today? Risk-on or risk-off? Any news or geopolitical events creating opportunity? Cleanest R:R setups?
 
 Deliver 4 DAY TRADE SETUPS for today (hold minutes to hours, close same day).
 
@@ -660,22 +704,21 @@ PICK 1:
 Pair: [pair]
 Direction: [BUY/SELL]
 Entry: [price]
-Stop Loss: [price] ([X] pips — reason for this level)
+Stop Loss: [price] ([X] pips — reason)
 TP1: [price] ([X] pips)
 TP2: [price] ([X] pips)
 Confidence: [X]%
 Best Session: [LONDON/NEW YORK/OVERLAP]
 Setup Type: [BREAKOUT/PULLBACK/RANGE FADE/MOMENTUM/RETEST]
-Reason: [4-5 sentences: what this pair is doing today, the catalyst, the technical setup, when/where to enter, what invalidates it intraday]
+Reason: [4-5 sentences: what this pair is doing today, catalyst, setup, when to enter, what invalidates it]
 
-PICK 2: [same]
-PICK 3: [same]
-PICK 4: [same]`;
-
+PICK 2: [same format]
+PICK 3: [same format]
+PICK 4: [same format]`;
   try{
-    const text = await callAI(prompt, 1800);
-    renderPicks(text, box, 'DAY');
-  }catch(e){box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;}
+    const text=await callAI(prompt,1800);
+    renderPicks(text,box,'DAY');
+  }catch(e){box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:13px;">Error: ${e.message}</div>`;}
   btn.disabled=false;btn.textContent='⚡ REFRESH DAY TRADES';
 }
 
@@ -683,45 +726,213 @@ async function loadSwings(){
   const btn=document.getElementById('swing-btn');
   const box=document.getElementById('swing-box');
   btn.disabled=true;btn.textContent='⏳ RESEARCHING MARKETS...';
-  box.innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI RESEARCHING SWING SETUPS...</div><div style="font-size:9px;color:var(--text-dim);margin-top:6px;letter-spacing:1px;">Weekly structure · Central banks · Macro · Correlations</div></div>`;
+  box.innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt">WOLF AI RESEARCHING SWING SETUPS...</div></div>`;
   const now=new Date();
-  const prompt=`You are Wolf AI, a professional forex swing trader. Week of ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}.
+  const prompt=`You are Wolf AI, professional forex swing trader. Week of ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}.
 
-Research like a real swing trader: Global macro theme this week. Fed/ECB/BOE/BOJ stances and divergence. DXY weekly chart direction. Which pairs are in clean weekly/daily trends. Major weekly support/resistance levels. Key risk events this week. Currency correlations that matter. Best fundamental + technical confluence.
+Research like a real swing trader: Global macro theme. Fed/ECB/BOE/BOJ stances. DXY weekly direction. Cleanest weekly/daily trends. Major weekly levels. Key events this week. Best fundamental + technical confluence.
 
 Deliver 5 SWING TRADE SETUPS for this week (hold 2-7 days).
 
 PICK 1:
 Pair: [pair]
 Direction: [BUY/SELL]
-Entry Zone: [price or range for limit order]
+Entry Zone: [price or tight range]
 Stop Loss: [price] ([X] pips — reason)
 TP1: [price] ([X] pips)
 TP2: [price] ([X] pips)
 TP3: [price] ([X] pips)
 Confidence: [X]%
 Hold Time: [X-X days]
-R:R Ratio: [ratio on TP1]
-Fundamental Driver: [2 sentences — macro/central bank reason this pair moves]
-Technical Reason: [2 sentences — chart setup, trend, pattern]
-Key Risk This Week: [specific event or level that invalidates trade]
+R:R Ratio: [ratio]
+Fundamental Driver: [2 sentences macro/central bank reason]
+Technical Reason: [2 sentences chart setup]
+Key Risk This Week: [specific event or level that invalidates]
 
 PICK 2: [same]
 PICK 3: [same]
 PICK 4: [same]
 PICK 5: [same]`;
-
   try{
-    const text = await callAI(prompt, 2200);
-    renderPicks(text, box, 'SWING');
-  }catch(e){box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;}
+    const text=await callAI(prompt,2200);
+    renderPicks(text,box,'SWING');
+  }catch(e){box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:13px;">Error: ${e.message}</div>`;}
   btn.disabled=false;btn.textContent='📈 REFRESH SWING TRADES';
+}
+
+async function loadGuaranteed(){
+  const btn=document.getElementById('guaranteed-btn');
+  const box=document.getElementById('guaranteed-box');
+  btn.disabled=true;btn.textContent='⏳ DEEP SCANNING ALL PAIRS...';
+  box.innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt" style="color:var(--gold);">FINDING TOP 3 GUARANTEED TRADES...</div><div style="font-size:10px;color:var(--text-dim);margin-top:6px;letter-spacing:1px;">Scanning all pairs · Maximum confluence · London & NY only</div></div>`;
+  const now=new Date();
+  const prompt=`You are Wolf AI, the most elite forex analyst. ${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}, ${now.toLocaleTimeString('en-US',{timeZone:'America/New_York'})} EST.
+
+Find the TOP 3 HIGHEST CONVICTION trades across ALL major pairs most likely to hit targets during LONDON OPEN (3AM-12PM EST) and NEW YORK SESSION (8AM-5PM EST) today.
+
+Scan ALL pairs: EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, NZD/USD, EUR/GBP, EUR/JPY, GBP/JPY, XAU/USD.
+Only pick where AT LEAST 5 factors align: trend + momentum + key level + session timing + news catalyst.
+Be ruthlessly selective. Quality over quantity.
+
+PICK 1 (HIGHEST CONVICTION):
+Pair: [pair]
+Direction: [BUY/SELL]
+Entry: [price]
+Stop Loss: [price] ([X] pips)
+TP1: [price] ([X] pips)
+TP2: [price] ([X] pips)
+TP3: [price] ([X] pips)
+Confidence: [X]%
+Best Window: [specific EST time range]
+Confluences: [list every factor aligned — minimum 5 bullet points]
+Why This Is The Best Setup Today: [3-4 sentences why this is #1]
+What Could Go Wrong: [honest risk assessment]
+
+PICK 2 (2ND HIGHEST CONVICTION): [same format]
+PICK 3 (3RD HIGHEST CONVICTION): [same format]`;
+  try{
+    const text=await callAI(prompt,2000);
+    renderGuaranteed(text,box);
+  }catch(e){box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:13px;">Error: ${e.message}</div>`;}
+  btn.disabled=false;btn.textContent='🏆 REFRESH TOP 3 GUARANTEED';
+}
+
+function renderGuaranteed(text,box){
+  const secs=text.split(/PICK \d+[^:]*:/i).filter(s=>s.trim());
+  if(!secs.length){box.innerHTML=`<div class="panel"><div class="ai-out">${fmt(text)}</div></div>`;return;}
+  const labels=['🥇 HIGHEST CONVICTION','🥈 2ND HIGHEST CONVICTION','🥉 3RD HIGHEST CONVICTION'];
+  let html=`<div style="font-size:11px;color:var(--gold);letter-spacing:2px;margin-bottom:14px;">🏆 WOLF AI TOP 3 GUARANTEED — LONDON & NY — ${new Date().toLocaleDateString()}</div>`;
+  secs.forEach((s,i)=>{
+    const pair=s.match(/Pair:\s*([A-Z\/]+)/i)?.[1]||'—';
+    const dir=s.match(/Direction:\s*(BUY|SELL)/i)?.[1]?.toUpperCase()||'BUY';
+    const entry=s.match(/Entry:\s*([\d.]+)/i)?.[1]||'—';
+    const sl=s.match(/Stop Loss:\s*([\d.]+)/i)?.[1]||'—';
+    const tp1=s.match(/TP1:\s*([\d.]+)/i)?.[1]||'—';
+    const tp2=s.match(/TP2:\s*([\d.]+)/i)?.[1]||'—';
+    const tp3=s.match(/TP3:\s*([\d.]+)/i)?.[1]||'—';
+    const conf=s.match(/Confidence:\s*(\d+)%/i)?.[1]||'—';
+    const window=s.match(/Best Window:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const confluences=s.match(/Confluences:\s*([\s\S]*?)(?=Why This|What Could|$)/i)?.[1]?.trim()||'';
+    const why=s.match(/Why This Is The Best[^:]*:\s*([\s\S]*?)(?=What Could|PICK|$)/i)?.[1]?.trim()||'';
+    const risk=s.match(/What Could Go Wrong:\s*([\s\S]*?)(?=PICK \d|$)/i)?.[1]?.trim()||'';
+    const isBuy=dir==='BUY';
+    html+=`<div class="pick-card ${isBuy?'pk-buy':'pk-sell'}" style="border-color:rgba(255,215,0,0.25);">
+      <div style="font-size:10px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;font-weight:bold;">${labels[i]||'PICK '+(i+1)}</div>
+      <div class="pk-top">
+        <div class="pk-pair">${pair}</div>
+        <div class="pk-dir ${isBuy?'dir-buy':'dir-sell'}">${dir}</div>
+        <span class="guaranteed-badge">GUARANTEED</span>
+        ${window?`<span style="font-size:10px;color:var(--gold);">⏰ ${window}</span>`:''}
+        <div class="pk-conf">${conf}% confidence</div>
+      </div>
+      <div class="pk-lvls">
+        <div class="pl"><div class="pl-l">ENTRY</div><div class="pl-v" style="color:var(--cyan)">${entry}</div></div>
+        <div class="pl"><div class="pl-l">SL</div><div class="pl-v" style="color:var(--red)">${sl}</div></div>
+        <div class="pl"><div class="pl-l">TP1</div><div class="pl-v" style="color:var(--green)">${tp1}</div></div>
+        <div class="pl"><div class="pl-l">TP2</div><div class="pl-v" style="color:var(--green)">${tp2}</div></div>
+        <div class="pl"><div class="pl-l">TP3</div><div class="pl-v" style="color:var(--green)">${tp3}</div></div>
+      </div>
+      ${confluences?`<div class="pk-reason" style="color:var(--gold);font-size:12px;"><span style="font-size:10px;letter-spacing:2px;">✅ CONFLUENCES:</span><br>${confluences.replace(/\n/g,'<br>')}</div>`:''}
+      ${why?`<div class="pk-reason">${why}</div>`:''}
+      ${risk?`<div class="pk-reason" style="color:var(--red);font-size:12px;">⚠ RISK: ${risk}</div>`:''}
+      <div class="pk-actions">
+        <button class="pa-btn pa-log" onclick="quickLog('${pair}','${dir}','${entry}','${sl}','${tp1}','SWING')">+ LOG TRADE</button>
+        <button class="pa-btn pa-skip" onclick="this.closest('.pick-card').style.opacity='0.3'">SKIP</button>
+      </div>
+    </div>`;
+  });
+  box.innerHTML=html;
+}
+
+async function loadConflict(){
+  const btn=document.getElementById('conflict-btn');
+  const box=document.getElementById('conflict-box');
+  btn.disabled=true;btn.textContent='⏳ RESEARCHING GLOBAL CONFLICTS...';
+  box.innerHTML=`<div class="load-ctr"><div class="spinner"></div><div class="load-txt" style="color:var(--orange);">WOLF AI ANALYZING WORLD CONFLICTS...</div><div style="font-size:10px;color:var(--text-dim);margin-top:6px;letter-spacing:1px;">USA/Iran · Russia/Ukraine · Middle East · Oil · Safe Havens</div></div>`;
+  const now=new Date();
+  const prompt=`You are Wolf AI, geopolitical forex analyst. Date: ${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}.
+
+Analyze ALL current major world conflicts and explain EXACTLY how each one affects forex pairs right now. Include USA vs Iran tensions specifically.
+
+For each conflict:
+
+CONFLICT: [Name]
+Status: [ACTIVE/ESCALATING/DE-ESCALATING/ONGOING]
+Summary: [2-3 sentences on current situation and latest developments]
+Oil Impact: [How this affects oil prices and oil-linked currencies like CAD, NOK]
+Safe Haven Impact: [How this affects USD, JPY, CHF, XAU/USD]
+Risk Sentiment: [RISK-OFF/RISK-ON/MIXED and why]
+Pairs Affected:
+- [PAIR]: [BUY/SELL/AVOID] — [specific reason]
+- [PAIR]: [BUY/SELL/AVOID] — [specific reason]
+- [PAIR]: [BUY/SELL/AVOID] — [specific reason]
+Wolf Alert: [1-2 sentences on the best trade opportunity from this conflict right now]
+
+Cover: 1) USA vs Iran 2) Russia vs Ukraine 3) Middle East (Israel/Gaza) 4) Any other active conflicts
+
+End with:
+OVERALL GEOPOLITICAL RISK: [LOW/MEDIUM/HIGH/EXTREME]
+Safe Haven Flows: [where money is moving right now]
+Best Pairs To Trade: [3 pairs with direction]
+Pairs To Avoid: [pairs too risky due to conflicts]`;
+  try{
+    const text=await callAI(prompt,2500);
+    renderConflict(text,box);
+  }catch(e){box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:13px;">Error: ${e.message}</div>`;}
+  btn.disabled=false;btn.textContent='⚔️ REFRESH CONFLICT ANALYSIS';
+}
+
+function renderConflict(text,box){
+  const sections=text.split(/CONFLICT:/i).filter(s=>s.trim());
+  let html='';
+  sections.forEach(s=>{
+    if(!s.trim())return;
+    const title=s.split('\n')[0].trim();
+    const statusM=s.match(/Status:\s*([^\n]+)/i);
+    const summaryM=s.match(/Summary:\s*([\s\S]*?)(?=Oil Impact:|$)/i);
+    const oilM=s.match(/Oil Impact:\s*([\s\S]*?)(?=Safe Haven:|$)/i);
+    const safeM=s.match(/Safe Haven Impact:\s*([\s\S]*?)(?=Risk Sentiment:|$)/i);
+    const sentM=s.match(/Risk Sentiment:\s*([^\n]+)/i);
+    const alertM=s.match(/Wolf Alert:\s*([\s\S]*?)(?=CONFLICT:|OVERALL|$)/i);
+    const pairsM=s.match(/Pairs Affected:([\s\S]*?)(?=Wolf Alert:|CONFLICT:|OVERALL|$)/i);
+    const status=statusM?.[1]?.trim()||'ONGOING';
+    const statusCls=status.includes('ESCAL')&&!status.includes('DE')?'imp-h':status.includes('DE-ESCAL')?'imp-l':'imp-war';
+    let pairsHtml='';
+    if(pairsM){
+      const pairs=pairsM[1].match(/[-•]\s*([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*([^\n]+)/gi)||[];
+      pairs.forEach(p=>{
+        const pm=p.match(/([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*(.+)/i);
+        if(pm){
+          const cls=pm[2]==='BUY'?'cc-bull':pm[2]==='AVOID'?'cc-neut':'cc-bear';
+          pairsHtml+=`<div class="cc-pair ${cls}">${pm[1]} <strong>${pm[2]}</strong></div>`;
+        }
+      });
+    }
+    html+=`<div class="conflict-card">
+      <div class="cc-top">
+        <div style="font-size:20px;">⚔️</div>
+        <div class="cc-title">${title}</div>
+        <span class="ni-imp ${statusCls}" style="margin-left:auto;">${status}</span>
+      </div>
+      ${summaryM?`<div class="cc-body">${summaryM[1].trim()}</div>`:''}
+      ${oilM?`<div class="cc-body" style="color:var(--orange);font-size:12px;"><strong>🛢 OIL IMPACT:</strong> ${oilM[1].trim()}</div>`:''}
+      ${safeM?`<div class="cc-body" style="color:var(--gold);font-size:12px;"><strong>🏦 SAFE HAVENS:</strong> ${safeM[1].trim()}</div>`:''}
+      ${sentM?`<div class="cc-body" style="font-size:12px;"><strong>RISK SENTIMENT:</strong> <span style="color:${sentM[1].includes('OFF')?'var(--red)':sentM[1].includes('ON')?'var(--green)':'var(--gold)'};font-weight:bold;">${sentM[1].trim()}</span></div>`:''}
+      ${pairsHtml?`<div class="cc-pairs">${pairsHtml}</div>`:''}
+      ${alertM?`<div class="cc-body" style="color:var(--cyan);font-size:13px;font-weight:bold;border-top:1px solid var(--border);padding-top:10px;margin-top:6px;">🐺 WOLF ALERT: ${alertM[1].trim()}</div>`:''}
+    </div>`;
+  });
+  const overall=text.match(/OVERALL GEOPOLITICAL RISK[\s\S]*$/i);
+  if(overall){
+    html+=`<div class="panel" style="border-color:rgba(255,136,0,0.25);margin-top:8px;"><div class="ph" style="color:var(--orange);">OVERALL MARKET ASSESSMENT</div><div class="ai-out">${fmt(overall[0])}</div></div>`;
+  }
+  box.innerHTML=html||`<div class="panel"><div class="ai-out">${fmt(text)}</div></div>`;
 }
 
 function renderPicks(text,box,type){
   const secs=text.split(/PICK \d+:/i).filter(s=>s.trim());
   if(!secs.length){box.innerHTML=`<div class="panel"><div class="ai-out">${fmt(text)}</div></div>`;return;}
-  let html=`<div style="font-size:9px;color:var(--text-dim);letter-spacing:2px;margin-bottom:12px;">${type} PICKS — Wolf AI — ${new Date().toLocaleDateString()}</div>`;
+  let html=`<div style="font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-bottom:12px;">${type} PICKS — Wolf AI — ${new Date().toLocaleDateString()}</div>`;
   secs.forEach((s,i)=>{
     const pair=s.match(/Pair:\s*([A-Z\/]+)/i)?.[1]||'—';
     const dir=s.match(/Direction:\s*(BUY|SELL)/i)?.[1]?.toUpperCase()||'BUY';
@@ -741,12 +952,12 @@ function renderPicks(text,box,type){
     const isBuy=dir==='BUY';
     html+=`<div class="pick-card ${isBuy?'pk-buy':'pk-sell'}">
       <div class="pk-top">
-        <div style="font-size:9px;color:var(--text-dim);letter-spacing:2px;">#${i+1}</div>
+        <div style="font-size:10px;color:var(--text-dim);letter-spacing:2px;">#${i+1}</div>
         <div class="pk-pair">${pair}</div>
         <div class="pk-dir ${isBuy?'dir-buy':'dir-sell'}">${dir}</div>
         ${stype?`<span class="type-badge">${stype}</span>`:''}
-        ${sess?`<span style="font-size:9px;color:var(--cyan);letter-spacing:1px;">${sess}</span>`:''}
-        ${hold?`<span style="font-size:9px;color:var(--text-mid);">${hold}</span>`:''}
+        ${sess?`<span style="font-size:10px;color:var(--cyan);">${sess}</span>`:''}
+        ${hold?`<span style="font-size:10px;color:var(--text-mid);">${hold}</span>`:''}
         <div class="pk-conf">${conf}% conf${rr?' · R:R '+rr:''}</div>
       </div>
       <div class="pk-lvls">
@@ -757,9 +968,9 @@ function renderPicks(text,box,type){
         <div class="pl"><div class="pl-l">TYPE</div><div class="pl-v" style="color:var(--purple)">${type}</div></div>
       </div>
       ${reason?`<div class="pk-reason">${reason}</div>`:''}
-      ${fund?`<div class="pk-reason"><span style="color:var(--gold);font-size:9px;letter-spacing:1px;">MACRO: </span>${fund}</div>`:''}
-      ${tech?`<div class="pk-reason"><span style="color:var(--cyan);font-size:9px;letter-spacing:1px;">TECHNICAL: </span>${tech}</div>`:''}
-      ${risk?`<div class="pk-reason" style="color:var(--red);font-size:11px;">⚠ KEY RISK: ${risk}</div>`:''}
+      ${fund?`<div class="pk-reason"><span style="color:var(--gold);font-size:10px;letter-spacing:1px;">MACRO: </span>${fund}</div>`:''}
+      ${tech?`<div class="pk-reason"><span style="color:var(--cyan);font-size:10px;letter-spacing:1px;">TECHNICAL: </span>${tech}</div>`:''}
+      ${risk?`<div class="pk-reason" style="color:var(--red);font-size:12px;">⚠ KEY RISK: ${risk}</div>`:''}
       <div class="pk-actions">
         <button class="pa-btn pa-log" onclick="quickLog('${pair}','${dir}','${entry}','${sl}','${tp1}','${type}')">+ LOG TRADE</button>
         <button class="pa-btn pa-skip" onclick="this.closest('.pick-card').style.opacity='0.3'">SKIP</button>
@@ -779,7 +990,7 @@ function quickLog(pair,dir,entry,sl,tp,type){
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('pane-tracker').classList.add('active');
-  document.querySelectorAll('.tab-btn')[5].classList.add('active');
+  document.querySelectorAll('.tab-btn')[7].classList.add('active');
 }
 
 function logTrade(){
@@ -793,56 +1004,6 @@ function logTrade(){
   const type=document.getElementById('t-type').value;
   const notes=document.getElementById('t-notes').value;
   if(!pair||!entry){alert('Please enter at least a pair and entry price.');return;}
-  let pips=0;
-  if(exit&&entry){
-    const diff=dir==='BUY'?exit-entry:entry-exit;
-    const mult=pair.includes('JPY')?100:pair.includes('XAU')?1:10000;
-    pips=Math.round(diff*mult*10)/10;
-    if(result==='LOSS')pips=Math.abs(pips)*-1;
-  }
-  trades.unshift({id:Date.now(),date:new Date().toLocaleDateString(),pair,dir,entry,exit,sl,tp,result,type,notes,pips});
-  localStorage.setItem('wolf_fx_trades',JSON.stringify(trades));
-  renderTracker();
-  ['t-pair','t-entry','t-exit','t-sl','t-tp','t-notes'].forEach(id=>document.getElementById(id).value='');
-}
-
-function renderTracker(){
-  const wins=trades.filter(t=>t.result==='WIN').length;
-  const losses=trades.filter(t=>t.result==='LOSS').length;
-  const comp=wins+losses;
-  const rate=comp?Math.round(wins/comp*100):0;
-  const pips=trades.reduce((s,t)=>s+(t.pips||0),0);
-  document.getElementById('st-total').textContent=trades.length;
-  document.getElementById('st-wins').textContent=wins;
-  document.getElementById('st-losses').textContent=losses;
-  document.getElementById('st-rate').textContent=rate+'%';
-  document.getElementById('st-pips').textContent=(pips>=0?'+':'')+Math.round(pips);
-  if(!trades.length){document.getElementById('trade-hist').innerHTML='<div class="empty">No trades logged yet.</div>';return;}
-  let html=`<table class="trade-table"><tr><th>DATE</th><th>PAIR</th><th>DIR</th><th>ENTRY</th><th>EXIT</th><th>SL</th><th>TP</th><th>PIPS</th><th>RESULT</th><th>TYPE</th><th>NOTES</th><th></th></tr>`;
-  trades.forEach(t=>{
-    const rc=t.result==='WIN'?'td-win':t.result==='LOSS'?'td-loss':'td-pend';
-    const dc=t.dir==='BUY'?'td-win':'td-loss';
-    const ps=t.pips?(t.pips>0?'+':'')+t.pips:'—';
-    html+=`<tr><td>${t.date}</td><td style="color:var(--text)">${t.pair}</td><td class="${dc}">${t.dir}</td><td>${t.entry||'—'}</td><td>${t.exit||'—'}</td><td style="color:var(--red)">${t.sl||'—'}</td><td style="color:var(--green)">${t.tp||'—'}</td><td class="${t.pips>0?'td-win':t.pips<0?'td-loss':'td-pend'}">${ps}</td><td class="${rc}">${t.result}</td><td style="color:var(--text-dim)">${t.type||'—'}</td><td style="color:var(--text-dim);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.notes||'—'}</td><td><button onclick="delTrade(${t.id})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;">✕</button></td></tr>`;
-  });
-  document.getElementById('trade-hist').innerHTML=html+'</table>';
-}
-
-function delTrade(id){
-  trades=trades.filter(t=>t.id!==id);
-  localStorage.setItem('wolf_fx_trades',JSON.stringify(trades));
-  renderTracker();
-}
-
-buildTicker();
-updateClock();
-setInterval(updateClock,1000);
-updPrice('EUR/USD');
-renderTracker();
-</script>
-</body>
-</html>
-alert('Please enter at least a pair and entry price.');return;}
   let pips=0;
   if(exit&&entry){
     const diff=dir==='BUY'?exit-entry:entry-exit;
