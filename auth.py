@@ -95,4 +95,4 @@ def signup():
 def logout():
     logout_user()
     session.clear()
-    return redirect(url_for('auth.login_page'))
+    return redirect('/auth/login')
