@@ -42,7 +42,7 @@ def _require_plan(min_plan: str, redirect_target: str = "pricing"):
 
             if plan is None:
                 flash("Please log in to access this page.", "warning")
-                return redirect(url_for("login"))
+                return redirect(url_for("auth.login"))
 
             if plan == "expired":
                 flash("Your free trial has expired. Upgrade to continue.", "warning")
@@ -73,7 +73,7 @@ def login_required(f):
         plan = _get_user_plan()
         if plan is None:
             flash("Please log in.", "warning")
-            return redirect(url_for("login"))
+            return redirect(url_for("auth.login"))
         if plan == "expired":
             flash("Your free trial has expired. Upgrade to continue.", "warning")
             return redirect(url_for("pricing"))

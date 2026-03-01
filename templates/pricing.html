@@ -209,7 +209,7 @@
       {% if session.get('plan') == 'trial' %}
         <a href="{{ url_for('index') }}" class="btn btn-current">Current Plan</a>
       {% elif not session.get('logged_in') %}
-        <a href="{{ url_for('signup') }}" class="btn btn-trial">Start Free Trial</a>
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-trial">Start Free Trial</a>
       {% else %}
         <a href="{{ url_for('index') }}" class="btn btn-trial">Go to App →</a>
       {% endif %}
