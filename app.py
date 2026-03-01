@@ -47,7 +47,7 @@ def load_user(user_id):
 def unauthorized():
     if request.path.startswith('/api/') or request.path.startswith('/scanner/'):
         return jsonify({'error': 'Please log in to access this feature.', 'action': 'login'}), 401
-    return redirect(url_for('auth.login_page'))
+    return redirect(url_for('login_page'))
 
 # ── Server Time API ──────────────────────────────────
 @app.route('/api/server-time')
@@ -94,13 +94,15 @@ def server_time():
     })
 
 # ── Blueprints ───────────────────────────────────────
-app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(auth_bp)
 
 from payments import payments_bp
 app.register_blueprint(payments_bp)
 
 from scanner import scanner_bp
 app.register_blueprint(scanner_bp)
+from forex import forex_bp
+app.register_blueprint(forex_bp)
 
 # ── Create DB tables ─────────────────────────────────
 with app.app_context():
@@ -212,6 +214,12 @@ def fetch_option_strikes(ticker, expiration, option_type='call'):
 def index():
     return render_template('index.html')
 
+@app.route('/login')
+def login_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('auth.html')
+
 @app.route('/pricing')
 def pricing():
     return render_template('pricing.html')
@@ -266,6 +274,7 @@ def create_checkout_session():
 @login_required
 def payment_success():
     plan = request.args.get('plan', 'basic')
+    # Update the user's plan in DB
     current_user.plan = plan
     db.session.commit()
     flash(f"🐺 You're now on Wolf Elite {'Elite' if plan == 'elite' else 'Basic'}! Let's get it.", 'success')
@@ -291,6 +300,7 @@ def stripe_webhook():
                 user.stripe_customer_id    = data.get('customer')
                 user.stripe_subscription_id = data.get('subscription')
                 db.session.commit()
+                print(f'[Webhook] User {user_id} upgraded to {plan}')
         except Exception as e:
             print(f'[Webhook] DB error: {e}')
 
@@ -301,6 +311,7 @@ def stripe_webhook():
             if user:
                 user.plan = 'trial'
                 db.session.commit()
+                print(f'[Webhook] Subscription cancelled for {stripe_customer_id}')
         except Exception as e:
             print(f'[Webhook] DB error: {e}')
 
@@ -433,7 +444,7 @@ def track_pick():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/tracker-stats', methods=['GET'])
-@login_required
+@login_required  
 def tracker_stats():
     import json, os
     tracker_file = 'wolf_tracker.json'
