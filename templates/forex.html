@@ -794,7 +794,6 @@ async function fetchAllPrices(){
       });
       buildTicker();
       updPrice(currentPair);
-      // Update session from server
       if(data.session){
         const pill=document.getElementById('sess');
         const s=data.session;
@@ -804,6 +803,21 @@ async function fetchAllPrices(){
       console.log('✅ Live prices updated');
     }
   }catch(e){console.log('Price fetch error:',e);}
+
+  // Also fetch DXY price separately
+  try{
+    const dxyRes=await fetch('/api/forex-price',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({symbol:'DXY'})
+    });
+    if(dxyRes.ok){
+      const dxyData=await dxyRes.json();
+      if(dxyData.price){
+        const dxyEl=document.getElementById('dxy-price');
+        if(dxyEl) dxyEl.textContent=parseFloat(dxyData.price).toFixed(2);
+      }
+    }
+  }catch(e){console.log('DXY fetch error:',e);}
 }
 
 async function callAI(prompt,maxTokens=2000){
@@ -1106,33 +1120,50 @@ function parseDisplay(text){
 function updTF(text){
   document.getElementById('tf-lbl').textContent=currentPair;
   const tfs=[
-    {l:'MONTHLY',k:'Monthly'},
-    {l:'WEEKLY',k:'Weekly'},
-    {l:'DAILY',k:'Daily'},
-    {l:'H4',k:'H4'},
-    {l:'H1',k:'H1'},
-    {l:'M15',k:'M15'}
+    {l:'MONTHLY',k:'Monthly',step:'5'},
+    {l:'WEEKLY', k:'Weekly', step:'6'},
+    {l:'DAILY',  k:'Daily',  step:'7'},
+    {l:'H4',     k:'H4',     step:'8'},
+    {l:'H1',     k:'H1',     step:'9'},
+    {l:'M15',    k:'M15',    step:'9'}
   ];
   let html='';
   tfs.forEach((tf,idx)=>{
-    const m=text.match(new RegExp(tf.k+'\\s*(?:Bias|Timeframe)?:\\s*(BULLISH|BEARISH|NEUTRAL)\\s*[—\\-]?\\s*([^\\n]*)','i'));
-    const sig=m?.[1]?.toUpperCase()||'NEUTRAL';
-    const desc=m?.[2]?.trim()||'See full analysis tab';
+    // Try multiple regex patterns to catch different AI response formats
+    const patterns=[
+      new RegExp(tf.k+'\\s*(?:Timeframe|Bias|Direction)?[:\\s]*\\*{0,2}(BULLISH|BEARISH|NEUTRAL)\\*{0,2}','i'),
+      new RegExp('\\*\\*'+tf.k+'[^*]*\\*\\*[:\\s]*\\*{0,2}(BULLISH|BEARISH|NEUTRAL)\\*{0,2}','i'),
+      new RegExp('\\*\\*STEP \\d+[^*]*'+tf.k+'[^*]*\\*\\*[\\s\\S]{0,200}?(BULLISH|BEARISH|NEUTRAL)','i'),
+      new RegExp(tf.k+'[^\\n]{0,50}(BULLISH|BEARISH|NEUTRAL)','i'),
+      new RegExp('(BULLISH|BEARISH|NEUTRAL)[^\\n]{0,30}'+tf.k,'i'),
+    ];
+    let sig='NEUTRAL',desc='';
+    for(const pat of patterns){
+      const m=text.match(pat);
+      if(m){
+        sig=m[1].toUpperCase();
+        break;
+      }
+    }
+    // Get description — text around that timeframe section
+    const blockM=text.match(new RegExp(tf.k+'[^\\n]*\\n([^\\n]{10,200})','i'));
+    desc=blockM?.[1]?.trim().replace(/\*\*/g,'')||'';
+    if(!desc){
+      const stepM=text.match(new RegExp('STEP \\d+[^\\n]*'+tf.k+'[^\\n]*\\n([\\s\\S]{20,300}?)(?=\\*\\*STEP|$)','i'));
+      desc=stepM?.[1]?.trim().replace(/\*\*/g,'').substring(0,150)||sig+' bias on '+tf.l;
+    }
+    if(!desc) desc=sig+' — see full analysis above';
+
     const cls=sig==='BULLISH'?'buy':sig==='BEARISH'?'sell':'neutral';
-    const lbl=sig==='BULLISH'?'▲ BUY':sig==='BEARISH'?'▼ SELL':'→ NEUTRAL';
+    const lbl=sig==='BULLISH'?'▲ BULLISH':sig==='BEARISH'?'▼ BEARISH':'→ NEUTRAL';
+    const color=sig==='BULLISH'?'var(--green)':sig==='BEARISH'?'var(--red)':'var(--gold)';
 
-    // Get detail block
-    const stepNums={'MONTHLY':'5','WEEKLY':'6','DAILY':'7','H4':'8','H1':'9','M15':'9'};
-    const stepNum=stepNums[tf.l]||'';
-    const detailM=text.match(new RegExp('STEP '+stepNum+'[^*]*\\*\\*[^\\n]*'+tf.k+'[^\\n]*\\n([\\s\\S]*?)(?=\\*\\*STEP|$)','i'));
-    const detail=detailM?.[1]?.trim()||desc;
-
-    html+=`<div class="tf-row" onclick="toggleTF(${idx})" id="tf-row-${idx}">
+    html+=`<div class="tf-row" onclick="toggleTF(${idx})" id="tf-row-${idx}" style="border-left:3px solid ${color};">
       <div class="tf-nm">${tf.l}</div>
       <div class="tf-sg ${cls}">${lbl}</div>
-      <div class="tf-ds">${desc.substring(0,80)}${desc.length>80?'...':''}</div>
+      <div class="tf-ds">${desc.substring(0,100)}${desc.length>100?'...':''}</div>
     </div>
-    <div class="tf-detail" id="tf-detail-${idx}">${fmt(detail)}</div>`;
+    <div class="tf-detail" id="tf-detail-${idx}">${fmt(desc)}</div>`;
   });
   document.getElementById('tf-box').innerHTML=html;
 }
@@ -1508,13 +1539,23 @@ function renderConflict(text,box){
 
 // ── TRACKER ───────────────────────────────────────────────────────────────────
 function quickLog(pair,dir,entry,sl,tp,type){
-  document.getElementById('t-pair').value=pair;
-  document.getElementById('t-dir').value=dir;
-  document.getElementById('t-entry').value=entry;
-  document.getElementById('t-sl').value=sl;
-  document.getElementById('t-tp').value=tp;
-  document.getElementById('t-type').value=type==='DAY'?'DAY':type==='SWING'?'SWING':'GUARANTEED';
-  openTab('tracker',document.querySelectorAll('.tab-btn')[8]);
+  // Fill tracker form
+  const setVal=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  setVal('t-pair', pair);
+  setVal('t-dir',  dir);
+  setVal('t-entry',entry);
+  setVal('t-sl',   sl);
+  setVal('t-tp',   tp);
+  setVal('t-type', type==='DAY'?'DAY':type==='SWING'?'SWING':'GUARANTEED');
+  // Navigate to tracker tab
+  const trackerBtn=Array.from(document.querySelectorAll('.tab-btn')).find(b=>b.textContent.includes('TRACKER'));
+  if(trackerBtn) openTab('tracker',trackerBtn);
+  else openTab('tracker',document.querySelectorAll('.tab-btn')[8]);
+  // Scroll to form
+  setTimeout(()=>{
+    const form=document.getElementById('t-pair');
+    if(form){form.scrollIntoView({behavior:'smooth',block:'center'});form.focus();}
+  },300);
 }
 
 function logTrade(){
@@ -1749,14 +1790,14 @@ function updateDXYPanel(text){
   const mM = text.match(/DXY\s*monthly[^:]*:\s*([^\n,\.]+)/i);
   const wM = text.match(/DXY\s*weekly[^:]*:\s*([^\n,\.]+)/i);
   const dM = text.match(/DXY\s*daily[^:]*:\s*([^\n,\.]+)/i);
-  if(mM) document.getElementById('dxy-monthly').textContent = mM[1].trim().substring(0,12);
-  if(wM) document.getElementById('dxy-weekly').textContent = wM[1].trim().substring(0,12);
-  if(dM) document.getElementById('dxy-daily').textContent = dM[1].trim().substring(0,12);
+  if(mM) document.getElementById('dxy-monthly').textContent = mM[1].trim().replace(/\*\*/g,'').substring(0,12);
+  if(wM) document.getElementById('dxy-weekly').textContent = wM[1].trim().replace(/\*\*/g,'').substring(0,12);
+  if(dM) document.getElementById('dxy-daily').textContent = dM[1].trim().replace(/\*\*/g,'').substring(0,12);
 
   // If no structured data, try to infer from text
-  if(!mM) document.getElementById('dxy-monthly').textContent = bias || 'See analysis';
-  if(!wM) document.getElementById('dxy-weekly').textContent = bias || 'See analysis';
-
+  if(!mM) document.getElementById('dxy-monthly').textContent = bias || '—';
+  if(!wM) document.getElementById('dxy-weekly').textContent = bias || '—';
+  if(!dM) document.getElementById('dxy-daily').textContent = bias || '—';
   const impactTxt = isBull ? 'USD STRENGTH — bearish for EUR/GBP/AUD' :
     isBear ? 'USD WEAKNESS — bullish for EUR/GBP/AUD/GOLD' : 'NEUTRAL — trade pair catalysts';
   document.getElementById('dxy-impact').textContent = impactTxt;
