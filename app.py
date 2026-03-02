@@ -506,3 +506,210 @@ def forex_picks():
         return jsonify({'content': message.content[0].text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+# ═══════════════════════════════════════════════════════════
+# FOREX WOLF ROUTES — Add these to app.py
+# Paste BEFORE the final "if __name__ == '__main__':" line
+# ═══════════════════════════════════════════════════════════
+
+@app.route('/forex-wolf')
+@login_required
+def forex_wolf():
+    return render_template('forex_wolf.html')
+
+@app.route('/api/forex-daily-picks', methods=['POST'])
+@login_required
+def forex_daily_picks():
+    """Top 3 guaranteed day trades — London & NY session"""
+    import json
+    from datetime import datetime
+    try:
+        now = datetime.now()
+        date_str = now.strftime('%A, %B %d, %Y')
+        time_str = now.strftime('%I:%M %p EST')
+
+        prompt = f"""You are Wolf AI, elite forex day trader. Today is {date_str}, {time_str}.
+
+Find the TOP 3 GUARANTEED DAY TRADES for today's London (3AM-12PM EST) and NY (8AM-5PM EST) sessions.
+
+Scan ALL pairs: EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, NZD/USD, EUR/GBP, EUR/JPY, GBP/JPY, XAU/USD
+Only pick where MINIMUM 5 factors align. Be ruthlessly selective.
+
+Respond ONLY with valid JSON, no markdown, no extra text:
+{{
+  "session": "LONDON/NY",
+  "date": "{date_str}",
+  "risk_environment": "RISK-ON or RISK-OFF",
+  "dxy_bias": "BULLISH or BEARISH",
+  "picks": [
+    {{
+      "rank": 1,
+      "pair": "EUR/USD",
+      "direction": "BUY",
+      "sharingan_score": 5,
+      "confidence": 88,
+      "entry": "1.0840",
+      "stop_loss": "1.0810",
+      "tp1": "1.0880",
+      "tp2": "1.0920",
+      "tp3": "1.0960",
+      "sl_pips": 30,
+      "tp1_pips": 40,
+      "rr_ratio": "1:1.3",
+      "best_window": "3AM-6AM EST",
+      "thesis": "Full 3-4 sentence reason why this is the best setup today",
+      "confluences": ["Factor 1", "Factor 2", "Factor 3", "Factor 4", "Factor 5"],
+      "buy_scenario": "IF price breaks above 1.0855 with strong London candle close, enter long",
+      "sell_scenario": "IF price rejects 1.0855 and breaks below 1.0830, enter short",
+      "key_news": "Any news affecting this pair today",
+      "invalidation": "What exactly cancels this trade"
+    }}
+  ]
+}}"""
+
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        message = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=2500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = message.content[0].text
+        # Clean JSON
+        text = text.strip()
+        if text.startswith('```'):
+            text = text.split('```')[1]
+            if text.startswith('json'):
+                text = text[4:]
+        text = text.strip()
+        data = json.loads(text)
+        return jsonify(data)
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'JSON parse error: {str(e)}', 'raw': text[:500]}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/forex-weekly-picks', methods=['POST'])
+@login_required
+def forex_weekly_picks():
+    """Top 3 swing trades for the week"""
+    import json
+    from datetime import datetime
+    try:
+        now = datetime.now()
+        date_str = now.strftime('%A, %B %d, %Y')
+
+        prompt = f"""You are Wolf AI, elite forex swing trader. Week of {date_str}.
+
+Find the TOP 3 SWING TRADES for this week (2-7 day holds) across ALL major pairs.
+Deep research: Fed/ECB/BOE/BOJ stance, DXY weekly direction, weekly/daily chart setups, key events this week.
+
+Respond ONLY with valid JSON, no markdown, no extra text:
+{{
+  "week": "{date_str}",
+  "weekly_theme": "Main macro theme driving forex this week",
+  "dxy_outlook": "BULLISH or BEARISH — brief reason",
+  "central_bank_focus": "Which central bank is market focused on this week",
+  "picks": [
+    {{
+      "rank": 1,
+      "pair": "GBP/USD",
+      "direction": "SELL",
+      "hold_days": "3-5",
+      "confidence": 85,
+      "entry_zone": "1.2620-1.2640",
+      "stop_loss": "1.2690",
+      "tp1": "1.2540",
+      "tp2": "1.2480",
+      "tp3": "1.2400",
+      "sl_pips": 60,
+      "tp1_pips": 90,
+      "rr_ratio": "1:1.5",
+      "weekly_bias": "BEARISH",
+      "fundamental": "2 sentences on central bank and macro reason",
+      "technical": "2 sentences on weekly/daily chart setup",
+      "buy_scenario": "IF price breaks above X weekly close, long targets Y",
+      "sell_scenario": "IF price breaks below X weekly close, short targets Y",
+      "key_events": "Events this week that could be catalysts",
+      "key_risk": "What breaks this setup"
+    }}
+  ]
+}}"""
+
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        message = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=2500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = message.content[0].text
+        text = text.strip()
+        if text.startswith('```'):
+            text = text.split('```')[1]
+            if text.startswith('json'):
+                text = text[4:]
+        text = text.strip()
+        data = json.loads(text)
+        return jsonify(data)
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'JSON parse error: {str(e)}', 'raw': text[:500]}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/forex-scanner', methods=['POST'])
+@login_required
+def forex_scanner():
+    """Scan forex pairs for a specific theme/setup"""
+    import json
+    from datetime import datetime
+    try:
+        data = request.get_json()
+        theme = data.get('theme', 'strongest momentum')
+        now = datetime.now()
+        date_str = now.strftime('%A, %B %d, %Y')
+
+        prompt = f"""You are Wolf AI, forex market analyst. Today is {date_str}.
+
+Scan ALL major forex pairs for: "{theme}"
+Find the TOP 5 pairs that best match this theme right now.
+
+Respond ONLY with valid JSON, no markdown:
+{{
+  "theme": "{theme}",
+  "date": "{date_str}",
+  "pairs": [
+    {{
+      "pair": "EUR/USD",
+      "direction": "BUY",
+      "score": 88,
+      "action": "STRONG BUY",
+      "session": "LONDON",
+      "entry": "1.0840",
+      "stop_loss": "1.0800",
+      "target": "1.0920",
+      "thesis": "Why this pair matches the theme — 2-3 sentences",
+      "catalyst": "Specific catalyst driving this move",
+      "timeframe": "Intraday / 2-3 days / Weekly"
+    }}
+  ]
+}}"""
+
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        message = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = message.content[0].text
+        text = text.strip()
+        if text.startswith('```'):
+            text = text.split('```')[1]
+            if text.startswith('json'):
+                text = text[4:]
+        text = text.strip()
+        result = json.loads(text)
+        return jsonify(result)
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'JSON parse error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

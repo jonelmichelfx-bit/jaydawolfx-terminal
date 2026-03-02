@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JAYDAWOLFX — Wolf Forex Picks</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#080c0f;--surface:#0f1923;--surface2:#141c24;--border:#2a3f52;
+  --green:#00ff99;--red:#ff4466;--cyan:#33ddff;--purple:#a855f7;
+  --orange:#ff8800;--gold:#ffd700;--pink:#ff44aa;
+  --text:#ffffff;--text2:#c0d8e8;--text3:#90b8d0;
+  --font:'Share Tech Mono',monospace;--head:'Orbitron',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,153,0.012) 2px,rgba(0,255,153,0.012) 4px);pointer-events:none;z-index:0;}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(8,12,15,0.97);
+  border-bottom:2px solid var(--gold);padding:10px 24px;display:flex;align-items:center;
+  justify-content:space-between;backdrop-filter:blur(10px);}
+.nav-left{display:flex;align-items:center;gap:14px;}
+.logo{font-family:var(--head);font-size:13px;font-weight:900;color:var(--gold);letter-spacing:3px;
+  text-shadow:0 0 20px rgba(255,215,0,0.5);}
+.logo span{color:var(--orange);}
+.nav-links{display:flex;align-items:center;gap:8px;}
+.nav-btn{padding:6px 14px;border-radius:4px;font-family:var(--font);font-size:10px;font-weight:bold;
+  letter-spacing:1px;text-decoration:none;border:1px solid var(--border);color:var(--text3);transition:all 0.2s;}
+.nav-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.nav-btn.active{background:rgba(255,215,0,0.1);border-color:var(--gold);color:var(--gold);}
+
+/* MAIN */
+.main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:90px 24px 60px;}
+
+/* HERO */
+.hero{text-align:center;margin-bottom:32px;padding:36px 24px;
+  background:linear-gradient(135deg,rgba(255,215,0,0.05),rgba(255,136,0,0.05));
+  border:1px solid rgba(255,215,0,0.2);border-radius:12px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(255,215,0,0.08),transparent 70%);pointer-events:none;}
+.hero-icon{font-size:50px;margin-bottom:12px;filter:drop-shadow(0 0 20px rgba(255,215,0,0.6));}
+.hero-title{font-family:var(--head);font-size:22px;font-weight:900;color:var(--gold);
+  letter-spacing:4px;text-shadow:0 0 25px rgba(255,215,0,0.4);margin-bottom:6px;}
+.hero-sub{font-size:11px;color:var(--text3);letter-spacing:2px;margin-bottom:18px;}
+.hero-badges{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.hbadge{background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);
+  border-radius:20px;padding:4px 14px;font-size:10px;color:var(--gold);letter-spacing:1px;}
+
+/* TABS */
+.mode-tabs{display:flex;gap:0;margin-bottom:28px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.mode-tab{flex:1;padding:14px;font-family:var(--font);font-size:11px;letter-spacing:2px;
+  background:transparent;border:none;color:var(--text3);cursor:pointer;transition:all 0.2s;text-align:center;}
+.mode-tab.active-day{background:rgba(255,215,0,0.1);color:var(--gold);}
+.mode-tab.active-week{background:rgba(168,85,247,0.1);color:var(--purple);}
+.mode-tab:hover{color:var(--text2);}
+
+/* CONTEXT BAR */
+.context-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+.ctx-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center;}
+.ctx-l{font-size:8px;letter-spacing:2px;color:var(--text3);margin-bottom:5px;}
+.ctx-v{font-size:13px;font-weight:bold;color:var(--text);}
+
+/* GENERATE BTN */
+.gen-wrap{margin-bottom:28px;}
+.btn-day{width:100%;padding:16px;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,136,0,0.15));
+  border:2px solid var(--gold);border-radius:6px;font-family:var(--head);font-size:12px;font-weight:700;
+  letter-spacing:3px;color:var(--gold);cursor:pointer;transition:all 0.3s;}
+.btn-day:hover{box-shadow:0 0 30px rgba(255,215,0,0.3);transform:translateY(-1px);}
+.btn-day:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.btn-week{width:100%;padding:16px;background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(204,85,255,0.15));
+  border:2px solid var(--purple);border-radius:6px;font-family:var(--head);font-size:12px;font-weight:700;
+  letter-spacing:3px;color:var(--purple);cursor:pointer;transition:all 0.3s;}
+.btn-week:hover{box-shadow:0 0 30px rgba(168,85,247,0.3);transform:translateY(-1px);}
+.btn-week:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* SCANNER */
+.scanner-wrap{display:flex;gap:10px;margin-bottom:28px;}
+.scan-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:var(--font);font-size:12px;padding:12px 16px;outline:none;transition:border-color 0.2s;}
+.scan-input:focus{border-color:var(--orange);}
+.scan-input::placeholder{color:var(--text3);}
+.btn-scan{padding:12px 20px;background:rgba(255,136,0,0.1);border:1px solid var(--orange);border-radius:6px;
+  color:var(--orange);font-family:var(--font);font-size:11px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.btn-scan:hover{background:rgba(255,136,0,0.2);}
+.btn-scan:disabled{opacity:0.4;cursor:not-allowed;}
+.theme-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px;}
+.chip{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:20px;
+  color:var(--text3);font-family:var(--font);font-size:10px;cursor:pointer;transition:all 0.15s;letter-spacing:1px;}
+.chip:hover{border-color:var(--orange);color:var(--orange);}
+
+/* LOADING */
+.loading{display:none;text-align:center;padding:60px 20px;}
+.loading.visible{display:block;}
+.wolf-bounce{font-size:50px;animation:bounce 1s ease-in-out infinite;margin-bottom:16px;}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-15px);}
+}
+.load-title{font-size:14px;color:var(--gold);letter-spacing:3px;margin-bottom:8px;}
+.load-sub{font-size:11px;color:var(--text3);letter-spacing:1px;}
+
+/* OUTLOOK CARD */
+.outlook-card{background:var(--surface);border:1px solid rgba(255,215,0,0.2);border-radius:10px;
+  padding:20px 24px;margin-bottom:20px;display:none;}
+.outlook-card.visible{display:block;}
+.outlook-top{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+.outlook-title{font-size:10px;letter-spacing:3px;color:var(--text3);}
+.mood-badge{padding:4px 12px;border-radius:20px;font-size:10px;font-weight:bold;letter-spacing:2px;}
+.mood-bull{background:rgba(0,255,153,0.1);border:1px solid rgba(0,255,153,0.3);color:var(--green);}
+.mood-bear{background:rgba(255,68,102,0.1);border:1px solid rgba(255,68,102,0.3);color:var(--red);}
+.mood-neutral{background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);color:var(--gold);}
+.outlook-text{font-size:12px;color:var(--text2);line-height:1.8;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;display:none;}
+.stats-row.visible{display:grid;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;}
+.stat-lbl{font-size:8px;letter-spacing:2px;color:var(--text3);margin-bottom:6px;}
+.stat-num{font-family:var(--head);font-size:20px;font-weight:700;}
+
+/* PICK CARDS */
+.picks-grid{display:flex;flex-direction:column;gap:16px;}
+.pick-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:transform 0.2s;}
+.pick-card:hover{transform:translateX(3px);}
+.pick-rank-bar{height:4px;}
+.pick-header{padding:18px 22px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;}
+.pick-left{display:flex;align-items:center;gap:14px;}
+.pick-rank{font-size:28px;min-width:40px;}
+.pick-pair{font-family:var(--head);font-size:22px;font-weight:700;letter-spacing:2px;}
+.pick-dir{font-size:10px;letter-spacing:2px;font-weight:bold;padding:4px 12px;border-radius:3px;margin-top:4px;display:inline-block;}
+.dir-buy{background:rgba(0,255,153,0.12);border:1px solid rgba(0,255,153,0.3);color:var(--green);}
+.dir-sell{background:rgba(255,68,102,0.12);border:1px solid rgba(255,68,102,0.3);color:var(--red);}
+.pick-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.tag{padding:3px 9px;border-radius:3px;font-size:9px;letter-spacing:1px;border:1px solid;}
+.tag-session{background:rgba(51,221,255,0.1);border-color:rgba(51,221,255,0.3);color:var(--cyan);}
+.tag-score{background:rgba(255,136,0,0.1);border-color:rgba(255,136,0,0.3);color:var(--orange);}
+.tag-gold{background:rgba(255,215,0,0.1);border-color:rgba(255,215,0,0.3);color:var(--gold);}
+.tag-purple{background:rgba(168,85,247,0.1);border-color:rgba(168,85,247,0.3);color:var(--purple);}
+.pick-right{text-align:right;}
+.score-ring{width:64px;height:64px;border-radius:50%;border:3px solid;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;}
+.score-num{font-family:var(--head);font-size:18px;font-weight:700;line-height:1;}
+.score-lbl{font-size:8px;letter-spacing:1px;color:var(--text3);margin-top:2px;}
+.pick-body{padding:18px 22px;}
+.pick-thesis{font-size:12px;color:var(--text);line-height:1.8;margin-bottom:14px;padding:12px 14px;
+  background:var(--surface2);border-radius:6px;border-left:3px solid var(--gold);}
+.pick-levels{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;}
+.pl-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center;}
+.pl-lbl{font-size:8px;letter-spacing:1px;color:var(--text3);margin-bottom:4px;}
+.pl-val{font-size:12px;font-weight:bold;}
+.pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.pick-box{background:var(--surface2);border-radius:6px;padding:12px 14px;}
+.pick-box-label{font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:5px;}
+.pick-box-value{font-size:12px;color:var(--text);line-height:1.6;}
+.pick-box.bull{border-left:3px solid var(--green);}
+.pick-box.bear{border-left:3px solid var(--red);}
+.pick-box.news{border-left:3px solid var(--cyan);}
+.pick-box.risk{border-left:3px solid var(--red);}
+.pick-box.fund{border-left:3px solid var(--gold);}
+.pick-box.tech{border-left:3px solid var(--purple);}
+.confluences{background:var(--surface2);border-radius:6px;padding:12px 14px;margin-bottom:12px;
+  border-left:3px solid var(--orange);}
+.conf-title{font-size:9px;letter-spacing:2px;color:var(--orange);margin-bottom:8px;}
+.conf-item{font-size:11px;color:var(--text2);margin-bottom:4px;padding-left:10px;}
+.conf-item::before{content:'✓ ';color:var(--green);}
+.pick-footer{display:flex;align-items:center;justify-content:space-between;padding-top:12px;
+  border-top:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.pf-rr{font-size:12px;color:var(--gold);}
+.pf-hold{font-size:11px;color:var(--text3);}
+.log-btn{padding:7px 16px;background:rgba(0,255,153,0.08);border:1px solid rgba(0,255,153,0.25);
+  border-radius:4px;color:var(--green);font-family:var(--font);font-size:10px;cursor:pointer;transition:all 0.2s;}
+.log-btn:hover{background:rgba(0,255,153,0.15);}
+
+/* SCANNER RESULTS */
+.scan-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 20px;
+  margin-bottom:10px;display:flex;align-items:flex-start;gap:16px;}
+.sc-rank{font-size:22px;min-width:36px;}
+.sc-body{flex:1;}
+.sc-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+.sc-pair{font-family:var(--head);font-size:16px;font-weight:700;}
+.sc-thesis{font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:8px;}
+.sc-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.sc-item{background:var(--surface2);border-radius:4px;padding:7px 10px;}
+.sc-item-l{font-size:8px;letter-spacing:1px;color:var(--text3);margin-bottom:3px;}
+.sc-item-v{font-size:11px;font-weight:bold;}
+
+/* EMPTY / ERROR */
+.empty-state{text-align:center;padding:50px 20px;color:var(--text3);font-size:12px;letter-spacing:1px;}
+.alert-box{background:rgba(255,68,102,0.1);border:1px solid rgba(255,68,102,0.3);border-radius:6px;
+  padding:12px 16px;margin-bottom:16px;color:var(--red);font-size:12px;display:none;}
+.alert-box.visible{display:block;}
+
+/* DISCLAIMER */
+.disclaimer{background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.12);border-radius:6px;
+  padding:12px 16px;font-size:10px;color:var(--text3);line-height:1.7;margin-top:20px;display:none;}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-left">
+    <div class="logo">🐺 JAYDAWOLFX <span>FOREX</span></div>
+    <div class="nav-links">
+      <a href="/" class="nav-btn">STOCKS</a>
+      <a href="/forex" class="nav-btn">FOREX TERMINAL</a>
+      <a href="/forex-wolf" class="nav-btn active">🐺 WOLF FOREX PICKS</a>
+      <a href="/wolf-elite" class="nav-btn">📈 WOLF ELITE</a>
+      <a href="/pricing" class="nav-btn">PLANS</a>
+    </div>
+  </div>
+  <div id="market-bar" style="font-size:10px;color:var(--text3);letter-spacing:1px;"></div>
+</nav>
+
+<main class="main">
+  <div class="hero">
+    <div class="hero-icon">🐺</div>
+    <div class="hero-title">WOLF FOREX PICKS</div>
+    <div class="hero-sub">DAILY GUARANTEED TRADES · WEEKLY SWING PICKS · AI SCANNER</div>
+    <div class="hero-badges">
+      <span class="hbadge">🏆 TOP 3 DAILY</span>
+      <span class="hbadge">📈 WEEKLY SWINGS</span>
+      <span class="hbadge">🔍 PAIR SCANNER</span>
+      <span class="hbadge">👁 SHARINGAN ANALYSIS</span>
+    </div>
+  </div>
+
+  <!-- MODE TABS -->
+  <div class="mode-tabs">
+    <button class="mode-tab active-day" id="tab-daily" onclick="switchMode('daily')">🏆 TODAY'S TOP 3 GUARANTEED</button>
+    <button class="mode-tab" id="tab-weekly" onclick="switchMode('weekly')">📈 THIS WEEK'S SWING PICKS</button>
+    <button class="mode-tab" id="tab-scanner" onclick="switchMode('scanner')">🔍 FOREX SCANNER</button>
+  </div>
+
+  <!-- CONTEXT BAR -->
+  <div class="context-bar">
+    <div class="ctx-box"><div class="ctx-l">DATE</div><div class="ctx-v" id="ctx-date">--</div></div>
+    <div class="ctx-box"><div class="ctx-l">SESSION</div><div class="ctx-v" id="ctx-sess" style="color:var(--green)">--</div></div>
+    <div class="ctx-box"><div class="ctx-l">DXY BIAS</div><div class="ctx-v" id="ctx-dxy">--</div></div>
+    <div class="ctx-box"><div class="ctx-l">RISK ENV</div><div class="ctx-v" id="ctx-risk">--</div></div>
+  </div>
+
+  <!-- DAILY SECTION -->
+  <div id="section-daily">
+    <div class="gen-wrap">
+      <button class="btn-day" id="btn-daily" onclick="generateDaily()">🏆 GET TODAY'S TOP 3 GUARANTEED TRADES</button>
+    </div>
+  </div>
+
+  <!-- WEEKLY SECTION -->
+  <div id="section-weekly" style="display:none;">
+    <div class="gen-wrap">
+      <button class="btn-week" id="btn-weekly" onclick="generateWeekly()">📈 GET THIS WEEK'S TOP 3 SWING TRADES</button>
+    </div>
+  </div>
+
+  <!-- SCANNER SECTION -->
+  <div id="section-scanner" style="display:none;">
+    <div class="scanner-wrap">
+      <input class="scan-input" id="scan-input" placeholder="Type a theme: safe haven, oil rally, risk-off, momentum, DXY weakness..." />
+      <button class="btn-scan" id="btn-scan" onclick="runScanner()">🔍 SCAN PAIRS</button>
+    </div>
+    <div class="theme-chips">
+      <button class="chip" onclick="quickScan('DXY weakness')">DXY weakness</button>
+      <button class="chip" onclick="quickScan('safe haven flows')">safe haven flows</button>
+      <button class="chip" onclick="quickScan('oil rally pairs')">oil rally</button>
+      <button class="chip" onclick="quickScan('risk-off environment')">risk-off</button>
+      <button class="chip" onclick="quickScan('London breakout')">London breakout</button>
+      <button class="chip" onclick="quickScan('oversold bounce')">oversold bounce</button>
+      <button class="chip" onclick="quickScan('strongest momentum today')">strongest momentum</button>
+      <button class="chip" onclick="quickScan('geopolitical risk pairs')">geopolitical risk</button>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert-box" id="alert-box"></div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading">
+    <div class="wolf-bounce">🐺</div>
+    <div class="load-title" id="load-title">WOLF AI ANALYZING...</div>
+    <div class="load-sub" id="load-sub">Scanning all pairs · Checking confluence · Building setups</div>
+  </div>
+
+  <!-- OUTLOOK -->
+  <div class="outlook-card" id="outlook-card">
+    <div class="outlook-top">
+      <span class="outlook-title">MARKET OUTLOOK</span>
+      <span id="market-mood"></span>
+    </div>
+    <div class="outlook-text" id="outlook-text"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card"><div class="stat-lbl">PICKS TODAY</div><div class="stat-num" style="color:var(--gold)" id="stat-count">3</div></div>
+    <div class="stat-card"><div class="stat-lbl">AVG CONFIDENCE</div><div class="stat-num" style="color:var(--cyan)" id="stat-conf">--</div></div>
+    <div class="stat-card"><div class="stat-lbl">SESSION</div><div class="stat-num" style="color:var(--green);font-size:14px;" id="stat-sess">--</div></div>
+    <div class="stat-card"><div class="stat-lbl">RISK ENV</div><div class="stat-num" style="color:var(--orange);font-size:14px;" id="stat-risk">--</div></div>
+  </div>
+
+  <!-- PICKS CONTAINER -->
+  <div id="picks-container">
+    <div class="empty-state">🐺 Click the button above to get Wolf AI's picks</div>
+  </div>
+
+  <div class="disclaimer" id="disclaimer">
+    ⚠️ Wolf Forex picks are AI-generated for informational purposes only. Not financial advice. Always do your own research. Never risk more than you can afford to lose. Forex trading involves significant risk.
+  </div>
+</main>
+
+<script>
+const TODAY = new Date();
+let currentMode = 'daily';
+
+// Init
+document.getElementById('ctx-date').textContent = TODAY.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+updateSession();
+setInterval(updateSession, 60000);
+
+function updateSession() {
+  const h = parseInt(new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',hour12:false}));
+  const day = new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})).getDay();
+  let sess = 'CLOSED';
+  if(day > 0 && day < 6) {
+    if(h >= 19 || h < 3) sess = 'TOKYO';
+    else if(h >= 3 && h < 8) sess = 'LONDON';
+    else if(h >= 8 && h < 12) sess = 'LDN/NY';
+    else if(h >= 12 && h < 17) sess = 'NEW YORK';
+  }
+  document.getElementById('ctx-sess').textContent = sess;
+  document.getElementById('stat-sess').textContent = sess;
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+  ['daily','weekly','scanner'].forEach(m => {
+    document.getElementById('section-'+m).style.display = m===mode?'block':'none';
+    const tab = document.getElementById('tab-'+m);
+    tab.className = 'mode-tab';
+    if(m===mode) tab.className = 'mode-tab '+(m==='daily'?'active-day':m==='weekly'?'active-week':'active-day');
+  });
+  document.getElementById('picks-container').innerHTML = '<div class="empty-state">🐺 Click the button above to get Wolf AI\'s picks</div>';
+  document.getElementById('outlook-card').classList.remove('visible');
+  document.getElementById('stats-row').classList.remove('visible');
+  document.getElementById('disclaimer').style.display = 'none';
+}
+
+function showLoading(title, sub) {
+  document.getElementById('load-title').textContent = title;
+  document.getElementById('load-sub').textContent = sub;
+  document.getElementById('loading').classList.add('visible');
+  document.getElementById('picks-container').innerHTML = '';
+  document.getElementById('outlook-card').classList.remove('visible');
+  document.getElementById('stats-row').classList.remove('visible');
+  document.getElementById('disclaimer').style.display = 'none';
+  hideAlert();
+}
+
+function hideLoading() { document.getElementById('loading').classList.remove('visible'); }
+function showAlert(msg) { const el=document.getElementById('alert-box'); el.textContent=msg; el.classList.add('visible'); }
+function hideAlert() { document.getElementById('alert-box').classList.remove('visible'); }
+
+async function generateDaily() {
+  document.getElementById('btn-daily').disabled = true;
+  showLoading("🏆 FINDING TODAY'S TOP 3 GUARANTEED TRADES...", "Scanning EUR/USD, GBP/USD, USD/JPY, XAU/USD + more · Checking confluence");
+  try {
+    const res = await fetch('/api/forex-daily-picks', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({}) });
+    const data = await res.json();
+    hideLoading();
+    if(!res.ok) { showAlert(data.error || 'Failed to generate picks.'); document.getElementById('btn-daily').disabled=false; return; }
+    renderDailyPicks(data);
+    document.getElementById('btn-daily').disabled = false;
+    document.getElementById('disclaimer').style.display = 'block';
+  } catch(e) {
+    hideLoading();
+    showAlert('Error: ' + e.message);
+    document.getElementById('btn-daily').disabled = false;
+  }
+}
+
+async function generateWeekly() {
+  document.getElementById('btn-weekly').disabled = true;
+  showLoading("📈 RESEARCHING THIS WEEK'S SWING TRADES...", "Central banks · DXY weekly · Key levels · Macro setup");
+  try {
+    const res = await fetch('/api/forex-weekly-picks', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({}) });
+    const data = await res.json();
+    hideLoading();
+    if(!res.ok) { showAlert(data.error || 'Failed to generate picks.'); document.getElementById('btn-weekly').disabled=false; return; }
+    renderWeeklyPicks(data);
+    document.getElementById('btn-weekly').disabled = false;
+    document.getElementById('disclaimer').style.display = 'block';
+  } catch(e) {
+    hideLoading();
+    showAlert('Error: ' + e.message);
+    document.getElementById('btn-weekly').disabled = false;
+  }
+}
+
+function quickScan(theme) {
+  document.getElementById('scan-input').value = theme;
+  runScanner();
+}
+
+async function runScanner() {
+  const theme = document.getElementById('scan-input').value.trim();
+  if(!theme) { showAlert('Enter a theme to scan for.'); return; }
+  document.getElementById('btn-scan').disabled = true;
+  showLoading(`🔍 SCANNING FOR "${theme.toUpperCase()}"...`, "Finding best forex pairs matching this theme");
+  try {
+    const res = await fetch('/api/forex-scanner', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({theme}) });
+    const data = await res.json();
+    hideLoading();
+    if(!res.ok) { showAlert(data.error || 'Scan failed.'); document.getElementById('btn-scan').disabled=false; return; }
+    renderScannerResults(data);
+    document.getElementById('btn-scan').disabled = false;
+    document.getElementById('disclaimer').style.display = 'block';
+  } catch(e) {
+    hideLoading();
+    showAlert('Error: ' + e.message);
+    document.getElementById('btn-scan').disabled = false;
+  }
+}
+
+function renderDailyPicks(data) {
+  // Update context
+  if(data.dxy_bias) { document.getElementById('ctx-dxy').textContent = data.dxy_bias; document.getElementById('ctx-dxy').style.color = data.dxy_bias.includes('BULL') ? 'var(--green)' : 'var(--red)'; }
+  if(data.risk_environment) { document.getElementById('ctx-risk').textContent = data.risk_environment; document.getElementById('ctx-risk').style.color = data.risk_environment.includes('ON') ? 'var(--green)' : 'var(--red)'; }
+
+  // Outlook
+  const outlookEl = document.getElementById('market-mood');
+  outlookEl.innerHTML = `<span class="mood-badge mood-${data.risk_environment?.includes('ON')?'bull':'bear'}">${data.risk_environment||'--'}</span> <span class="mood-badge mood-neutral">DXY: ${data.dxy_bias||'--'}</span>`;
+  document.getElementById('outlook-text').textContent = `London & NY Session picks for ${data.date||'today'}. Scanning all major pairs for highest conviction setups.`;
+  document.getElementById('outlook-card').classList.add('visible');
+
+  // Stats
+  const picks = data.picks || [];
+  const avgConf = picks.length ? Math.round(picks.reduce((s,p) => s+(p.confidence||0), 0) / picks.length) : 0;
+  document.getElementById('stat-count').textContent = picks.length;
+  document.getElementById('stat-conf').textContent = avgConf + '%';
+  document.getElementById('stat-risk').textContent = data.risk_environment || '--';
+  document.getElementById('stats-row').classList.add('visible');
+
+  // Render cards
+  const container = document.getElementById('picks-container');
+  const grid = document.createElement('div');
+  grid.className = 'picks-grid';
+
+  picks.forEach((p, i) => {
+    const rankEmoji = ['🥇','🥈','🥉'][i] || '#'+(i+1);
+    const barColors = ['#ffd700','#c0c0c0','#cd7f32'];
+    const barColor = barColors[i] || '#ff8800';
+    const scoreColor = p.confidence >= 85 ? '#00ff99' : p.confidence >= 70 ? '#ffd700' : '#ff6b6b';
+    const isBuy = p.direction === 'BUY';
+
+    const card = document.createElement('div');
+    card.className = 'pick-card';
+    card.innerHTML = `
+      <div class="pick-rank-bar" style="background:${barColor}"></div>
+      <div class="pick-header">
+        <div class="pick-left">
+          <div class="pick-rank" style="color:${barColor}">${rankEmoji}</div>
+          <div>
+            <div class="pick-pair" style="color:${isBuy?'var(--green)':'var(--red)'}">${p.pair}</div>
+            <div class="pick-dir ${isBuy?'dir-buy':'dir-sell'}">${p.direction}</div>
+            <div class="pick-tags">
+              ${p.best_window?`<span class="tag tag-session">⏰ ${p.best_window}</span>`:''}
+              ${p.sharingan_score?`<span class="tag tag-score">👁 SHARINGAN ${p.sharingan_score}/6</span>`:''}
+              <span class="tag tag-gold">GUARANTEED</span>
+            </div>
+          </div>
+        </div>
+        <div class="pick-right">
+          <div class="score-ring" style="border-color:${scoreColor}">
+            <div class="score-num" style="color:${scoreColor}">${p.confidence}%</div>
+            <div class="score-lbl">CONF</div>
+          </div>
+        </div>
+      </div>
+      <div class="pick-body">
+        <div class="pick-thesis">${p.thesis}</div>
+        <div class="pick-levels">
+          <div class="pl-box"><div class="pl-lbl">ENTRY</div><div class="pl-val" style="color:var(--orange)">${p.entry}</div></div>
+          <div class="pl-box"><div class="pl-lbl">STOP LOSS</div><div class="pl-val" style="color:var(--red)">${p.stop_loss}</div></div>
+          <div class="pl-box"><div class="pl-lbl">TP1</div><div class="pl-val" style="color:var(--green)">${p.tp1}</div></div>
+          <div class="pl-box"><div class="pl-lbl">TP2</div><div class="pl-val" style="color:var(--green)">${p.tp2}</div></div>
+          <div class="pl-box"><div class="pl-lbl">TP3</div><div class="pl-val" style="color:var(--green)">${p.tp3}</div></div>
+        </div>
+        ${p.confluences && p.confluences.length ? `
+        <div class="confluences">
+          <div class="conf-title">✅ CONFLUENCES (${p.confluences.length} FACTORS ALIGNED)</div>
+          ${p.confluences.map(c => `<div class="conf-item">${c}</div>`).join('')}
+        </div>` : ''}
+        <div class="pick-grid">
+          ${p.buy_scenario?`<div class="pick-box bull"><div class="pick-box-label">📈 BUY SCENARIO</div><div class="pick-box-value">${p.buy_scenario}</div></div>`:''}
+          ${p.sell_scenario?`<div class="pick-box bear"><div class="pick-box-label">📉 SELL SCENARIO</div><div class="pick-box-value">${p.sell_scenario}</div></div>`:''}
+          ${p.key_news?`<div class="pick-box news"><div class="pick-box-label">📰 KEY NEWS</div><div class="pick-box-value">${p.key_news}</div></div>`:''}
+          ${p.invalidation?`<div class="pick-box risk"><div class="pick-box-label">⚠ INVALIDATION</div><div class="pick-box-value" style="color:var(--red)">${p.invalidation}</div></div>`:''}
+        </div>
+        <div class="pick-footer">
+          <div>
+            <span class="pf-rr">R:R ${p.rr_ratio||'--'}</span>
+            <span class="pf-hold" style="margin-left:12px;">${p.sl_pips||'--'} pip SL · ${p.tp1_pips||'--'} pip TP1</span>
+          </div>
+          <button class="log-btn" onclick="window.location.href='/forex'">📋 LOG THIS TRADE</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(grid);
+}
+
+function renderWeeklyPicks(data) {
+  // Update context
+  document.getElementById('ctx-dxy').textContent = (data.dxy_outlook||'').split(' ')[0];
+  document.getElementById('ctx-risk').textContent = 'WEEKLY';
+
+  // Outlook
+  document.getElementById('market-mood').innerHTML = `<span class="mood-badge mood-neutral">WEEK OF ${data.week||'--'}</span>`;
+  document.getElementById('outlook-text').textContent = `${data.weekly_theme||''} | ${data.dxy_outlook||''} | Focus: ${data.central_bank_focus||''}`;
+  document.getElementById('outlook-card').classList.add('visible');
+
+  const picks = data.picks || [];
+  const avgConf = picks.length ? Math.round(picks.reduce((s,p) => s+(p.confidence||0), 0) / picks.length) : 0;
+  document.getElementById('stat-count').textContent = picks.length;
+  document.getElementById('stat-conf').textContent = avgConf + '%';
+  document.getElementById('stat-sess').textContent = 'SWING';
+  document.getElementById('stat-risk').textContent = data.weekly_theme ? data.weekly_theme.split(' ').slice(0,2).join(' ') : '--';
+  document.getElementById('stats-row').classList.add('visible');
+
+  const container = document.getElementById('picks-container');
+  const grid = document.createElement('div');
+  grid.className = 'picks-grid';
+
+  picks.forEach((p, i) => {
+    const rankEmoji = ['🥇','🥈','🥉'][i] || '#'+(i+1);
+    const barColors = ['#a855f7','#c0c0c0','#cd7f32'];
+    const barColor = barColors[i] || '#a855f7';
+    const scoreColor = p.confidence >= 85 ? '#a855f7' : p.confidence >= 70 ? '#ffd700' : '#ff6b6b';
+    const isBuy = p.direction === 'BUY';
+
+    const card = document.createElement('div');
+    card.className = 'pick-card';
+    card.innerHTML = `
+      <div class="pick-rank-bar" style="background:${barColor}"></div>
+      <div class="pick-header">
+        <div class="pick-left">
+          <div class="pick-rank" style="color:${barColor}">${rankEmoji}</div>
+          <div>
+            <div class="pick-pair" style="color:${isBuy?'var(--green)':'var(--red)'}">${p.pair}</div>
+            <div class="pick-dir ${isBuy?'dir-buy':'dir-sell'}">${p.direction}</div>
+            <div class="pick-tags">
+              ${p.hold_days?`<span class="tag tag-session">📅 ${p.hold_days} DAYS</span>`:''}
+              <span class="tag tag-purple">SWING TRADE</span>
+              <span class="tag" style="background:rgba(168,85,247,0.1);border-color:rgba(168,85,247,0.3);color:var(--purple);">${p.weekly_bias||'--'}</span>
+            </div>
+          </div>
+        </div>
+        <div class="pick-right">
+          <div class="score-ring" style="border-color:${scoreColor}">
+            <div class="score-num" style="color:${scoreColor}">${p.confidence}%</div>
+            <div class="score-lbl">CONF</div>
+          </div>
+        </div>
+      </div>
+      <div class="pick-body">
+        <div class="pick-thesis">${p.fundamental} ${p.technical}</div>
+        <div class="pick-levels">
+          <div class="pl-box"><div class="pl-lbl">ENTRY ZONE</div><div class="pl-val" style="color:var(--orange);font-size:10px;">${p.entry_zone}</div></div>
+          <div class="pl-box"><div class="pl-lbl">STOP LOSS</div><div class="pl-val" style="color:var(--red)">${p.stop_loss}</div></div>
+          <div class="pl-box"><div class="pl-lbl">TP1</div><div class="pl-val" style="color:var(--green)">${p.tp1}</div></div>
+          <div class="pl-box"><div class="pl-lbl">TP2</div><div class="pl-val" style="color:var(--green)">${p.tp2}</div></div>
+          <div class="pl-box"><div class="pl-lbl">TP3</div><div class="pl-val" style="color:var(--green)">${p.tp3}</div></div>
+        </div>
+        <div class="pick-grid">
+          ${p.buy_scenario?`<div class="pick-box bull"><div class="pick-box-label">📈 BUY SCENARIO</div><div class="pick-box-value">${p.buy_scenario}</div></div>`:''}
+          ${p.sell_scenario?`<div class="pick-box bear"><div class="pick-box-label">📉 SELL SCENARIO</div><div class="pick-box-value">${p.sell_scenario}</div></div>`:''}
+          ${p.key_events?`<div class="pick-box news"><div class="pick-box-label">📅 KEY EVENTS</div><div class="pick-box-value">${p.key_events}</div></div>`:''}
+          ${p.key_risk?`<div class="pick-box risk"><div class="pick-box-label">⚠ KEY RISK</div><div class="pick-box-value" style="color:var(--red)">${p.key_risk}</div></div>`:''}
+        </div>
+        <div class="pick-footer">
+          <div>
+            <span class="pf-rr">R:R ${p.rr_ratio||'--'}</span>
+            <span class="pf-hold" style="margin-left:12px;">${p.sl_pips||'--'} pip SL</span>
+          </div>
+          <button class="log-btn" onclick="window.location.href='/forex'">📋 LOG THIS TRADE</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(grid);
+}
+
+function renderScannerResults(data) {
+  const pairs = data.pairs || [];
+  const avgScore = pairs.length ? Math.round(pairs.reduce((s,p) => s+(p.score||0), 0) / pairs.length) : 0;
+  document.getElementById('stat-count').textContent = pairs.length;
+  document.getElementById('stat-conf').textContent = avgScore;
+  document.getElementById('stat-sess').textContent = data.theme ? data.theme.substring(0,8).toUpperCase() : '--';
+  document.getElementById('stats-row').classList.add('visible');
+
+  const container = document.getElementById('picks-container');
+  container.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:14px;letter-spacing:1px;">🔍 SCAN RESULTS: ${(data.theme||'').toUpperCase()} — ${data.date||''}</div>`;
+
+  const rankEmojis = ['🥇','🥈','🥉','#4','#5'];
+  pairs.forEach((p, i) => {
+    const isBuy = p.direction === 'BUY';
+    const scoreColor = p.score >= 85 ? '#00ff99' : p.score >= 70 ? '#ffd700' : '#ff6b6b';
+    const card = document.createElement('div');
+    card.className = 'scan-card';
+    card.innerHTML = `
+      <div class="sc-rank">${rankEmojis[i]||'#'+(i+1)}</div>
+      <div class="sc-body">
+        <div class="sc-top">
+          <span style="font-family:var(--head);font-size:16px;font-weight:700;color:${isBuy?'var(--green)':'var(--red)'}">${p.pair}</span>
+          <span class="pick-dir ${isBuy?'dir-buy':'dir-sell'}" style="font-size:9px;padding:2px 8px;">${p.direction}</span>
+          ${p.action?`<span class="tag tag-score">${p.action}</span>`:''}
+          ${p.session?`<span class="tag tag-session">${p.session}</span>`:''}
+          <span style="margin-left:auto;font-size:12px;font-weight:bold;color:${scoreColor}">${p.score}/100</span>
+        </div>
+        <div class="sc-thesis">${p.thesis}</div>
+        <div class="sc-meta">
+          <div class="sc-item"><div class="sc-item-l">ENTRY</div><div class="sc-item-v" style="color:var(--orange)">${p.entry||'--'}</div></div>
+          <div class="sc-item"><div class="sc-item-l">TARGET</div><div class="sc-item-v" style="color:var(--green)">${p.target||'--'}</div></div>
+          <div class="sc-item"><div class="sc-item-l">STOP LOSS</div><div class="sc-item-v" style="color:var(--red)">${p.stop_loss||'--'}</div></div>
+        </div>
+        ${p.catalyst?`<div style="margin-top:8px;font-size:11px;color:var(--cyan);">⚡ ${p.catalyst}</div>`:''}
+      </div>`;
+    container.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
