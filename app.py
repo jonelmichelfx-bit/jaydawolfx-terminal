@@ -466,77 +466,415 @@ def tracker_stats():
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+# ═══════════════════════════════════════════════════════════════
+# FOREX LIVE DATA + WOLF ROUTES
+# Replace the existing forex routes at the bottom of app.py
+# with all of this (paste above if __name__ == '__main__':)
+# ═══════════════════════════════════════════════════════════════
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-# Add these routes to your app.py
-# Paste them anywhere after your existing routes
+import requests as http_requests
 
-@app.route('/api/forex-analyze', methods=['POST'])
-@login_required
-def forex_analyze():
+TWELVE_DATA_KEY = os.environ.get('TWELVE_DATA_API_KEY', '')
+NEWS_API_KEY = os.environ.get('NEWS_API_KEY', '')
+
+FOREX_SESSIONS = {
+    'TOKYO':   {'start': 19, 'end': 4,  'color': 'purple', 'pairs': ['USD/JPY','EUR/JPY','GBP/JPY','AUD/USD','NZD/USD']},
+    'LONDON':  {'start': 3,  'end': 12, 'color': 'cyan',   'pairs': ['EUR/USD','GBP/USD','EUR/GBP','USD/CHF','EUR/JPY']},
+    'NEW YORK':{'start': 8,  'end': 17, 'color': 'green',  'pairs': ['EUR/USD','GBP/USD','USD/CAD','USD/JPY','XAU/USD']},
+    'OVERLAP': {'start': 8,  'end': 12, 'color': 'gold',   'pairs': ['EUR/USD','GBP/USD','USD/JPY','XAU/USD']},
+}
+
+PAIR_MAP = {
+    'EUR/USD':'EUR/USD','GBP/USD':'GBP/USD','USD/JPY':'USD/JPY',
+    'USD/CHF':'USD/CHF','AUD/USD':'AUD/USD','USD/CAD':'USD/CAD',
+    'NZD/USD':'NZD/USD','EUR/GBP':'EUR/GBP','EUR/JPY':'EUR/JPY',
+    'GBP/JPY':'GBP/JPY','XAU/USD':'XAU/USD','BTC/USD':'BTC/USD',
+}
+
+def get_current_session():
+    """Get current forex session based on EST time"""
+    from datetime import datetime
+    import pytz
     try:
-        data = request.get_json()
-        prompt = data.get('prompt', '')
-        
-        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
-        message = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=2000,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return jsonify({'content': message.content[0].text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        est = pytz.timezone('America/New_York')
+        now_est = datetime.now(est)
+        h = now_est.hour
+        day = now_est.weekday()  # 0=Mon, 6=Sun
+        # Market closed: Friday 5PM - Sunday 5PM EST
+        if day == 5:  # Saturday
+            return 'CLOSED', []
+        if day == 6 and h < 17:  # Sunday before 5PM
+            return 'CLOSED', []
+        if day == 4 and h >= 17:  # Friday after 5PM
+            return 'CLOSED', []
+        # Active sessions
+        if h >= 19 or h < 3:
+            return 'TOKYO', FOREX_SESSIONS['TOKYO']['pairs']
+        elif h >= 3 and h < 8:
+            return 'LONDON', FOREX_SESSIONS['LONDON']['pairs']
+        elif h >= 8 and h < 12:
+            return 'OVERLAP', FOREX_SESSIONS['OVERLAP']['pairs']
+        elif h >= 12 and h < 17:
+            return 'NEW YORK', FOREX_SESSIONS['NEW YORK']['pairs']
+        else:
+            return 'PRE-MARKET', []
+    except:
+        return 'UNKNOWN', []
 
-
-@app.route('/api/forex-picks', methods=['POST'])
-@login_required
-def forex_picks():
+def fetch_live_price(symbol):
+    """Fetch real live price from Twelve Data"""
     try:
-        data = request.get_json()
-        prompt = data.get('prompt', '')
+        # Format symbol for Twelve Data
+        td_symbol = symbol.replace('/', '')
+        if symbol == 'XAU/USD':
+            td_symbol = 'XAU/USD'
+        elif symbol == 'BTC/USD':
+            td_symbol = 'BTC/USD'
         
-        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
-        message = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=2200,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return jsonify({'content': message.content[0].text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-# ═══════════════════════════════════════════════════════════
-# FOREX WOLF ROUTES — Add these to app.py
-# Paste BEFORE the final "if __name__ == '__main__':" line
-# ═══════════════════════════════════════════════════════════
+        url = f'https://api.twelvedata.com/price?symbol={td_symbol}&apikey={TWELVE_DATA_KEY}'
+        resp = http_requests.get(url, timeout=5)
+        data = resp.json()
+        if 'price' in data:
+            return float(data['price'])
+        return None
+    except:
+        return None
+
+def fetch_live_quote(symbol):
+    """Fetch full quote including high/low/change"""
+    try:
+        td_symbol = symbol.replace('/', '')
+        if '/' in symbol and symbol not in ['XAU/USD','BTC/USD']:
+            td_symbol = symbol.replace('/', '')
+        
+        url = f'https://api.twelvedata.com/quote?symbol={td_symbol}&apikey={TWELVE_DATA_KEY}'
+        resp = http_requests.get(url, timeout=5)
+        data = resp.json()
+        if 'close' in data:
+            return {
+                'price': float(data.get('close', 0)),
+                'open': float(data.get('open', 0)),
+                'high': float(data.get('high', 0)),
+                'low': float(data.get('low', 0)),
+                'change': float(data.get('change', 0)),
+                'percent_change': float(data.get('percent_change', 0)),
+                'volume': data.get('volume', 0),
+                'symbol': symbol,
+                'live': True
+            }
+        return None
+    except:
+        return None
+
+def fetch_forex_news(pair):
+    """Fetch real news for a forex pair"""
+    try:
+        # Build search query from pair
+        currencies = pair.replace('/', ' ').replace('USD', 'Dollar').replace('EUR', 'Euro').replace('GBP', 'Pound').replace('JPY', 'Yen').replace('XAU', 'Gold')
+        query = f'forex {pair} {currencies} currency'
+        url = f'https://newsapi.org/v2/everything?q={query}&language=en&sortBy=publishedAt&pageSize=5&apiKey={NEWS_API_KEY}'
+        resp = http_requests.get(url, timeout=5)
+        data = resp.json()
+        articles = data.get('articles', [])
+        news = []
+        for a in articles[:5]:
+            news.append({
+                'title': a.get('title', ''),
+                'source': a.get('source', {}).get('name', ''),
+                'published': a.get('publishedAt', '')[:10],
+                'description': a.get('description', '')[:200] if a.get('description') else '',
+                'url': a.get('url', '')
+            })
+        return news
+    except:
+        return []
+
+def fetch_market_news():
+    """Fetch general forex/macro market news"""
+    try:
+        url = f'https://newsapi.org/v2/everything?q=forex+currency+Fed+ECB+central+bank&language=en&sortBy=publishedAt&pageSize=10&apiKey={NEWS_API_KEY}'
+        resp = http_requests.get(url, timeout=5)
+        data = resp.json()
+        articles = data.get('articles', [])
+        news = []
+        for a in articles[:10]:
+            news.append({
+                'title': a.get('title', ''),
+                'source': a.get('source', {}).get('name', ''),
+                'published': a.get('publishedAt', '')[:10],
+                'description': (a.get('description', '') or '')[:200],
+            })
+        return news
+    except:
+        return []
+
+
+# ── ROUTE: Forex page ─────────────────────────────────────────
+@app.route('/forex')
+@login_required
+def forex():
+    return render_template('forex.html')
 
 @app.route('/forex-wolf')
 @login_required
 def forex_wolf():
     return render_template('forex_wolf.html')
 
-@app.route('/api/forex-daily-picks', methods=['POST'])
+
+# ── ROUTE: Live price for single pair ────────────────────────
+@app.route('/api/forex-price', methods=['POST'])
 @login_required
-def forex_daily_picks():
-    """Top 3 guaranteed day trades — London & NY session"""
-    import json
-    from datetime import datetime
+def forex_price():
+    try:
+        data = request.get_json()
+        symbol = data.get('symbol', 'EUR/USD')
+        quote = fetch_live_quote(symbol)
+        if quote:
+            return jsonify(quote)
+        return jsonify({'error': 'Price unavailable', 'live': False}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── ROUTE: All prices at once ─────────────────────────────────
+@app.route('/api/forex-prices', methods=['GET'])
+@login_required
+def forex_prices():
+    """Fetch live prices for all major pairs"""
+    try:
+        pairs = ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','USD/CAD','NZD/USD','EUR/GBP','EUR/JPY','GBP/JPY','XAU/USD']
+        prices = {}
+        for pair in pairs:
+            quote = fetch_live_quote(pair)
+            if quote:
+                prices[pair] = quote
+        session_name, session_pairs = get_current_session()
+        return jsonify({
+            'prices': prices,
+            'session': session_name,
+            'session_pairs': session_pairs,
+            'timestamp': datetime.now().strftime('%H:%M:%S EST')
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── ROUTE: News for a pair ────────────────────────────────────
+@app.route('/api/forex-news', methods=['POST'])
+@login_required
+def forex_news():
+    try:
+        data = request.get_json()
+        pair = data.get('pair', 'EUR/USD')
+        news = fetch_forex_news(pair)
+        market_news = fetch_market_news()
+        return jsonify({'pair_news': news, 'market_news': market_news})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── ROUTE: Main analysis with live data ──────────────────────
+@app.route('/api/forex-analyze', methods=['POST'])
+@login_required
+def forex_analyze():
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '')
+        max_tokens = data.get('max_tokens', 2500)
+        pair = data.get('pair', '')
+
+        # Enrich prompt with live data if pair provided
+        live_context = ''
+        if pair:
+            quote = fetch_live_quote(pair)
+            news = fetch_forex_news(pair)
+            session_name, _ = get_current_session()
+            if quote:
+                live_context = f"""
+LIVE MARKET DATA (real-time):
+Current Price: {quote['price']}
+Today's High: {quote['high']}
+Today's Low: {quote['low']}
+Open: {quote['open']}
+Change: {quote['change']:+.5f} ({quote['percent_change']:+.2f}%)
+Current Session: {session_name}
+"""
+            if news:
+                live_context += f"\nREAL-TIME NEWS FOR {pair}:\n"
+                for n in news[:3]:
+                    live_context += f"- {n['title']} ({n['source']}, {n['published']})\n"
+
+        full_prompt = live_context + '\n' + prompt if live_context else prompt
+
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        message = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": full_prompt}]
+        )
+        return jsonify({'content': message.content[0].text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── ROUTE: 7 best scenario trades for the week ───────────────
+@app.route('/api/forex-scenarios', methods=['POST'])
+@login_required
+def forex_scenarios():
+    """Top 7 trades with full buy/sell scenarios using live data"""
     try:
         now = datetime.now()
         date_str = now.strftime('%A, %B %d, %Y')
-        time_str = now.strftime('%I:%M %p EST')
+        session_name, _ = get_current_session()
 
-        prompt = f"""You are Wolf AI, elite forex day trader. Today is {date_str}, {time_str}.
+        # Fetch live prices for top pairs
+        top_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY']
+        live_prices = {}
+        for p in top_pairs:
+            q = fetch_live_quote(p)
+            if q:
+                live_prices[p] = q
 
-Find the TOP 3 GUARANTEED DAY TRADES for today's London (3AM-12PM EST) and NY (8AM-5PM EST) sessions.
+        # Fetch market news
+        market_news = fetch_market_news()
+        news_summary = '\n'.join([f"- {n['title']}" for n in market_news[:8]])
 
-Scan ALL pairs: EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, NZD/USD, EUR/GBP, EUR/JPY, GBP/JPY, XAU/USD
-Only pick where MINIMUM 5 factors align. Be ruthlessly selective.
+        prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p, v in live_prices.items()])
 
-Respond ONLY with valid JSON, no markdown, no extra text:
+        prompt = f"""You are Wolf AI — a professional forex trader with 15 years experience. 
+Today is {date_str}. Current session: {session_name}.
+Forex market: Sunday 5PM EST open → Friday 5PM EST close.
+Sessions: Tokyo 7PM-4AM EST · London 3AM-12PM EST · NY 8AM-5PM EST · Overlap 8AM-12PM EST (highest volatility).
+
+LIVE PRICES RIGHT NOW:
+{prices_str}
+
+REAL MARKET NEWS TODAY:
+{news_summary}
+
+Do a complete top-down analysis and find the 7 BEST trades for this week.
+For each trade, go through: Monthly direction → Weekly direction → Daily direction → H4 direction → H1 direction → M15 entry signal.
+Only recommend trades where 4+ timeframes align in the same direction.
+
+For each pair provide BOTH a BUY scenario AND a SELL scenario based on key price levels.
+
+Respond ONLY in valid JSON, no markdown:
 {{
-  "session": "LONDON/NY",
+  "week": "{date_str}",
+  "session": "{session_name}",
+  "market_theme": "Main macro theme this week",
+  "dxy_direction": "BULLISH or BEARISH",
+  "risk_sentiment": "RISK-ON or RISK-OFF",
+  "trades": [
+    {{
+      "rank": 1,
+      "pair": "EUR/USD",
+      "live_price": "1.0842",
+      "overall_bias": "BEARISH",
+      "timeframe_alignment": {{
+        "monthly": "BEARISH",
+        "weekly": "BEARISH", 
+        "daily": "BEARISH",
+        "h4": "BEARISH",
+        "h1": "NEUTRAL",
+        "m15": "BEARISH"
+      }},
+      "aligned_count": 5,
+      "confidence": 82,
+      "primary_direction": "SELL",
+      "thesis": "Full 3-4 sentence top-down thesis explaining why this pair is trending in this direction across all timeframes",
+      "key_resistance": "1.0890",
+      "key_support": "1.0780",
+      "critical_zone": "1.0850",
+      "buy_scenario": {{
+        "trigger": "Price breaks and closes above 1.0890 on H4 with strong bullish candle",
+        "news_needed": "Hawkish ECB surprise or weak US data",
+        "entry": "1.0895",
+        "stop_loss": "1.0855",
+        "tp1": "1.0950",
+        "tp2": "1.1000",
+        "tp3": "1.1050",
+        "probability": 35,
+        "confirmation": "RSI above 55 on H4, MACD cross bullish"
+      }},
+      "sell_scenario": {{
+        "trigger": "Price rejects 1.0890 and breaks below 1.0820 on H1",
+        "news_needed": "Strong US NFP or hawkish Fed",
+        "entry": "1.0815",
+        "stop_loss": "1.0855",
+        "tp1": "1.0780",
+        "tp2": "1.0720",
+        "tp3": "1.0650",
+        "probability": 65,
+        "confirmation": "RSI below 45, momentum bearish on H4"
+      }},
+      "best_session": "LONDON",
+      "key_news_this_week": "Fed minutes Wednesday, NFP Friday",
+      "invalidation": "Daily close above 1.0920"
+    }}
+  ]
+}}"""
+
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        message = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=4000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = message.content[0].text.strip()
+        if text.startswith('```'):
+            text = text.split('```')[1]
+            if text.startswith('json'):
+                text = text[4:]
+        text = text.strip()
+        result = json.loads(text)
+        return jsonify(result)
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'JSON error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── ROUTE: Daily guaranteed picks with live data ──────────────
+@app.route('/api/forex-daily-picks', methods=['POST'])
+@login_required
+def forex_daily_picks():
+    import json as json_lib
+    try:
+        now = datetime.now()
+        date_str = now.strftime('%A, %B %d, %Y')
+        session_name, session_pairs = get_current_session()
+
+        # Live prices
+        pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','USD/CHF']
+        live_prices = {}
+        for p in pairs:
+            q = fetch_live_quote(p)
+            if q:
+                live_prices[p] = q
+        prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p, v in live_prices.items()])
+
+        # News
+        market_news = fetch_market_news()
+        news_str = '\n'.join([f"- {n['title']}" for n in market_news[:6]])
+
+        prompt = f"""You are Wolf AI, elite forex day trader. Today is {date_str}. Current session: {session_name}.
+Forex hours: Sunday 5PM EST open to Friday 5PM EST close.
+Best sessions: London 3AM-12PM EST, NY 8AM-5PM EST, Overlap 8AM-12PM EST.
+
+LIVE PRICES:
+{prices_str}
+
+TODAY'S NEWS:
+{news_str}
+
+Find TOP 3 GUARANTEED DAY TRADES for London & NY sessions today.
+Use top-down analysis: Monthly→Weekly→Daily→H4 direction, then H1/M15 for entry.
+Only pick where 5+ factors align. Use the LIVE PRICES above for exact levels.
+
+Respond ONLY with valid JSON:
+{{
+  "session": "{session_name}",
   "date": "{date_str}",
   "risk_environment": "RISK-ON or RISK-OFF",
   "dxy_bias": "BULLISH or BEARISH",
@@ -544,24 +882,25 @@ Respond ONLY with valid JSON, no markdown, no extra text:
     {{
       "rank": 1,
       "pair": "EUR/USD",
-      "direction": "BUY",
+      "live_price": "1.0842",
+      "direction": "SELL",
       "sharingan_score": 5,
       "confidence": 88,
       "entry": "1.0840",
-      "stop_loss": "1.0810",
-      "tp1": "1.0880",
-      "tp2": "1.0920",
-      "tp3": "1.0960",
+      "stop_loss": "1.0870",
+      "tp1": "1.0800",
+      "tp2": "1.0760",
+      "tp3": "1.0720",
       "sl_pips": 30,
       "tp1_pips": 40,
       "rr_ratio": "1:1.3",
-      "best_window": "3AM-6AM EST",
-      "thesis": "Full 3-4 sentence reason why this is the best setup today",
-      "confluences": ["Factor 1", "Factor 2", "Factor 3", "Factor 4", "Factor 5"],
-      "buy_scenario": "IF price breaks above 1.0855 with strong London candle close, enter long",
-      "sell_scenario": "IF price rejects 1.0855 and breaks below 1.0830, enter short",
-      "key_news": "Any news affecting this pair today",
-      "invalidation": "What exactly cancels this trade"
+      "best_window": "3AM-6AM EST London Open",
+      "thesis": "Full 3-4 sentence reason based on live price and news",
+      "confluences": ["Monthly bearish", "Weekly below key level", "Daily downtrend", "H4 lower highs", "News bearish USD"],
+      "buy_scenario": "IF price breaks above 1.0870 with H4 close, enter long target 1.0920",
+      "sell_scenario": "IF price rejects 1.0860 and breaks 1.0820, enter short target 1.0780",
+      "key_news": "Specific news from today affecting this pair",
+      "invalidation": "H4 close above 1.0880"
     }}
   ]
 }}"""
@@ -572,47 +911,63 @@ Respond ONLY with valid JSON, no markdown, no extra text:
             max_tokens=2500,
             messages=[{"role": "user", "content": prompt}]
         )
-        text = message.content[0].text
-        # Clean JSON
-        text = text.strip()
+        text = message.content[0].text.strip()
         if text.startswith('```'):
             text = text.split('```')[1]
-            if text.startswith('json'):
-                text = text[4:]
+            if text.startswith('json'): text = text[4:]
         text = text.strip()
-        data = json.loads(text)
+        data = json_lib.loads(text)
         return jsonify(data)
-    except json.JSONDecodeError as e:
-        return jsonify({'error': f'JSON parse error: {str(e)}', 'raw': text[:500]}), 500
+    except json_lib.JSONDecodeError as e:
+        return jsonify({'error': f'JSON error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
+# ── ROUTE: Weekly swing picks with live data ──────────────────
 @app.route('/api/forex-weekly-picks', methods=['POST'])
 @login_required
 def forex_weekly_picks():
-    """Top 3 swing trades for the week"""
-    import json
-    from datetime import datetime
+    import json as json_lib
     try:
         now = datetime.now()
         date_str = now.strftime('%A, %B %d, %Y')
 
+        # Live prices
+        pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY']
+        live_prices = {}
+        for p in pairs:
+            q = fetch_live_quote(p)
+            if q: live_prices[p] = q
+        prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']})" for p, v in live_prices.items()])
+
+        market_news = fetch_market_news()
+        news_str = '\n'.join([f"- {n['title']}" for n in market_news[:6]])
+
         prompt = f"""You are Wolf AI, elite forex swing trader. Week of {date_str}.
+Forex hours: Sunday 5PM EST open to Friday 5PM EST close.
 
-Find the TOP 3 SWING TRADES for this week (2-7 day holds) across ALL major pairs.
-Deep research: Fed/ECB/BOE/BOJ stance, DXY weekly direction, weekly/daily chart setups, key events this week.
+LIVE PRICES THIS WEEK:
+{prices_str}
 
-Respond ONLY with valid JSON, no markdown, no extra text:
+THIS WEEK'S NEWS:
+{news_str}
+
+Find TOP 3 SWING TRADES for this week (2-7 day holds).
+Use full top-down: Monthly→Weekly→Daily direction, H4 for entry zone.
+Use live prices for exact levels.
+
+Respond ONLY with valid JSON:
 {{
   "week": "{date_str}",
-  "weekly_theme": "Main macro theme driving forex this week",
-  "dxy_outlook": "BULLISH or BEARISH — brief reason",
-  "central_bank_focus": "Which central bank is market focused on this week",
+  "weekly_theme": "Main macro theme",
+  "dxy_outlook": "BULLISH — reason",
+  "central_bank_focus": "Fed/ECB/BOE etc",
   "picks": [
     {{
       "rank": 1,
       "pair": "GBP/USD",
+      "live_price": "1.2634",
       "direction": "SELL",
       "hold_days": "3-5",
       "confidence": 85,
@@ -625,11 +980,12 @@ Respond ONLY with valid JSON, no markdown, no extra text:
       "tp1_pips": 90,
       "rr_ratio": "1:1.5",
       "weekly_bias": "BEARISH",
-      "fundamental": "2 sentences on central bank and macro reason",
-      "technical": "2 sentences on weekly/daily chart setup",
-      "buy_scenario": "IF price breaks above X weekly close, long targets Y",
-      "sell_scenario": "IF price breaks below X weekly close, short targets Y",
-      "key_events": "Events this week that could be catalysts",
+      "timeframe_alignment": "Monthly BEAR · Weekly BEAR · Daily BEAR · H4 NEUTRAL",
+      "fundamental": "Central bank + macro reason in 2 sentences",
+      "technical": "Weekly/daily chart setup in 2 sentences using live price levels",
+      "buy_scenario": "IF weekly closes above X, long targets Y",
+      "sell_scenario": "IF weekly closes below X, short targets Y",
+      "key_events": "Specific events this week",
       "key_risk": "What breaks this setup"
     }}
   ]
@@ -641,55 +997,64 @@ Respond ONLY with valid JSON, no markdown, no extra text:
             max_tokens=2500,
             messages=[{"role": "user", "content": prompt}]
         )
-        text = message.content[0].text
-        text = text.strip()
+        text = message.content[0].text.strip()
         if text.startswith('```'):
             text = text.split('```')[1]
-            if text.startswith('json'):
-                text = text[4:]
+            if text.startswith('json'): text = text[4:]
         text = text.strip()
-        data = json.loads(text)
+        data = json_lib.loads(text)
         return jsonify(data)
-    except json.JSONDecodeError as e:
-        return jsonify({'error': f'JSON parse error: {str(e)}', 'raw': text[:500]}), 500
+    except json_lib.JSONDecodeError as e:
+        return jsonify({'error': f'JSON error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
+# ── ROUTE: Forex scanner ──────────────────────────────────────
 @app.route('/api/forex-scanner', methods=['POST'])
 @login_required
 def forex_scanner():
-    """Scan forex pairs for a specific theme/setup"""
-    import json
-    from datetime import datetime
+    import json as json_lib
     try:
         data = request.get_json()
         theme = data.get('theme', 'strongest momentum')
         now = datetime.now()
         date_str = now.strftime('%A, %B %d, %Y')
 
+        # Live prices
+        pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD','USD/CHF']
+        live_prices = {}
+        for p in pairs:
+            q = fetch_live_quote(p)
+            if q: live_prices[p] = q
+        prices_str = '\n'.join([f"{p}: {v['price']} ({v['percent_change']:+.2f}%)" for p, v in live_prices.items()])
+
         prompt = f"""You are Wolf AI, forex market analyst. Today is {date_str}.
 
-Scan ALL major forex pairs for: "{theme}"
-Find the TOP 5 pairs that best match this theme right now.
+LIVE PRICES:
+{prices_str}
 
-Respond ONLY with valid JSON, no markdown:
+Scan ALL pairs for theme: "{theme}"
+Find TOP 5 pairs that best match this theme using the live prices above.
+
+Respond ONLY with valid JSON:
 {{
   "theme": "{theme}",
   "date": "{date_str}",
   "pairs": [
     {{
       "pair": "EUR/USD",
-      "direction": "BUY",
+      "live_price": "1.0842",
+      "direction": "SELL",
       "score": 88,
-      "action": "STRONG BUY",
+      "action": "STRONG SELL",
       "session": "LONDON",
       "entry": "1.0840",
-      "stop_loss": "1.0800",
-      "target": "1.0920",
-      "thesis": "Why this pair matches the theme — 2-3 sentences",
-      "catalyst": "Specific catalyst driving this move",
-      "timeframe": "Intraday / 2-3 days / Weekly"
+      "stop_loss": "1.0870",
+      "target": "1.0780",
+      "thesis": "Why this pair matches the theme — 2-3 sentences using live price",
+      "catalyst": "Specific catalyst",
+      "timeframe": "Intraday"
     }}
   ]
 }}"""
@@ -700,17 +1065,35 @@ Respond ONLY with valid JSON, no markdown:
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )
-        text = message.content[0].text
-        text = text.strip()
+        text = message.content[0].text.strip()
         if text.startswith('```'):
             text = text.split('```')[1]
-            if text.startswith('json'):
-                text = text[4:]
+            if text.startswith('json'): text = text[4:]
         text = text.strip()
-        result = json.loads(text)
+        result = json_lib.loads(text)
         return jsonify(result)
-    except json.JSONDecodeError as e:
-        return jsonify({'error': f'JSON parse error: {str(e)}'}), 500
+    except json_lib.JSONDecodeError as e:
+        return jsonify({'error': f'JSON error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-@app.route('/api/forex-analyze')
+
+
+# ── ROUTE: Forex picks (legacy) ───────────────────────────────
+@app.route('/api/forex-picks', methods=['POST'])
+@login_required
+def forex_picks():
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '')
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        message = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=2200,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return jsonify({'content': message.content[0].text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
