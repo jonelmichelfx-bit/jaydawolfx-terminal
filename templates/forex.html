@@ -320,6 +320,9 @@ input::placeholder{color:var(--text-dim);}
 .tv-title{font-family:var(--head);font-size:9px;letter-spacing:2px;color:var(--gold);}
 .tv-info{font-size:10px;color:var(--text-dim);}
 .tv-iframe{width:100%;height:500px;border:none;display:block;}
+.tv-tf-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-mid);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;letter-spacing:1px;transition:all .2s;}
+.tv-tf-btn:hover{border-color:var(--gold);color:var(--gold);}
+.tv-tf-active{background:rgba(255,215,0,0.1)!important;border-color:var(--gold)!important;color:var(--gold)!important;}
 
 /* Buttons */
 .big-btn{width:100%;padding:13px;border-radius:4px;font-family:var(--head);font-size:11px;font-weight:700;
@@ -611,7 +614,16 @@ input::placeholder{color:var(--text-dim);}
         <div class="tv-header">
           <span class="tv-title">👁 THE SHARINGAN — LIVE TRADINGVIEW CHART</span>
           <span class="tv-info" id="tv-pair-label">EUR/USD</span>
-          <span style="font-size:9px;color:var(--text-dim);margin-left:auto;">Your custom strategy running live · Change pair in sidebar</span>
+          <div style="display:flex;gap:6px;margin-left:auto;align-items:center;">
+            <button onclick="setTVInterval(this,'1')"   class="tv-tf-btn">1M</button>
+            <button onclick="setTVInterval(this,'5')"   class="tv-tf-btn">5M</button>
+            <button onclick="setTVInterval(this,'15')"  class="tv-tf-btn">15M</button>
+            <button onclick="setTVInterval(this,'30')"  class="tv-tf-btn">30M</button>
+            <button onclick="setTVInterval(this,'60')"  class="tv-tf-btn tv-tf-active">1H</button>
+            <button onclick="setTVInterval(this,'240')" class="tv-tf-btn">4H</button>
+            <button onclick="setTVInterval(this,'D')"   class="tv-tf-btn">1D</button>
+            <button onclick="setTVInterval(this,'W')"   class="tv-tf-btn">1W</button>
+          </div>
         </div>
         <iframe id="tv-iframe" class="tv-iframe"
           src="https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=EURUSD&interval=60&theme=dark&style=1&locale=en&toolbar_bg=%23080c0f&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=true&studies=RSI%40tv-basicstudies,MACD%40tv-basicstudies,BB%40tv-basicstudies"
@@ -620,10 +632,10 @@ input::placeholder{color:var(--text-dim);}
       <div class="panel">
         <div class="ph gold">SHARINGAN STRATEGY RULES</div>
         <div style="font-size:12px;color:var(--text-mid);line-height:1.9;">
-          <div style="margin-bottom:12px;"><span style="color:var(--green);font-weight:bold;">🔥 BUY SIGNAL</span> — Price touches Daily/Weekly LOW while above Monthly Open + EMA100. RSI &gt;50. London or NY session. Bullish candle close. Weekly bias UP.</div>
-          <div style="margin-bottom:12px;"><span style="color:var(--red);font-weight:bold;">🔥 SELL SIGNAL</span> — Price touches Daily/Weekly HIGH while below Monthly Open + EMA100. RSI &lt;50. London or NY session. Bearish candle close. Weekly bias DOWN.</div>
-          <div style="margin-bottom:12px;"><span style="color:var(--gold);font-weight:bold;">🎯 TP TARGETS</span> — Monthly High (long) / Monthly Low (short). Stop = Monthly Low (long) / Monthly High (short). Wolfx trailing stop active.</div>
-          <div><span style="color:var(--cyan);font-weight:bold;">📊 MTF ALIGNMENT</span> — 6/6 = highest conviction. 4-5/6 = good setup. Below 3/6 = wait for better alignment.</div>
+          <div style="margin-bottom:12px;"><span style="color:var(--green);font-weight:bold;">🔥 BUY SIGNAL</span> — Price above 200 EMA on D1 + H4 bullish engulfing + RSI crossing 50 from below + MACD bullish cross</div>
+          <div style="margin-bottom:12px;"><span style="color:var(--red);font-weight:bold;">🔥 SELL SIGNAL</span> — Price below 200 EMA on D1 + H4 bearish engulfing + RSI crossing 50 from above + MACD bearish cross</div>
+          <div style="margin-bottom:12px;"><span style="color:var(--gold);font-weight:bold;">🎯 TP TARGETS</span> — Monthly/Weekly key levels. TP1=nearest S/R. TP2=next major level. TP3=full trend target</div>
+          <div><span style="color:var(--cyan);font-weight:bold;">📊 MTF ALIGNMENT</span> — 6/6 = highest conviction. 4-5/6 = take trade. Below 4/6 = wait</div>
         </div>
       </div>
     </div>
@@ -926,6 +938,15 @@ function updPrice(pair){
   document.getElementById('ps-sp').textContent=d.sp;
 }
 
+let currentTVInterval = '60';
+
+function setTVInterval(btn, interval){
+  currentTVInterval = interval;
+  document.querySelectorAll('.tv-tf-btn').forEach(b=>b.classList.remove('tv-tf-active'));
+  if(btn) btn.classList.add('tv-tf-active');
+  updTVChart(currentPair);
+}
+
 function updTVChart(pair){
   const d=PRICES[pair];
   const sym=d?d.tv:(pair.replace('/',''));
@@ -933,9 +954,10 @@ function updTVChart(pair){
   if(label)label.textContent=pair;
   const iframe=document.getElementById('tv-iframe');
   if(iframe){
-    iframe.src=`https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=${sym}&interval=60&theme=dark&style=1&locale=en&toolbar_bg=%23080c0f&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=true&studies=RSI%40tv-basicstudies,MACD%40tv-basicstudies,BB%40tv-basicstudies`;
+    iframe.src=`https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=${sym}&interval=${currentTVInterval}&theme=dark&style=1&locale=en&toolbar_bg=%23080c0f&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=true&studies=RSI%40tv-basicstudies,MACD%40tv-basicstudies,BB%40tv-basicstudies`;
   }
 }
+
 
 function openTab(name,btn){
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
