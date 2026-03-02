@@ -1731,73 +1731,103 @@ function calcRisk(){
 
 // ── DXY + CENTRAL BANKS — updated after analysis ─────────────────────────────
 function updateDXYPanel(text){
-  // Parse DXY info from analysis text
-  const dxyM=text.match(/DXY[^:]*:\s*([^\n.]+)/i);
-  const dxyBiasM=text.match(/DXY\s*(?:direction|bias|trend)?[^:]*:\s*(BULLISH|BEARISH|NEUTRAL)/i);
-  const bias=dxyBiasM?.[1]||'';
-  const isBull=bias==='BULLISH';
-  const isBear=bias==='BEARISH';
+  // Multiple regex patterns to catch DXY mentions
+  const biasM = text.match(/DXY[^:]*(?:direction|bias|trend|is)[^:]*:\s*(BULLISH|BEARISH|NEUTRAL)/i) ||
+                text.match(/Dollar[^:]*(?:is|bias|direction)[^:]*:\s*(BULLISH|BEARISH|NEUTRAL)/i) ||
+                text.match(/DXY[^\n]*(BULLISH|BEARISH|NEUTRAL)/i) ||
+                text.match(/(BULLISH|BEARISH|NEUTRAL)[^\n]*DXY/i);
+  const bias = biasM?.[1]?.toUpperCase() || '';
+  const isBull = bias === 'BULLISH';
+  const isBear = bias === 'BEARISH';
 
   if(bias){
-    document.getElementById('dxy-bias').textContent=bias;
-    document.getElementById('dxy-bias').className='lv-v '+(isBull?'dxy-up':isBear?'dxy-dn':'neut');
+    document.getElementById('dxy-bias').textContent = bias;
+    document.getElementById('dxy-bias').className = 'lv-v ' + (isBull ? 'dxy-up' : isBear ? 'dxy-dn' : 'cb-neut');
   }
 
-  // Monthly/weekly/daily DXY
-  const mM=text.match(/DXY\s*monthly[^:]*:\s*([^\n,]+)/i);
-  const wM=text.match(/DXY\s*weekly[^:]*:\s*([^\n,]+)/i);
-  const dM=text.match(/DXY\s*daily[^:]*:\s*([^\n,]+)/i);
-  if(mM)document.getElementById('dxy-monthly').textContent=mM[1].trim().substring(0,10);
-  if(wM)document.getElementById('dxy-weekly').textContent=wM[1].trim().substring(0,10);
-  if(dM)document.getElementById('dxy-daily').textContent=dM[1].trim().substring(0,10);
+  // Monthly/weekly/daily from text
+  const mM = text.match(/DXY\s*monthly[^:]*:\s*([^\n,\.]+)/i);
+  const wM = text.match(/DXY\s*weekly[^:]*:\s*([^\n,\.]+)/i);
+  const dM = text.match(/DXY\s*daily[^:]*:\s*([^\n,\.]+)/i);
+  if(mM) document.getElementById('dxy-monthly').textContent = mM[1].trim().substring(0,12);
+  if(wM) document.getElementById('dxy-weekly').textContent = wM[1].trim().substring(0,12);
+  if(dM) document.getElementById('dxy-daily').textContent = dM[1].trim().substring(0,12);
 
-  // Impact on current pair
-  const impactTxt=isBull?`USD STRENGTH → ${currentPair.includes('USD/')&&!currentPair.startsWith('USD/')?'BEARISH for '+currentPair:'Check pair direction'}`:
-    isBear?`USD WEAKNESS → ${!currentPair.includes('USD/')||currentPair.startsWith('USD/')?'Could boost '+currentPair:'Check pair direction'}`:'DXY NEUTRAL';
-  document.getElementById('dxy-impact').textContent=impactTxt;
-  document.getElementById('dxy-note').innerHTML=`🐺 <strong style="color:var(--gold)">DXY is ${bias||'--'}</strong> right now. ${isBull?'Dollar strengthening — favor USD-long trades, be cautious on EUR/USD, GBP/USD, AUD/USD longs.':isBear?'Dollar weakening — favor EUR/USD, GBP/USD, AUD/USD, XAU/USD longs. Short the dollar.':'Dollar ranging — trade pairs with strongest independent catalysts.'}`;
+  // If no structured data, try to infer from text
+  if(!mM) document.getElementById('dxy-monthly').textContent = bias || 'See analysis';
+  if(!wM) document.getElementById('dxy-weekly').textContent = bias || 'See analysis';
+
+  const impactTxt = isBull ? 'USD STRENGTH — bearish for EUR/GBP/AUD' :
+    isBear ? 'USD WEAKNESS — bullish for EUR/GBP/AUD/GOLD' : 'NEUTRAL — trade pair catalysts';
+  document.getElementById('dxy-impact').textContent = impactTxt;
+  document.getElementById('dxy-note').innerHTML = bias ?
+    '🐺 <strong style="color:var(--gold)">DXY is ' + bias + '</strong> — ' +
+    (isBull ? 'Dollar strengthening. Favor USD longs. Be cautious on EUR/USD, GBP/USD, AUD/USD longs.' :
+     isBear ? 'Dollar weakening. Favor EUR/USD, GBP/USD, AUD/USD, XAU/USD longs.' :
+     'Dollar ranging. Trade pairs with strongest independent catalysts.') :
+    '🐺 Run 🐺 DEEP ANALYSIS to populate DXY data from live market research.';
 }
 
 function updateCBPanel(text){
-  // Parse central bank stances
-  const banks=[
-    {id:'fed',keys:['Federal Reserve','Fed','FOMC'],flag:'🇺🇸',rateId:'cb-fed-rate'},
-    {id:'ecb',keys:['European Central Bank','ECB'],flag:'🇪🇺',rateId:'cb-ecb-rate'},
-    {id:'boe',keys:['Bank of England','BOE'],flag:'🇬🇧',rateId:'cb-boe-rate'},
-    {id:'boj',keys:['Bank of Japan','BOJ'],flag:'🇯🇵',rateId:'cb-boj-rate'},
+  const banks = [
+    {id:'fed', keys:['Federal Reserve','Fed','FOMC']},
+    {id:'ecb', keys:['European Central Bank','ECB']},
+    {id:'boe', keys:['Bank of England','BOE']},
+    {id:'boj', keys:['Bank of Japan','BOJ']},
   ];
 
-  banks.forEach(b=>{
-    const el=document.getElementById('cb-'+b.id);
+  banks.forEach(function(b){
+    const el = document.getElementById('cb-' + b.id);
+    let found = false;
     for(const key of b.keys){
-      const m=text.match(new RegExp(key+'[^.]*?(hawkish|dovish|neutral|holding|hiking|cutting|pause)[^.]*\\.','i'));
+      // Look for stance near the bank name
+      const pattern = new RegExp(key + '[^.\\n]*?(HAWKISH|DOVISH|NEUTRAL|HOLDING|HIKING|CUTTING|PAUSE|EASING|TIGHTENING)', 'i');
+      const m = text.match(pattern);
       if(m){
-        const stance=m[1].toUpperCase();
-        el.textContent=stance;
-        el.className=stance==='HAWKISH'||stance==='HIKING'?'cb-hawk':
-          stance==='DOVISH'||stance==='CUTTING'?'cb-dove':'cb-neut';
+        const stance = m[1].toUpperCase();
+        const display = stance === 'HIKING' || stance === 'TIGHTENING' ? 'HAWKISH' :
+                        stance === 'CUTTING' || stance === 'EASING' ? 'DOVISH' :
+                        stance === 'HOLDING' || stance === 'PAUSE' ? 'NEUTRAL' : stance;
+        el.textContent = display;
+        el.className = display === 'HAWKISH' ? 'cb-hawk' : display === 'DOVISH' ? 'cb-dove' : 'cb-neut';
+        found = true;
         break;
       }
     }
+    if(!found) el.textContent = 'See analysis';
   });
 
-  // Find divergence
-  const fedEl=document.getElementById('cb-fed');
-  const ecbEl=document.getElementById('cb-ecb');
-  const boeEl=document.getElementById('cb-boe');
-  const bojEl=document.getElementById('cb-boj');
-  const fedStance=fedEl.textContent;
-  const bojStance=bojEl.textContent;
+  // Rate extraction
+  const ratePatterns = [
+    {id:'cb-fed-rate', pattern:/(?:Fed|Federal Reserve)[^.]*?(\d+\.?\d*)\s*%/i},
+    {id:'cb-ecb-rate', pattern:/ECB[^.]*?(\d+\.?\d*)\s*%/i},
+    {id:'cb-boe-rate', pattern:/(?:BOE|Bank of England)[^.]*?(\d+\.?\d*)\s*%/i},
+    {id:'cb-boj-rate', pattern:/(?:BOJ|Bank of Japan)[^.]*?(\d+\.?\d*)\s*%/i},
+  ];
+  ratePatterns.forEach(function(r){
+    const m = text.match(r.pattern);
+    if(m) document.getElementById(r.id).textContent = 'Rate: ' + m[1] + '%';
+  });
 
-  let divergenceNote='';
-  if(fedStance==='HAWKISH'&&bojStance==='DOVISH'){
-    divergenceNote='🔥 <strong style="color:var(--gold)">MAJOR DIVERGENCE:</strong> Fed HAWKISH vs BOJ DOVISH = Strong case for <strong style="color:var(--red)">USD/JPY LONG</strong> — Druckenmiller would trade this.';
-  } else if(fedStance==='DOVISH'&&bojStance==='HAWKISH'){
-    divergenceNote='🔥 <strong style="color:var(--gold)">MAJOR DIVERGENCE:</strong> Fed DOVISH vs BOJ HAWKISH = Strong case for <strong style="color:var(--green)">USD/JPY SHORT</strong> — Druckenmiller would trade this.';
-  } else {
-    divergenceNote='Run analysis to identify the biggest divergence opportunity right now across all central banks.';
-  }
-  document.getElementById('cb-divergence-note').innerHTML=divergenceNote;
+  // Divergence note
+  const fedEl = document.getElementById('cb-fed');
+  const bojEl = document.getElementById('cb-boj');
+  const ecbEl = document.getElementById('cb-ecb');
+  const fedS = fedEl.textContent;
+  const bojS = bojEl.textContent;
+  const ecbS = ecbEl.textContent;
+  let note = '';
+  if(fedS === 'HAWKISH' && bojS === 'DOVISH')
+    note = '🔥 <strong style="color:var(--gold)">MAJOR DIVERGENCE:</strong> Fed HAWKISH vs BOJ DOVISH = <strong style="color:var(--red)">USD/JPY LONG</strong> — Druckenmiller\'s trade.';
+  else if(fedS === 'DOVISH' && bojS === 'HAWKISH')
+    note = '🔥 <strong style="color:var(--gold)">MAJOR DIVERGENCE:</strong> Fed DOVISH vs BOJ HAWKISH = <strong style="color:var(--green)">USD/JPY SHORT</strong> — Druckenmiller\'s trade.';
+  else if(fedS === 'HAWKISH' && ecbS === 'DOVISH')
+    note = '🔥 <strong style="color:var(--gold)">DIVERGENCE:</strong> Fed HAWKISH vs ECB DOVISH = <strong style="color:var(--red)">EUR/USD SHORT</strong> setup.';
+  else if(fedS === 'DOVISH' && ecbS === 'HAWKISH')
+    note = '🔥 <strong style="color:var(--gold)">DIVERGENCE:</strong> Fed DOVISH vs ECB HAWKISH = <strong style="color:var(--green)">EUR/USD LONG</strong> setup.';
+  else
+    note = '🏦 Run 🐺 DEEP ANALYSIS to see live central bank stances and divergence opportunities.';
+  document.getElementById('cb-divergence-note').innerHTML = note;
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
