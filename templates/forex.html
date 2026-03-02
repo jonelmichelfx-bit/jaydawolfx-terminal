@@ -137,6 +137,11 @@ input::placeholder{color:var(--text-dim);}
 .cp-val{font-weight:bold;}
 
 /* Analyze button */
+.cb-hawk{color:var(--red);font-weight:bold;}
+.cb-dove{color:var(--green);font-weight:bold;}
+.cb-neut{color:var(--gold);font-weight:bold;}
+.dxy-up{color:var(--red);}
+.dxy-dn{color:var(--green);}
 .analyze-btn{width:100%;padding:13px;background:linear-gradient(135deg,rgba(255,136,0,0.15),rgba(204,85,255,0.15));
   border:2px solid var(--orange);border-radius:4px;color:var(--orange);font-family:var(--head);
   font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;margin-bottom:6px;}
@@ -355,7 +360,8 @@ input::placeholder{color:var(--text-dim);}
   <div class="nav-tabs">
     <a href="/" class="ntab">STOCKS</a>
     <a href="/forex" class="ntab active">FOREX</a>
-    <a href="/wolf-elite" class="ntab">WOLF PICKS</a>
+    <a href="/forex-wolf" class="ntab" style="color:var(--gold);border-color:rgba(255,215,0,0.3);">🐺 WOLF PICKS</a>
+    <a href="/wolf-elite" class="ntab">📈 ELITE</a>
     <a href="/pricing" class="ntab">PLANS</a>
   </div>
   <div class="nav-right">
@@ -470,15 +476,90 @@ input::placeholder{color:var(--text-dim);}
 
     <!-- ANALYSIS TAB -->
     <div class="tab-pane active" id="pane-analysis">
+
+      <!-- DXY MASTER FILTER — Soros/Kovner start here -->
+      <div class="panel" style="border-color:rgba(255,215,0,0.3);margin-bottom:10px;">
+        <div class="ph gold">💵 DXY MASTER FILTER — THE DOLLAR DRIVES EVERYTHING</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px;">
+          <div class="lv" style="border-color:rgba(255,215,0,0.3);">
+            <div class="lv-l">DXY PRICE</div>
+            <div class="lv-v" id="dxy-price" style="color:var(--gold);">—</div>
+          </div>
+          <div class="lv"><div class="lv-l">DXY BIAS</div><div class="lv-v" id="dxy-bias">—</div></div>
+          <div class="lv"><div class="lv-l">MONTHLY</div><div class="lv-v" id="dxy-monthly">—</div></div>
+          <div class="lv"><div class="lv-l">WEEKLY</div><div class="lv-v" id="dxy-weekly">—</div></div>
+          <div class="lv"><div class="lv-l">DAILY</div><div class="lv-v" id="dxy-daily">—</div></div>
+          <div class="lv"><div class="lv-l">IMPACT</div><div class="lv-v" id="dxy-impact" style="font-size:10px;">—</div></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.7;" id="dxy-note">
+          🐺 <strong style="color:var(--gold)">Kovner & Soros Rule:</strong> Always know DXY direction FIRST. Dollar up = USD pairs favor USD strength. Dollar down = risk-on, commodity currencies rally. Run analysis to get live DXY reading.
+        </div>
+      </div>
+
+      <!-- CENTRAL BANK DIVERGENCE — Druckenmiller's weapon -->
+      <div class="panel" style="border-color:rgba(204,85,255,0.3);margin-bottom:10px;">
+        <div class="ph purple">🏦 CENTRAL BANK DIVERGENCE — DRUCKENMILLER'S #1 EDGE</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;">🇺🇸 FED</div>
+            <div style="font-size:13px;font-weight:bold;" id="cb-fed">—</div>
+            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;" id="cb-fed-rate">Rate: —</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;">🇪🇺 ECB</div>
+            <div style="font-size:13px;font-weight:bold;" id="cb-ecb">—</div>
+            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;" id="cb-ecb-rate">Rate: —</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;">🇬🇧 BOE</div>
+            <div style="font-size:13px;font-weight:bold;" id="cb-boe">—</div>
+            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;" id="cb-boe-rate">Rate: —</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;">🇯🇵 BOJ</div>
+            <div style="font-size:13px;font-weight:bold;" id="cb-boj">—</div>
+            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;" id="cb-boj-rate">Rate: —</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);padding:8px;background:var(--surface2);border-radius:3px;border-left:3px solid var(--purple);" id="cb-divergence-note">
+          🏆 <strong style="color:var(--purple)">Druckenmiller:</strong> The biggest forex moves come from central bank DIVERGENCE — when one bank is hiking while another is cutting. Run analysis to see current divergence and which pairs benefit most.
+        </div>
+      </div>
+
+      <!-- KOVNER RISK CALCULATOR -->
+      <div class="panel" style="border-color:rgba(255,51,85,0.2);margin-bottom:10px;">
+        <div class="ph war">🛡 KOVNER 1-2% RISK RULE — NEVER RISK MORE THAN YOU CAN HANDLE</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;align-items:end;">
+          <div class="fg"><div class="fl">ACCOUNT SIZE ($)</div><input id="risk-account" type="number" placeholder="10000" oninput="calcRisk()"/></div>
+          <div class="fg"><div class="fl">RISK % (MAX 2%)</div><input id="risk-pct" type="number" placeholder="1" min="0.1" max="2" step="0.1" oninput="calcRisk()"/></div>
+          <div class="fg"><div class="fl">STOP LOSS (PIPS)</div><input id="risk-pips" type="number" placeholder="30" oninput="calcRisk()"/></div>
+          <div class="fg"><div class="fl">PAIR</div>
+            <select id="risk-pair" onchange="calcRisk()">
+              <option>EUR/USD</option><option>GBP/USD</option><option>USD/JPY</option>
+              <option>AUD/USD</option><option>USD/CAD</option><option>XAU/USD</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;" id="risk-result" style="display:none;">
+          <div class="lv"><div class="lv-l">MAX RISK $</div><div class="lv-v" id="risk-dollars" style="color:var(--red);">—</div></div>
+          <div class="lv"><div class="lv-l">LOT SIZE</div><div class="lv-v" id="risk-lots" style="color:var(--orange);">—</div></div>
+          <div class="lv"><div class="lv-l">MINI LOTS</div><div class="lv-v" id="risk-mini" style="color:var(--cyan);">—</div></div>
+          <div class="lv"><div class="lv-l">MICRO LOTS</div><div class="lv-v" id="risk-micro" style="color:var(--green);">—</div></div>
+        </div>
+      </div>
+
       <div class="g2">
         <div class="panel">
           <div class="ph">WOLF AI — FULL TOP-DOWN ANALYSIS</div>
           <div class="ai-out" id="ai-full">
             <span style="color:var(--text-dim)">Select a pair and click <span style="color:var(--orange);font-weight:bold;">🐺 DEEP ANALYSIS</span>.<br><br>
-            Wolf AI conducts a full Wall Street-style top-down analysis:<br>
-            Monthly → Weekly → Daily → H4 → H1 → M15<br><br>
-            Checks: Macro environment · Central bank stance · DXY direction · Market structure · Key levels · Technical confluence · News catalysts · Geopolitical risk<br><br>
-            Then delivers a BUY, SELL, or STAY OUT verdict with full reasoning.</span>
+            Wolf AI thinks like <strong style="color:var(--gold)">Soros + Kovner + Druckenmiller</strong>:<br><br>
+            1️⃣ <strong style="color:var(--gold)">DXY direction</strong> — dollar master filter<br>
+            2️⃣ <strong style="color:var(--purple)">Central bank divergence</strong> — who's hawkish vs dovish<br>
+            3️⃣ <strong style="color:var(--cyan)">Macro environment</strong> — risk-on vs risk-off<br>
+            4️⃣ <strong style="color:var(--orange)">Top-down</strong> Monthly → Weekly → Daily → H4 → H1 → M15<br>
+            5️⃣ <strong style="color:var(--green)">Both scenarios</strong> — BUY trigger AND SELL trigger<br>
+            6️⃣ <strong style="color:var(--red)">Risk management</strong> — 1-2% rule, exact position size</span>
           </div>
         </div>
         <div>
@@ -505,15 +586,14 @@ input::placeholder{color:var(--text-dim);}
 
     <!-- SCENARIOS TAB -->
     <div class="tab-pane" id="pane-scenarios">
-      <div class="panel">
-        <div class="ph">⚡ SCENARIO ANALYSIS — IF THIS BREAKS, DO THIS</div>
+      <div class="panel" style="border-color:rgba(51,221,255,0.2);">
+        <div class="ph" style="color:var(--cyan);">⚡ TOP 7 TRADES — FULL TOP-DOWN SCENARIO ANALYSIS — LIVE DATA</div>
         <div style="font-size:12px;color:var(--text-mid);margin-bottom:14px;line-height:1.8;">
-          Wolf AI analyzes both BUY and SELL scenarios based on key price levels, news data, and market structure. Run a pair analysis first, then check here for both scenarios.
+          Wolf AI scans ALL pairs with <strong style="color:var(--cyan)">real live prices + live news</strong>. Monthly → Weekly → Daily → H4 → H1 → M15. Each trade has a <strong style="color:var(--green)">BUY scenario</strong> AND <strong style="color:var(--red)">SELL scenario</strong> with exact trigger levels. Only pairs where <strong style="color:var(--gold)">4+ timeframes align</strong> make the list.
         </div>
-        <div id="scenario-box">
-          <div class="empty">Run 🐺 DEEP ANALYSIS on a pair to see both BUY and SELL scenarios with exact trigger levels, news alignment, and full trade setup.</div>
-        </div>
+        <button class="big-btn btn-cyan" id="scenario-btn" onclick="loadScenarios()">⚡ GET TOP 7 SCENARIO TRADES — LIVE DATA + AI RESEARCH</button>
       </div>
+      <div id="scenario-box"><div class="empty">Click above — Wolf AI scans live prices, pulls real news, does full top-down analysis on ALL pairs, gives you 7 best BUY/SELL scenarios.</div></div>
     </div>
 
     <!-- TIMEFRAMES TAB -->
@@ -645,7 +725,8 @@ let currentPair='EUR/USD';
 let analyzing=false;
 let trades=JSON.parse(localStorage.getItem('wolf_fx_trades')||'[]');
 
-const PRICES={
+// Live prices cache
+let PRICES={
   'EUR/USD':{p:1.0842,c:+0.0012,pct:+0.11,h:1.0871,l:1.0821,sp:1.2,tv:'EURUSD'},
   'GBP/USD':{p:1.2634,c:-0.0021,pct:-0.17,h:1.2671,l:1.2601,sp:1.5,tv:'GBPUSD'},
   'USD/JPY':{p:149.82,c:+0.44,pct:+0.29,h:150.21,l:149.41,sp:1.8,tv:'USDJPY'},
@@ -660,15 +741,99 @@ const PRICES={
   'BTC/USD':{p:67420,c:+1240,pct:+1.87,h:68100,l:66200,sp:25,tv:'BTCUSD'},
 };
 
+const TV_MAP={
+  'EUR/USD':'EURUSD','GBP/USD':'GBPUSD','USD/JPY':'USDJPY','USD/CHF':'USDCHF',
+  'AUD/USD':'AUDUSD','USD/CAD':'USDCAD','NZD/USD':'NZDUSD','EUR/GBP':'EURGBP',
+  'EUR/JPY':'EURJPY','GBP/JPY':'GBPJPY','XAU/USD':'XAUUSD','BTC/USD':'BTCUSD'
+};
+
+// Forex session timing - Sunday 5PM EST open, Friday 5PM EST close
+const SESSIONS={
+  TOKYO:  {start:19,end:4,  label:'TOKYO',   cls:'s-tokyo',  pairs:['USD/JPY','EUR/JPY','GBP/JPY','AUD/USD']},
+  LONDON: {start:3, end:12, label:'LONDON',  cls:'s-london', pairs:['EUR/USD','GBP/USD','EUR/GBP','USD/CHF']},
+  OVERLAP:{start:8, end:12, label:'LDN/NY',  cls:'s-overlap',pairs:['EUR/USD','GBP/USD','USD/JPY','XAU/USD']},
+  NEWYORK:{start:12,end:17, label:'NEW YORK',cls:'s-ny',     pairs:['EUR/USD','GBP/USD','USD/CAD','XAU/USD']},
+};
+
+function getSession(){
+  const now=new Date();
+  const estStr=now.toLocaleString('en-US',{timeZone:'America/New_York'});
+  const est=new Date(estStr);
+  const h=est.getHours(),day=est.getDay();
+  // Saturday = closed all day
+  if(day===6) return {label:'CLOSED',cls:'s-closed',pairs:[]};
+  // Sunday before 5PM EST = closed
+  if(day===0&&h<17) return {label:'CLOSED',cls:'s-closed',pairs:[]};
+  // Friday after 5PM EST = closed
+  if(day===5&&h>=17) return {label:'CLOSED',cls:'s-closed',pairs:[]};
+  // Active sessions
+  if(h>=19||h<3) return SESSIONS.TOKYO;
+  if(h>=3&&h<8)  return SESSIONS.LONDON;
+  if(h>=8&&h<12) return SESSIONS.OVERLAP;
+  if(h>=12&&h<17) return SESSIONS.NEWYORK;
+  return {label:'PRE-MARKET',cls:'s-closed',pairs:[]};
+}
+
+// Fetch ALL live prices from backend
+async function fetchAllPrices(){
+  try{
+    const res=await fetch('/api/forex-prices');
+    if(!res.ok)return;
+    const data=await res.json();
+    if(data.prices){
+      Object.entries(data.prices).forEach(([pair,q])=>{
+        const tv=TV_MAP[pair]||pair.replace('/','');
+        PRICES[pair]={
+          p:parseFloat(q.price).toFixed(pair.includes('JPY')?3:5),
+          c:parseFloat(q.change).toFixed(pair.includes('JPY')?3:5),
+          pct:parseFloat(q.percent_change).toFixed(2),
+          h:parseFloat(q.high).toFixed(pair.includes('JPY')?3:5),
+          l:parseFloat(q.low).toFixed(pair.includes('JPY')?3:5),
+          sp:1.2,tv,live:true
+        };
+      });
+      buildTicker();
+      updPrice(currentPair);
+      // Update session from server
+      if(data.session){
+        const pill=document.getElementById('sess');
+        const s=data.session;
+        const cls=s==='LONDON'?'s-london':s==='NEW YORK'?'s-ny':s==='OVERLAP'?'s-overlap':s==='TOKYO'?'s-tokyo':'s-closed';
+        pill.textContent=s;pill.className='sess-pill '+cls;
+      }
+      console.log('✅ Live prices updated');
+    }
+  }catch(e){console.log('Price fetch error:',e);}
+}
+
 async function callAI(prompt,maxTokens=2000){
   const res=await fetch('/api/forex-analyze',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({prompt,max_tokens:maxTokens})
+    body:JSON.stringify({prompt,max_tokens:maxTokens,pair:currentPair})
   });
   if(!res.ok)throw new Error('Server error '+res.status);
   const data=await res.json();
   if(data.error)throw new Error(data.error);
   return data.content;
+}
+
+// News panel
+async function loadPairNews(pair){
+  try{
+    const res=await fetch('/api/forex-news',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pair})});
+    if(!res.ok)return;
+    const data=await res.json();
+    const newsEl=document.getElementById('ai-news');
+    if(!newsEl)return;
+    const items=[...(data.pair_news||[]),...(data.market_news||[])].slice(0,6);
+    if(!items.length){newsEl.innerHTML='<span style="color:var(--text-dim)">No news found</span>';return;}
+    newsEl.innerHTML=items.map(n=>`
+      <div class="ni">
+        <div class="ni-meta"><span class="ni-time">${n.source||'NEWS'}</span><span class="ni-time" style="color:var(--text-dim)">${n.published||''}</span></div>
+        <div class="ni-title">${n.title||''}</div>
+        ${n.description?`<div class="ni-body">${n.description}</div>`:''}
+      </div>`).join('');
+  }catch(e){console.log('News error',e);}
 }
 
 function buildTicker(){
@@ -681,18 +846,17 @@ function buildTicker(){
 function updateClock(){
   const now=new Date();
   document.getElementById('clock').textContent=now.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',second:'2-digit'})+' EST';
-  const h=parseInt(now.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',hour12:false}));
-  const day=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'})).getDay();
-  const pill=document.getElementById('sess'),sEl=document.getElementById('ps-sess');
-  let s='CLOSED',cls='s-closed';
-  if(day>0&&day<6){
-    if(h>=19||h<3){s='TOKYO';cls='s-tokyo';}
-    else if(h>=3&&h<8){s='LONDON';cls='s-london';}
-    else if(h>=8&&h<12){s='LDN/NY';cls='s-overlap';}
-    else if(h>=12&&h<17){s='NEW YORK';cls='s-ny';}
-  }
-  pill.textContent=s;pill.className='sess-pill '+cls;
-  if(sEl)sEl.textContent=s;
+  const sess=getSession();
+  const pill=document.getElementById('sess');
+  const sEl=document.getElementById('ps-sess');
+  pill.textContent=sess.label;
+  pill.className='sess-pill '+sess.cls;
+  if(sEl)sEl.textContent=sess.label;
+  // Highlight active pairs
+  document.querySelectorAll('.pb').forEach(b=>{
+    const p=b.textContent.trim();
+    b.style.boxShadow=sess.pairs.includes(p)?'0 0 8px rgba(0,255,153,0.3)':'';
+  });
 }
 
 function selPair(pair,btn){
@@ -778,10 +942,18 @@ Sharingan Score: [X]/6 timeframes aligned
 [Current global risk environment. Risk-on or risk-off today. What macro theme is dominating forex markets. Any geopolitical tensions directly affecting this pair. USD strength/weakness theme.]
 
 **STEP 2 — DOLLAR INDEX (DXY)**
-[DXY current direction and momentum. Weekly trend. What DXY movement means for this specific pair. Correlation impact.]
+DXY direction: [BULLISH/BEARISH/NEUTRAL]
+DXY monthly: [BULLISH/BEARISH/NEUTRAL]
+DXY weekly: [BULLISH/BEARISH/NEUTRAL]
+DXY daily: [BULLISH/BEARISH/NEUTRAL]
+[What DXY is doing right now. Is the dollar gaining or losing strength. How this directly impacts ${currentPair}. Is this a headwind or tailwind for the trade.]
 
 **STEP 3 — CENTRAL BANK DIVERGENCE**
-[Both central banks full stance. Who is hawkish. Who is dovish. Rate expectations. How the divergence creates the directional bias for this pair.]
+Federal Reserve: [HAWKISH/DOVISH/NEUTRAL] — Rate: [X]%
+European Central Bank: [HAWKISH/DOVISH/NEUTRAL] — Rate: [X]%
+Bank of England: [HAWKISH/DOVISH/NEUTRAL] — Rate: [X]%
+Bank of Japan: [HAWKISH/DOVISH/NEUTRAL] — Rate: [X]%
+[The key divergence creating this trade. Who is hiking vs cutting. How many rate moves are priced in. What the spread in rates means for this pair direction. This is Druckenmiller's core edge.]
 
 **STEP 4 — ECONOMIC DATA & NEWS CATALYSTS**
 [3-4 recent key data releases that moved this pair. How they shifted the outlook. What upcoming events could be catalysts this week.]
@@ -925,6 +1097,10 @@ function parseDisplay(text){
   updInd(verdict,parseInt(conf));
   // Scenarios
   buildScenarios(text);
+  // DXY Master Filter
+  updateDXYPanel(text);
+  // Central Bank Divergence
+  updateCBPanel(text);
 }
 
 function updTF(text){
@@ -1061,99 +1237,6 @@ function buildScenarios(text){
 }
 
 // ── TOP 3 GUARANTEED DAY TRADES ───────────────────────────────────────────────
-async function loadGuaranteed(){
-  const btn=document.getElementById('guaranteed-btn');
-  const box=document.getElementById('guaranteed-box');
-  btn.disabled=true;btn.textContent='⏳ DEEP SCANNING ALL PAIRS...';
-  box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--gold)"></div><div class="load-txt" style="color:var(--gold)">SCANNING ALL PAIRS — FINDING TOP 3...</div><div style="font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;">Checking confluence · Session timing · News · Key levels · Scenarios</div></div>`;
-  const now=new Date();
-  const prompt=`You are Wolf AI, the most elite forex analyst. ${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}, ${now.toLocaleTimeString('en-US',{timeZone:'America/New_York'})} EST.
-
-Find the TOP 3 GUARANTEED DAY TRADES across ALL major pairs for TODAY's London & NY sessions.
-
-Scan ALL pairs: EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, NZD/USD, EUR/GBP, EUR/JPY, GBP/JPY, XAU/USD
-Only include picks where MINIMUM 5 factors align: trend + momentum + key level + session timing + news catalyst + technical confirmation.
-Include BOTH buy and sell scenarios per pick. Include exact Sharingan-style analysis.
-
-PICK 1 (HIGHEST CONVICTION):
-Pair: [pair]
-Direction: [BUY/SELL]
-Sharingan Score: [X]/6
-Entry: [price]
-Stop Loss: [price] ([X] pips)
-TP1: [price] ([X] pips)
-TP2: [price] ([X] pips)
-TP3: [price] ([X] pips)
-Confidence: [X]%
-Best Window: [EST time range — London or NY]
-Confluences:
-- [factor 1]
-- [factor 2]
-- [factor 3]
-- [factor 4]
-- [factor 5]
-Why #1 Today: [3 sentences — what makes this the best setup, current price action, catalyst]
-BUY Scenario: IF price breaks above [level] AND [condition], enter long at [price], SL [price], TP1 [price]
-SELL Scenario: IF price breaks below [level] AND [condition], enter short at [price], SL [price], TP1 [price]
-Key News: [any news/events affecting this pair today]
-What Kills This Trade: [exactly what invalidates it]
-
-PICK 2 (2ND HIGHEST CONVICTION): [same format]
-PICK 3 (3RD HIGHEST CONVICTION): [same format]`;
-
-  try{
-    const text=await callAI(prompt,2200);
-    renderGuaranteed(text,box,'DAY');
-  }catch(e){
-    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
-  }
-  btn.disabled=false;btn.textContent='🏆 REFRESH TOP 3 GUARANTEED';
-}
-
-// ── TOP 3 SWING TRADES ────────────────────────────────────────────────────────
-async function loadSwings(){
-  const btn=document.getElementById('swing-btn');
-  const box=document.getElementById('swing-box');
-  btn.disabled=true;btn.textContent='⏳ RESEARCHING MARKETS...';
-  box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--purple)"></div><div class="load-txt" style="color:var(--purple)">WOLF AI RESEARCHING SWING SETUPS...</div><div style="font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;">Weekly structure · Central banks · Macro · Scenarios</div></div>`;
-  const now=new Date();
-  const prompt=`You are Wolf AI, professional forex swing trader. Week of ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}.
-
-Find the TOP 3 SWING TRADES for this week (2-7 day holds) across ALL major pairs.
-
-Research: Global macro theme. Fed/ECB/BOE/BOJ stance this week. DXY weekly direction. Key weekly chart setups. Major weekly levels. Events this week. Best fundamental + technical confluence.
-
-PICK 1:
-Pair: [pair]
-Direction: [BUY/SELL]
-Hold: [X-X days]
-Entry Zone: [price range]
-Stop Loss: [price] ([X] pips — structural reason)
-TP1: [price] ([X] pips)
-TP2: [price] ([X] pips)
-TP3: [price] ([X] pips)
-R:R: [ratio]
-Confidence: [X]%
-Weekly Bias: [BULLISH/BEARISH]
-Fundamental Driver: [2 sentences — central bank + macro reason]
-Technical Setup: [2 sentences — weekly/daily chart setup]
-BUY Scenario: IF weekly candle closes above [level], enter at [price], target [price]
-SELL Scenario: IF weekly candle closes below [level], enter at [price], target [price]
-Key Events This Week: [what could be a catalyst]
-Key Risk: [what breaks this setup]
-
-PICK 2: [same format]
-PICK 3: [same format]`;
-
-  try{
-    const text=await callAI(prompt,2200);
-    renderGuaranteed(text,box,'SWING');
-  }catch(e){
-    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
-  }
-  btn.disabled=false;btn.textContent='📈 REFRESH TOP 3 SWING TRADES';
-}
-
 function renderGuaranteed(text,box,type){
   const secs=text.split(/PICK \d+[^:]*:/i).filter(s=>s.trim().length>10);
   if(!secs.length){box.innerHTML=`<div class="panel"><div class="ai-out">${fmt(text)}</div></div>`;return;}
@@ -1484,12 +1567,235 @@ function delTrade(id){
   renderTracker();
 }
 
+// ── SCENARIOS — 7 BEST TRADES LIVE DATA ──────────────────────────────────────
+async function loadScenarios(){
+  const btn=document.getElementById('scenario-btn');
+  const box=document.getElementById('scenario-box');
+  btn.disabled=true;btn.textContent='⏳ SCANNING LIVE PRICES + NEWS...';
+  box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--cyan)"></div><div class="load-txt" style="color:var(--cyan)">WOLF AI — TOP-DOWN ANALYSIS ALL PAIRS...</div><div style="font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;">Live prices · Real news · Monthly→M15 · BUY & SELL scenarios</div></div>`;
+  try{
+    const res=await fetch('/api/forex-scenarios',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json();
+    if(!res.ok||data.error)throw new Error(data.error||'Failed');
+    renderScenarios(data,box);
+  }catch(e){
+    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+  }
+  btn.disabled=false;btn.textContent='⚡ REFRESH — LIVE DATA + AI RESEARCH';
+}
+
+function renderScenarios(data,box){
+  const trades=data.trades||[];
+  let html=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+    <div class="lv"><div class="lv-l">MARKET THEME</div><div class="lv-v" style="color:var(--cyan);font-size:11px;">${data.market_theme||'--'}</div></div>
+    <div class="lv"><div class="lv-l">DXY</div><div class="lv-v" style="color:${(data.dxy_direction||'').includes('BULL')?'var(--green)':'var(--red)'}">${data.dxy_direction||'--'}</div></div>
+    <div class="lv"><div class="lv-l">RISK</div><div class="lv-v" style="color:${(data.risk_sentiment||'').includes('ON')?'var(--green)':'var(--red)'}">${data.risk_sentiment||'--'}</div></div>
+  </div>`;
+
+  trades.forEach((t,i)=>{
+    const rankEmoji=['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣'][i]||'#'+(i+1);
+    const bias=t.overall_bias||'NEUTRAL';
+    const isBull=bias==='BULLISH';
+    const tf=t.timeframe_alignment||{};
+    const tfKeys=['monthly','weekly','daily','h4','h1','m15'];
+    const tfBars=tfKeys.map(k=>{
+      const v=(tf[k]||'NEUTRAL').toUpperCase();
+      const cls=v.includes('BULL')?'bull':v.includes('BEAR')?'bear':'neut';
+      return`<div class="ss-bar ${cls}" style="font-size:7px;">${k.toUpperCase().replace('MONTHLY','M').replace('WEEKLY','W').replace('DAILY','D')}</div>`;
+    }).join('');
+    const buy=t.buy_scenario||{};
+    const sell=t.sell_scenario||{};
+
+    html+=`<div class="pick-card ${isBull?'pk-buy':'pk-sell'}" style="border-color:rgba(${isBull?'0,255,153':'255,51,85'},0.15);margin-bottom:12px;">
+      <div style="font-size:9px;color:var(--cyan);letter-spacing:2px;margin-bottom:8px;">${rankEmoji} RANK ${i+1} — ${t.aligned_count||'?'}/6 TIMEFRAMES ALIGNED</div>
+      <div class="pk-top">
+        <div class="pk-pair">${t.pair}</div>
+        <div class="pk-dir ${isBull?'dir-buy':'dir-sell'}">${t.primary_direction||bias}</div>
+        <span class="badge badge-score">CONFIDENCE ${t.confidence||'--'}%</span>
+        ${t.live_price?`<span style="font-size:11px;color:var(--text-mid);">LIVE: ${t.live_price}</span>`:''}
+        ${t.best_session?`<span class="badge" style="background:rgba(51,221,255,0.1);border:1px solid rgba(51,221,255,0.3);color:var(--cyan);">⏰ ${t.best_session}</span>`:''}
+      </div>
+
+      <div style="margin:10px 0;">
+        <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:5px;">MTF ALIGNMENT</div>
+        <div class="ss-bars" style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;">${tfBars}</div>
+      </div>
+
+      ${t.thesis?`<div class="pk-body" style="border-left:3px solid var(--cyan);padding-left:10px;">${t.thesis}</div>`:''}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;">
+        <div style="font-size:11px;color:var(--text-mid);padding:8px;background:var(--surface2);border-radius:3px;">
+          <div style="font-size:8px;letter-spacing:2px;color:var(--red);margin-bottom:4px;">KEY RESISTANCE</div>${t.key_resistance||'--'}
+        </div>
+        <div style="font-size:11px;color:var(--text-mid);padding:8px;background:var(--surface2);border-radius:3px;">
+          <div style="font-size:8px;letter-spacing:2px;color:var(--green);margin-bottom:4px;">KEY SUPPORT</div>${t.key_support||'--'}
+        </div>
+      </div>
+
+      <div class="scenario-wrap">
+        <div class="scenario sc-bull">
+          <div class="sc-head">📈 BUY SCENARIO <span style="margin-left:auto;font-size:9px;color:var(--green);">${buy.probability||'--'}% PROB</span></div>
+          ${buy.trigger?`<div class="sc-trigger" style="border-color:var(--green)"><strong style="font-size:8px;letter-spacing:1px;">TRIGGER:</strong><br>${buy.trigger}</div>`:''}
+          ${buy.news_needed?`<div class="sc-news"><strong style="font-size:8px;letter-spacing:1px;color:var(--cyan)">NEWS NEEDED:</strong><br>${buy.news_needed}</div>`:''}
+          <div class="sc-lvl"><span class="sc-lkey">ENTRY</span><span class="sc-lval">${buy.entry||'--'}</span></div>
+          <div class="sc-lvl"><span class="sc-lkey">STOP</span><span class="sc-lval" style="color:var(--red)!important">${buy.stop_loss||'--'}</span></div>
+          <div class="sc-lvl"><span class="sc-lkey">TP1</span><span class="sc-lval">${buy.tp1||'--'}</span></div>
+          <div class="sc-lvl"><span class="sc-lkey">TP2</span><span class="sc-lval">${buy.tp2||'--'}</span></div>
+          <div class="sc-lvl"><span class="sc-lkey">TP3</span><span class="sc-lval">${buy.tp3||'--'}</span></div>
+          ${buy.confirmation?`<div class="sc-news" style="margin-top:6px;"><strong style="font-size:8px;color:var(--gold);">CONFIRMATION:</strong><br>${buy.confirmation}</div>`:''}
+        </div>
+        <div class="scenario sc-bear">
+          <div class="sc-head">📉 SELL SCENARIO <span style="margin-left:auto;font-size:9px;color:var(--red);">${sell.probability||'--'}% PROB</span></div>
+          ${sell.trigger?`<div class="sc-trigger" style="border-color:var(--red)"><strong style="font-size:8px;letter-spacing:1px;">TRIGGER:</strong><br>${sell.trigger}</div>`:''}
+          ${sell.news_needed?`<div class="sc-news"><strong style="font-size:8px;letter-spacing:1px;color:var(--cyan)">NEWS NEEDED:</strong><br>${sell.news_needed}</div>`:''}
+          <div class="sc-lvl"><span class="sc-lkey">ENTRY</span><span class="sc-lval">${sell.entry||'--'}</span></div>
+          <div class="sc-lvl"><span class="sc-lkey">STOP</span><span class="sc-lval" style="color:var(--red)!important">${sell.stop_loss||'--'}</span></div>
+          <div class="sc-lvl"><span class="sc-lkey">TP1</span><span class="sc-lval">${sell.tp1||'--'}</span></div>
+          <div class="sc-lvl"><span class="sc-lkey">TP2</span><span class="sc-lval">${sell.tp2||'--'}</span></div>
+          <div class="sc-lvl"><span class="sc-lkey">TP3</span><span class="sc-lval">${sell.tp3||'--'}</span></div>
+          ${sell.confirmation?`<div class="sc-news" style="margin-top:6px;"><strong style="font-size:8px;color:var(--gold);">CONFIRMATION:</strong><br>${sell.confirmation}</div>`:''}
+        </div>
+      </div>
+      ${t.key_news_this_week?`<div style="font-size:11px;color:var(--cyan);margin-top:8px;padding:8px;background:var(--surface2);border-radius:3px;"><strong style="font-size:8px;letter-spacing:1px;">📰 NEWS THIS WEEK:</strong><br>${t.key_news_this_week}</div>`:''}
+      ${t.invalidation?`<div style="font-size:11px;color:var(--red);margin-top:6px;">⚠ INVALIDATED IF: ${t.invalidation}</div>`:''}
+    </div>`;
+  });
+  box.innerHTML=html;
+}
+
+// ── UPDATE GUARANTEED + SWINGS TO USE BACKEND ROUTES ─────────────────────────
+async function loadGuaranteed(){
+  const btn=document.getElementById('guaranteed-btn');
+  const box=document.getElementById('guaranteed-box');
+  btn.disabled=true;btn.textContent='⏳ SCANNING LIVE PRICES...';
+  box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--gold)"></div><div class="load-txt" style="color:var(--gold)">WOLF AI — SCANNING ALL PAIRS WITH LIVE DATA...</div></div>`;
+  try{
+    const res=await fetch('/api/forex-daily-picks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json();
+    if(!res.ok||data.error)throw new Error(data.error||'Failed');
+    renderGuaranteed(data,box,'DAY');
+  }catch(e){
+    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+  }
+  btn.disabled=false;btn.textContent='🏆 REFRESH TOP 3 GUARANTEED';
+}
+
+async function loadSwings(){
+  const btn=document.getElementById('swing-btn');
+  const box=document.getElementById('swing-box');
+  btn.disabled=true;btn.textContent='⏳ RESEARCHING LIVE MARKETS...';
+  box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--purple)"></div><div class="load-txt" style="color:var(--purple)">WOLF AI — WEEKLY SWING RESEARCH WITH LIVE DATA...</div></div>`;
+  try{
+    const res=await fetch('/api/forex-weekly-picks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json();
+    if(!res.ok||data.error)throw new Error(data.error||'Failed');
+    renderGuaranteed(data,box,'SWING');
+  }catch(e){
+    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+  }
+  btn.disabled=false;btn.textContent='📈 REFRESH TOP 3 SWING TRADES';
+}
+
+// ── KOVNER 1-2% RISK CALCULATOR ──────────────────────────────────────────────
+function calcRisk(){
+  const account=parseFloat(document.getElementById('risk-account').value)||0;
+  const pct=parseFloat(document.getElementById('risk-pct').value)||1;
+  const pips=parseFloat(document.getElementById('risk-pips').value)||0;
+  const pair=document.getElementById('risk-pair').value;
+  if(!account||!pips)return;
+  const maxRisk=account*(pct/100);
+  const isJpy=pair.includes('JPY');
+  const isGold=pair.includes('XAU');
+  // Pip value per standard lot
+  const pipVal=isJpy?9.09:isGold?10:10;
+  const stdLot=maxRisk/(pips*pipVal);
+  document.getElementById('risk-dollars').textContent='$'+maxRisk.toFixed(2);
+  document.getElementById('risk-lots').textContent=stdLot.toFixed(3)+' lots';
+  document.getElementById('risk-mini').textContent=(stdLot*10).toFixed(2)+' mini';
+  document.getElementById('risk-micro').textContent=(stdLot*100).toFixed(1)+' micro';
+  document.getElementById('risk-result').style.display='grid';
+}
+
+// ── DXY + CENTRAL BANKS — updated after analysis ─────────────────────────────
+function updateDXYPanel(text){
+  // Parse DXY info from analysis text
+  const dxyM=text.match(/DXY[^:]*:\s*([^\n.]+)/i);
+  const dxyBiasM=text.match(/DXY\s*(?:direction|bias|trend)?[^:]*:\s*(BULLISH|BEARISH|NEUTRAL)/i);
+  const bias=dxyBiasM?.[1]||'';
+  const isBull=bias==='BULLISH';
+  const isBear=bias==='BEARISH';
+
+  if(bias){
+    document.getElementById('dxy-bias').textContent=bias;
+    document.getElementById('dxy-bias').className='lv-v '+(isBull?'dxy-up':isBear?'dxy-dn':'neut');
+  }
+
+  // Monthly/weekly/daily DXY
+  const mM=text.match(/DXY\s*monthly[^:]*:\s*([^\n,]+)/i);
+  const wM=text.match(/DXY\s*weekly[^:]*:\s*([^\n,]+)/i);
+  const dM=text.match(/DXY\s*daily[^:]*:\s*([^\n,]+)/i);
+  if(mM)document.getElementById('dxy-monthly').textContent=mM[1].trim().substring(0,10);
+  if(wM)document.getElementById('dxy-weekly').textContent=wM[1].trim().substring(0,10);
+  if(dM)document.getElementById('dxy-daily').textContent=dM[1].trim().substring(0,10);
+
+  // Impact on current pair
+  const impactTxt=isBull?`USD STRENGTH → ${currentPair.includes('USD/')&&!currentPair.startsWith('USD/')?'BEARISH for '+currentPair:'Check pair direction'}`:
+    isBear?`USD WEAKNESS → ${!currentPair.includes('USD/')||currentPair.startsWith('USD/')?'Could boost '+currentPair:'Check pair direction'}`:'DXY NEUTRAL';
+  document.getElementById('dxy-impact').textContent=impactTxt;
+  document.getElementById('dxy-note').innerHTML=`🐺 <strong style="color:var(--gold)">DXY is ${bias||'--'}</strong> right now. ${isBull?'Dollar strengthening — favor USD-long trades, be cautious on EUR/USD, GBP/USD, AUD/USD longs.':isBear?'Dollar weakening — favor EUR/USD, GBP/USD, AUD/USD, XAU/USD longs. Short the dollar.':'Dollar ranging — trade pairs with strongest independent catalysts.'}`;
+}
+
+function updateCBPanel(text){
+  // Parse central bank stances
+  const banks=[
+    {id:'fed',keys:['Federal Reserve','Fed','FOMC'],flag:'🇺🇸',rateId:'cb-fed-rate'},
+    {id:'ecb',keys:['European Central Bank','ECB'],flag:'🇪🇺',rateId:'cb-ecb-rate'},
+    {id:'boe',keys:['Bank of England','BOE'],flag:'🇬🇧',rateId:'cb-boe-rate'},
+    {id:'boj',keys:['Bank of Japan','BOJ'],flag:'🇯🇵',rateId:'cb-boj-rate'},
+  ];
+
+  banks.forEach(b=>{
+    const el=document.getElementById('cb-'+b.id);
+    for(const key of b.keys){
+      const m=text.match(new RegExp(key+'[^.]*?(hawkish|dovish|neutral|holding|hiking|cutting|pause)[^.]*\\.','i'));
+      if(m){
+        const stance=m[1].toUpperCase();
+        el.textContent=stance;
+        el.className=stance==='HAWKISH'||stance==='HIKING'?'cb-hawk':
+          stance==='DOVISH'||stance==='CUTTING'?'cb-dove':'cb-neut';
+        break;
+      }
+    }
+  });
+
+  // Find divergence
+  const fedEl=document.getElementById('cb-fed');
+  const ecbEl=document.getElementById('cb-ecb');
+  const boeEl=document.getElementById('cb-boe');
+  const bojEl=document.getElementById('cb-boj');
+  const fedStance=fedEl.textContent;
+  const bojStance=bojEl.textContent;
+
+  let divergenceNote='';
+  if(fedStance==='HAWKISH'&&bojStance==='DOVISH'){
+    divergenceNote='🔥 <strong style="color:var(--gold)">MAJOR DIVERGENCE:</strong> Fed HAWKISH vs BOJ DOVISH = Strong case for <strong style="color:var(--red)">USD/JPY LONG</strong> — Druckenmiller would trade this.';
+  } else if(fedStance==='DOVISH'&&bojStance==='HAWKISH'){
+    divergenceNote='🔥 <strong style="color:var(--gold)">MAJOR DIVERGENCE:</strong> Fed DOVISH vs BOJ HAWKISH = Strong case for <strong style="color:var(--green)">USD/JPY SHORT</strong> — Druckenmiller would trade this.';
+  } else {
+    divergenceNote='Run analysis to identify the biggest divergence opportunity right now across all central banks.';
+  }
+  document.getElementById('cb-divergence-note').innerHTML=divergenceNote;
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────────────
 buildTicker();
 updateClock();
 setInterval(updateClock,1000);
 updPrice('EUR/USD');
 renderTracker();
+// Fetch live prices immediately then every 30 seconds
+fetchAllPrices();
+setInterval(fetchAllPrices,30000);
 </script>
 </body>
 </html>

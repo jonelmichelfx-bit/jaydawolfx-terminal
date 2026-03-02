@@ -713,3 +713,4 @@ Respond ONLY with valid JSON, no markdown:
         return jsonify({'error': f'JSON parse error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+@app.route('/api/forex-analyze')
