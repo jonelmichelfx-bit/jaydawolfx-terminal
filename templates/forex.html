@@ -825,10 +825,33 @@ async function callAI(prompt,maxTokens=2000){
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({prompt,max_tokens:maxTokens,pair:currentPair})
   });
+  // Check if response is HTML (session expired / server error)
+  const contentType=res.headers.get('content-type')||'';
+  if(!contentType.includes('application/json')){
+    if(res.status===401||res.status===302) throw new Error('Session expired — please refresh the page and log in again');
+    throw new Error('Server error '+res.status+' — please try again');
+  }
   if(!res.ok)throw new Error('Server error '+res.status);
   const data=await res.json();
   if(data.error)throw new Error(data.error);
   return data.content;
+}
+
+// Safe fetch wrapper for all AI endpoints — always returns JSON or throws clean error
+async function safeFetch(url, body){
+  const res=await fetch(url,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body||{})
+  });
+  const contentType=res.headers.get('content-type')||'';
+  if(!contentType.includes('application/json')){
+    if(res.status===401||res.status===302) throw new Error('Session expired — please refresh and log in');
+    throw new Error('Server returned error page — please try again');
+  }
+  const data=await res.json();
+  if(data.error) throw new Error(data.error);
+  return data;
 }
 
 // News panel
@@ -1628,9 +1651,7 @@ async function loadScenarios(){
   btn.disabled=true;btn.textContent='⏳ SCANNING LIVE PRICES + NEWS...';
   box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--cyan)"></div><div class="load-txt" style="color:var(--cyan)">WOLF AI — TOP-DOWN ANALYSIS ALL PAIRS...</div><div style="font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;">Live prices · Real news · Monthly→M15 · BUY & SELL scenarios</div></div>`;
   try{
-    const res=await fetch('/api/forex-scenarios',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
-    const data=await res.json();
-    if(!res.ok||data.error)throw new Error(data.error||'Failed');
+    const data=await safeFetch('/api/forex-scenarios',{});
     renderScenarios(data,box);
   }catch(e){
     box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
@@ -1724,9 +1745,7 @@ async function loadGuaranteed(){
   btn.disabled=true;btn.textContent='⏳ SCANNING LIVE PRICES...';
   box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--gold)"></div><div class="load-txt" style="color:var(--gold)">WOLF AI — SCANNING ALL PAIRS WITH LIVE DATA...</div></div>`;
   try{
-    const res=await fetch('/api/forex-daily-picks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
-    const data=await res.json();
-    if(!res.ok||data.error)throw new Error(data.error||'Failed');
+    const data=await safeFetch('/api/forex-daily-picks',{});
     renderGuaranteed(data,box,'DAY');
   }catch(e){
     box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
@@ -1740,9 +1759,7 @@ async function loadSwings(){
   btn.disabled=true;btn.textContent='⏳ RESEARCHING LIVE MARKETS...';
   box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--purple)"></div><div class="load-txt" style="color:var(--purple)">WOLF AI — WEEKLY SWING RESEARCH WITH LIVE DATA...</div></div>`;
   try{
-    const res=await fetch('/api/forex-weekly-picks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
-    const data=await res.json();
-    if(!res.ok||data.error)throw new Error(data.error||'Failed');
+    const data=await safeFetch('/api/forex-weekly-picks',{});
     renderGuaranteed(data,box,'SWING');
   }catch(e){
     box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
