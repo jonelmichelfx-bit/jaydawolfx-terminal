@@ -471,6 +471,11 @@ def tracker_stats():
 # Replace the existing forex routes at the bottom of app.py
 # with all of this (paste above if __name__ == '__main__':)
 # ═══════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# FOREX LIVE DATA + WOLF ROUTES
+# Replace the existing forex routes at the bottom of app.py
+# with all of this (paste above if __name__ == '__main__':)
+# ═══════════════════════════════════════════════════════════════
 
 import requests as http_requests
 
@@ -493,11 +498,10 @@ PAIR_MAP = {
 
 def get_current_session():
     """Get current forex session based on EST time"""
-    from datetime import datetime
-    import pytz
+    from datetime import datetime, timezone, timedelta
     try:
-        est = pytz.timezone('America/New_York')
-        now_est = datetime.now(est)
+        est_offset = timedelta(hours=-5)  # EST (UTC-5), adjust for DST manually
+        now_est = datetime.now(timezone.utc) + est_offset
         h = now_est.hour
         day = now_est.weekday()  # 0=Mon, 6=Sun
         # Market closed: Friday 5PM - Sunday 5PM EST
@@ -839,7 +843,7 @@ Respond ONLY in valid JSON, no markdown:
 @app.route('/api/forex-daily-picks', methods=['POST'])
 @login_required
 def forex_daily_picks():
-    import json as json_lib
+    
     try:
         now = datetime.now()
         date_str = now.strftime('%A, %B %d, %Y')
@@ -916,9 +920,9 @@ Respond ONLY with valid JSON:
             text = text.split('```')[1]
             if text.startswith('json'): text = text[4:]
         text = text.strip()
-        data = json_lib.loads(text)
+        data = json.loads(text)
         return jsonify(data)
-    except json_lib.JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         return jsonify({'error': f'JSON error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -928,7 +932,7 @@ Respond ONLY with valid JSON:
 @app.route('/api/forex-weekly-picks', methods=['POST'])
 @login_required
 def forex_weekly_picks():
-    import json as json_lib
+    
     try:
         now = datetime.now()
         date_str = now.strftime('%A, %B %d, %Y')
@@ -1002,9 +1006,9 @@ Respond ONLY with valid JSON:
             text = text.split('```')[1]
             if text.startswith('json'): text = text[4:]
         text = text.strip()
-        data = json_lib.loads(text)
+        data = json.loads(text)
         return jsonify(data)
-    except json_lib.JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         return jsonify({'error': f'JSON error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1014,7 +1018,7 @@ Respond ONLY with valid JSON:
 @app.route('/api/forex-scanner', methods=['POST'])
 @login_required
 def forex_scanner():
-    import json as json_lib
+    
     try:
         data = request.get_json()
         theme = data.get('theme', 'strongest momentum')
@@ -1070,9 +1074,9 @@ Respond ONLY with valid JSON:
             text = text.split('```')[1]
             if text.startswith('json'): text = text[4:]
         text = text.strip()
-        result = json_lib.loads(text)
+        result = json.loads(text)
         return jsonify(result)
-    except json_lib.JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         return jsonify({'error': f'JSON error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1094,6 +1098,7 @@ def forex_picks():
         return jsonify({'content': message.content[0].text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
