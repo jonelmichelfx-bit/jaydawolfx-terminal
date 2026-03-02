@@ -958,6 +958,237 @@ def forex_picks():
         return jsonify({'content': text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+# ═══════════════════════════════════════════════════════════════
+# WOLF SCANNER ROUTE + SERVER-SIDE PRICE CACHE
+# Add this to forex_routes_final.py (paste before if __name__)
+# ═══════════════════════════════════════════════════════════════
+# The cache fetches prices ONCE every 60 seconds server-side.
+# All users share the same cached prices = 1440 API calls/day
+# instead of 1440 × number_of_users. Saves 99% of API credits.
+
+import time
+
+# ── PRICE CACHE ────────────────────────────────────────────────
+_price_cache = {
+    'prices': {},
+    'fetched_at': 0,
+    'ttl': 60,  # seconds — fetch fresh prices every 60s
+    'live': False
+}
+
+def get_cached_prices():
+    """Return cached prices — only fetches from API if cache is stale"""
+    now = time.time()
+    if now - _price_cache['fetched_at'] < _price_cache['ttl'] and _price_cache['prices']:
+        return _price_cache['prices'], _price_cache['live']
+
+    # Cache stale — fetch fresh
+    pairs = ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','USD/CAD',
+             'NZD/USD','EUR/GBP','EUR/JPY','GBP/JPY','XAU/USD','DXY']
+    fresh = get_prices_parallel(pairs)
+
+    if fresh:
+        _price_cache['prices'] = fresh
+        _price_cache['fetched_at'] = now
+        # Check if any are live (not fallback)
+        _price_cache['live'] = any(v.get('live', False) for v in fresh.values())
+
+    return _price_cache['prices'], _price_cache['live']
+
+
+# ── SCANNER PAGE ───────────────────────────────────────────────
+@app.route('/wolf-scanner')
+@login_required
+def wolf_scanner_page():
+    return render_template('wolf_scanner.html')
+
+
+# ── UPDATED PRICES ROUTE (uses cache) ─────────────────────────
+@app.route('/api/forex-prices', methods=['GET'])
+@login_required
+def forex_prices():
+    try:
+        prices, is_live = get_cached_prices()
+        session_name, session_pairs = get_session()
+        return jsonify({
+            'prices': prices,
+            'session': session_name,
+            'session_pairs': session_pairs,
+            'live': is_live,
+            'cached_at': datetime.now().strftime('%H:%M:%S')
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── WOLF SCAN ROUTE ────────────────────────────────────────────
+@app.route('/api/wolf-scan', methods=['POST'])
+@login_required
+def wolf_scan():
+    """The main scanner — returns 5 best trades with full analysis"""
+    try:
+        data = request.get_json() or {}
+        scan_filter = data.get('filter', 'ALL')
+        now = datetime.now()
+        date_str = now.strftime('%A, %B %d, %Y')
+        session_name, _ = get_session()
+
+        # Get cached prices (shared across all users)
+        prices, is_live = get_cached_prices()
+
+        # Filter pairs based on selection
+        all_pairs = list(prices.keys())
+        if scan_filter == 'MAJORS':
+            scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','USD/CAD']
+        elif scan_filter == 'GOLD':
+            scan_pairs = ['XAU/USD','EUR/USD','USD/JPY','AUD/USD','NZD/USD']
+        elif scan_filter == 'ASIAN':
+            scan_pairs = ['USD/JPY','EUR/JPY','GBP/JPY','AUD/USD','NZD/USD']
+        elif scan_filter == 'LONDON':
+            scan_pairs = ['EUR/USD','GBP/USD','EUR/GBP','USD/CHF','EUR/JPY']
+        else:
+            scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD',
+                         'USD/CAD','GBP/JPY','EUR/JPY','NZD/USD','USD/CHF']
+
+        # Build prices string
+        prices_lines = []
+        for p in scan_pairs:
+            q = prices.get(p)
+            if q:
+                dp = 2 if (p.includes('JPY') if hasattr(p,'includes') else 'JPY' in p) or p=='XAU/USD' else 5
+                prices_lines.append(
+                    f"{p}: {float(q['price']):.{dp}f} "
+                    f"(High: {float(q['high']):.{dp}f} "
+                    f"Low: {float(q['low']):.{dp}f} "
+                    f"Change: {float(q.get('percent_change',0)):+.2f}%)"
+                )
+        prices_str = '\n'.join(prices_lines)
+
+        # Get news
+        news_items = get_news()
+        news_str = '\n'.join([f"- {n['title']} ({n['source']}, {n['published']})"
+                              for n in news_items[:6]]) or "- Monitor key economic events this week"
+
+        # The Wolf prompt — Soros/Kovner/Druckenmiller methodology
+        prompt = f"""You are Wolf AI — a professional forex trader trained in the methodologies of George Soros, Stanley Druckenmiller, Bruce Kovner, and Paul Tudor Jones.
+
+TODAY: {date_str} | SESSION: {session_name}
+DATA SOURCE: {'LIVE REAL-TIME' if is_live else 'REFERENCE (API limit — use as guide)'}
+
+LIVE MARKET PRICES:
+{prices_str}
+
+LATEST MARKET NEWS:
+{news_str}
+
+YOUR TASK: Scan all pairs above and find the 5 BEST trades using this exact methodology:
+
+STEP 1 — SOROS TOP-DOWN: Start with DXY direction. Dollar drives 80% of forex moves.
+STEP 2 — DRUCKENMILLER DIVERGENCE: Find central bank policy differences (Fed vs ECB vs BOJ vs BOE). Rate divergence = biggest edge.
+STEP 3 — KOVNER TIMEFRAME CONFLUENCE: Only recommend trades where 4+ timeframes (Monthly/Weekly/Daily/H4/H1/M15) align.
+STEP 4 — TREND IDENTIFICATION: Is this pair in clear uptrend or downtrend? Trade WITH the trend only.
+STEP 5 — S/R LEVELS: Find key support and resistance levels NEAR the current price (within 50-100 pips). These are the actual levels to watch.
+STEP 6 — SCENARIOS: For each trade give both a BUY scenario AND a SELL scenario based on what price does at key levels.
+STEP 7 — WARNINGS: Note any upcoming economic data, central bank meetings, or news events that could affect the trade. Tell trader to WAIT if data is imminent.
+
+IMPORTANT RULES:
+- Trade trends, not reversals
+- Only levels NEAR current price matter (within 100 pips for majors, 5 for gold)
+- Be specific with exact price levels
+- Warn about economic calendar events (NFP, CPI, FOMC, BOE, ECB meetings)
+- Use real technical analysis: EMA200, RSI, MACD, key S/R zones
+
+Respond ONLY in valid JSON (absolutely no markdown, no backticks, no extra text):
+{{
+  "scan_date": "{date_str}",
+  "session": "{session_name}",
+  "market_theme": "One sentence describing main macro theme today",
+  "dxy_bias": "BULLISH or BEARISH",
+  "risk_sentiment": "RISK-ON or RISK-OFF",
+  "wolf_commentary": "2-3 sentences from Wolf AI on overall market conditions right now",
+  "trades": [
+    {{
+      "rank": 1,
+      "pair": "EUR/USD",
+      "current_price": "1.0380",
+      "trend": "DOWNTREND",
+      "primary_direction": "SELL",
+      "wolf_score": 8.5,
+      "confidence": 85,
+      "aligned_count": 5,
+      "thesis": "3-4 sentence explanation using Soros/Druckenmiller/Kovner logic. Why is this the best trade right now? What macro factors, what technical factors, what central bank divergence?",
+      "timeframe_alignment": {{
+        "monthly": "BEARISH",
+        "weekly": "BEARISH",
+        "daily": "BEARISH",
+        "h4": "BEARISH",
+        "h1": "NEUTRAL",
+        "m15": "BEARISH"
+      }},
+      "confluences": [
+        "Price below 200 EMA on Daily",
+        "Fed hawkish vs ECB dovish divergence",
+        "DXY bullish — dollar strength",
+        "Weekly bearish engulfing candle",
+        "RSI below 50 on H4"
+      ],
+      "key_levels": [
+        {{"type": "RESISTANCE", "price": "1.0450", "note": "Previous daily high — key ceiling", "distance_pips": 70}},
+        {{"type": "RESISTANCE", "price": "1.0400", "note": "48hr high — immediate resistance", "distance_pips": 20}},
+        {{"type": "CURRENT",    "price": "1.0380", "note": "Current price", "distance_pips": 0}},
+        {{"type": "SUPPORT",    "price": "1.0340", "note": "Yesterday low — first support", "distance_pips": 40}},
+        {{"type": "SUPPORT",    "price": "1.0280", "note": "Weekly S/R zone", "distance_pips": 100}}
+      ],
+      "buy_scenario": {{
+        "trigger": "If price breaks and closes ABOVE 1.0450 on H4 with strong bullish candle — momentum shift confirmed",
+        "entry": "1.0460",
+        "stop_loss": "1.0410",
+        "tp1": "1.0510",
+        "tp2": "1.0570",
+        "tp3": "1.0640",
+        "rr": "1:3.0",
+        "probability": 25
+      }},
+      "sell_scenario": {{
+        "trigger": "If price rejects 1.0400 resistance and breaks below 1.0360 — continuation of downtrend",
+        "entry": "1.0355",
+        "stop_loss": "1.0400",
+        "tp1": "1.0310",
+        "tp2": "1.0260",
+        "tp3": "1.0200",
+        "rr": "1:2.5",
+        "probability": 75
+      }},
+      "warnings": [
+        {{"level": "HIGH", "text": "US CPI data Thursday 8:30AM EST — WAIT for release before entering, expect 50-80 pip spike"}},
+        {{"level": "MEDIUM", "text": "ECB President speaks Wednesday — could cause EUR volatility"}}
+      ],
+      "relevant_news": [
+        "Fed holds rates — signals no cuts until inflation cools further",
+        "ECB mulls rate cuts as eurozone growth slows"
+      ]
+    }}
+  ]
+}}"""
+
+        text = call_claude(prompt, 4500)
+        result = parse_json_response(text)
+
+        # Inject live prices into results for accuracy
+        for trade in result.get('trades', []):
+            pair = trade.get('pair', '')
+            q = prices.get(pair)
+            if q:
+                dp = 2 if 'JPY' in pair or pair == 'XAU/USD' else 4
+                trade['current_price'] = f"{float(q['price']):.{dp}f}"
+                trade['live_price_confirmed'] = True
+
+        return jsonify(result)
+
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'AI analysis error — please try again ({str(e)[:50]})'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
