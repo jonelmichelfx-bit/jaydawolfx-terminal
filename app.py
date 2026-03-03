@@ -522,7 +522,11 @@ def forex_prices():
         return jsonify({'prices': prices, 'session': session_name,
                         'session_pairs': session_pairs, 'live': is_live,
                         'cached_at': datetime.now().strftime('%H:%M:%S')})
-    except Exception as e: return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        import traceback
+        print(f'[forex-analyze ERROR] {str(e)}')
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/forex-price', methods=['POST'])
 @login_required
@@ -687,6 +691,16 @@ Respond ONLY in valid JSON (no markdown, no backticks):
         return jsonify(result)
     except json.JSONDecodeError as e: return jsonify({'error': f'AI analysis error — try again ({str(e)[:50]})'}), 500
     except Exception as e: return jsonify({'error': str(e)}), 500
+
+# ── Admin setup (run once to set your account to admin) ──────
+@app.route('/make-me-admin/<secret>')
+@login_required
+def make_me_admin(secret):
+    if secret != os.environ.get('ADMIN_SECRET', 'wolfadmin2026'):
+        return 'Wrong secret', 403
+    current_user.plan = 'admin'
+    db.session.commit()
+    return f'✅ {current_user.email} is now ADMIN — full access unlocked! <a href="/">Go to terminal</a>'
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
