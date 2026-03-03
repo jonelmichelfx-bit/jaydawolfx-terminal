@@ -15,8 +15,26 @@ def _is_api_request():
 
 
 def _plan_rank(plan):
-    """Higher number = more access. admin = full access."""
-    return {'trial': 1, 'basic': 2, 'elite': 3, 'admin': 99}.get(plan, 0)
+    """trial=1, basic=2, pro=3, elite=4, admin=99"""
+    return {'trial': 1, 'basic': 2, 'pro': 3, 'elite': 4, 'admin': 99}.get(plan, 0)
+
+
+def pro_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated:
+            if _is_api_request():
+                return jsonify({'error': 'Login required'}), 401
+            flash('Please log in to continue.', 'warning')
+            return redirect(url_for('auth.login_page'))
+        if _is_admin(): return f(*args, **kwargs)
+        if _plan_rank(current_user.plan) < _plan_rank('pro'):
+            if _is_api_request():
+                return jsonify({'error': 'Wolf Pro plan required.', 'redirect': url_for('pricing')}), 403
+            flash('Upgrade to Wolf Pro ($99/mo) to unlock the Forex Terminal.', 'warning')
+            return redirect(url_for('pricing'))
+        return f(*args, **kwargs)
+    return decorated
 
 
 def _is_admin():

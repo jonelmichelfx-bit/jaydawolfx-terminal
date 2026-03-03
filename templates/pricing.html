@@ -1,294 +1,386 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pricing — Wolf Elite Options Terminal</title>
+  <title>Pricing — JaydaWolfX Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg:     #080c0f;
-      --green:  #00ff99;
-      --cyan:   #33ddff;
-      --text:   #ffffff;
-      --border: #2a3f52;
-      --card:   #0d1821;
-      --gold:   #ffd700;
+    :root{
+      --bg:#060a0f;--bg2:#090d14;--bg3:#0d1219;
+      --border:#1a2535;--border2:#243040;
+      --green:#00ff99;--red:#ff3355;
+      --gold:#ffd700;--cyan:#33ddff;
+      --orange:#ff8800;--purple:#cc55ff;
+      --text:#e8f4ff;--text2:#b0c8dc;--text3:#6a9ab8;
+      --mono:'Share Tech Mono',monospace;
+      --head:'Barlow Condensed',sans-serif;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;padding:0 0 80px;}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 60px 20px 80px;
-    }
+    /* NAV */
+    .nav{height:48px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;}
+    .nav-logo{font-family:var(--head);font-size:20px;font-weight:900;color:var(--gold);letter-spacing:3px;}
+    .nav-back{font-size:9px;letter-spacing:2px;color:var(--text3);text-decoration:none;border:1px solid var(--border);padding:5px 12px;transition:all .2s;margin-left:auto;}
+    .nav-back:hover{color:var(--cyan);border-color:var(--cyan);}
 
-    /* ── Header ── */
-    .logo {
-      font-size: 1.1rem;
-      color: var(--cyan);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    h1 {
-      font-size: 2.4rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--green), var(--cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-align: center;
-      margin-bottom: 10px;
-    }
-    .subtitle {
-      color: #8ba3b8;
-      font-size: 1rem;
-      margin-bottom: 50px;
-      text-align: center;
-    }
+    /* HERO */
+    .hero{text-align:center;padding:60px 20px 50px;}
+    .hero-tag{font-size:9px;letter-spacing:4px;color:var(--text3);margin-bottom:16px;}
+    .hero-title{font-family:var(--head);font-size:52px;font-weight:900;letter-spacing:2px;line-height:1;margin-bottom:14px;}
+    .hero-title span{color:var(--gold);}
+    .hero-sub{font-size:12px;color:var(--text3);letter-spacing:2px;line-height:1.8;}
 
-    /* ── Flash messages ── */
-    .flash-upgrade {
-      background: linear-gradient(135deg, #1a2a1a, #0d1821);
-      border: 1px solid var(--green);
-      border-radius: 8px;
-      padding: 14px 20px;
-      margin-bottom: 30px;
-      color: var(--green);
-      font-size: 0.95rem;
-      max-width: 700px;
-      width: 100%;
-      text-align: center;
-    }
+    /* FLASH */
+    .flash{max-width:600px;margin:0 auto 30px;padding:14px 20px;background:rgba(0,255,153,.05);border:1px solid rgba(0,255,153,.3);color:var(--green);font-size:11px;text-align:center;letter-spacing:1px;}
 
-    /* ── Cards grid ── */
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 28px;
-      max-width: 960px;
-      width: 100%;
-    }
+    /* GRID */
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1200px;margin:0 auto;padding:0 24px;}
+    @media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:600px){.grid{grid-template-columns:1fr;}}
 
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 36px 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      transition: transform 0.2s, border-color 0.2s;
-      position: relative;
-    }
-    .card:hover { transform: translateY(-4px); }
+    /* CARD */
+    .card{background:var(--bg2);border:1px solid var(--border);padding:32px 24px;display:flex;flex-direction:column;gap:18px;position:relative;transition:transform .2s;}
+    .card:hover{transform:translateY(-4px);}
+    .card.c-basic{border-color:rgba(51,221,255,.3);}
+    .card.c-pro{border-color:rgba(255,136,0,.4);box-shadow:0 0 40px rgba(255,136,0,.06);}
+    .card.c-elite{border-color:rgba(255,215,0,.4);box-shadow:0 0 40px rgba(255,215,0,.08);}
+    .card.c-app{border-color:rgba(204,85,255,.4);box-shadow:0 0 40px rgba(204,85,255,.08);}
 
-    .card.trial  { border-color: #2a3f52; }
-    .card.basic  { border-color: var(--cyan); box-shadow: 0 0 30px rgba(51,221,255,0.08); }
-    .card.elite  { border-color: var(--gold); box-shadow: 0 0 40px rgba(255,215,0,0.12); }
+    /* BADGE */
+    .badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);padding:4px 16px;font-size:8px;font-weight:700;letter-spacing:2px;white-space:nowrap;}
+    .b-popular{background:var(--orange);color:#000;}
+    .b-best{background:var(--gold);color:#000;}
+    .b-app{background:var(--purple);color:#fff;}
 
-    .badge {
-      position: absolute;
-      top: -14px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 4px 16px;
-      border-radius: 20px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .badge-cyan { background: var(--cyan); color: #080c0f; }
-    .badge-gold { background: var(--gold); color: #080c0f; }
+    /* PLAN NAME */
+    .plan-icon{font-size:28px;margin-bottom:4px;}
+    .plan-name{font-family:var(--head);font-size:26px;font-weight:900;letter-spacing:2px;}
+    .c-trial .plan-name{color:var(--text);}
+    .c-basic .plan-name{color:var(--cyan);}
+    .c-pro .plan-name{color:var(--orange);}
+    .c-elite .plan-name{color:var(--gold);}
+    .c-app .plan-name{color:var(--purple);}
 
-    .plan-name {
-      font-size: 1.4rem;
-      font-weight: 700;
-      letter-spacing: 1px;
-    }
-    .card.trial  .plan-name { color: var(--text); }
-    .card.basic  .plan-name { color: var(--cyan); }
-    .card.elite  .plan-name { color: var(--gold); }
+    .plan-desc{font-size:10px;color:var(--text3);letter-spacing:1px;line-height:1.6;}
 
-    .price-block { display: flex; align-items: baseline; gap: 4px; }
-    .price-dollar { font-size: 2.6rem; font-weight: 800; }
-    .price-period { color: #8ba3b8; font-size: 0.9rem; }
-    .card.trial .price-dollar  { color: var(--green); }
-    .card.basic .price-dollar  { color: var(--cyan); }
-    .card.elite .price-dollar  { color: var(--gold); }
+    /* PRICE */
+    .price-wrap{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 0;}
+    .price-amount{font-family:var(--head);font-size:48px;font-weight:900;line-height:1;}
+    .price-period{font-size:10px;color:var(--text3);letter-spacing:2px;margin-top:4px;}
+    .c-trial .price-amount{color:var(--green);}
+    .c-basic .price-amount{color:var(--cyan);}
+    .c-pro .price-amount{color:var(--orange);}
+    .c-elite .price-amount{color:var(--gold);}
+    .c-app .price-amount{color:var(--purple);}
 
-    .features {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      flex: 1;
-    }
-    .features li { font-size: 0.92rem; color: #c8dae6; display: flex; align-items: flex-start; gap: 8px; }
-    .features li::before { content: "✓"; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
-    .card.trial  .features li::before { color: var(--green); }
-    .card.basic  .features li::before { color: var(--cyan); }
-    .card.elite  .features li::before { color: var(--gold); }
+    /* FEATURES */
+    .features{list-style:none;display:flex;flex-direction:column;gap:8px;flex:1;}
+    .features li{font-size:10px;color:var(--text2);display:flex;align-items:flex-start;gap:8px;letter-spacing:.5px;line-height:1.5;}
+    .features li .ck{flex-shrink:0;margin-top:1px;}
+    .c-trial .ck{color:var(--green);}
+    .c-basic .ck{color:var(--cyan);}
+    .c-pro .ck{color:var(--orange);}
+    .c-elite .ck{color:var(--gold);}
+    .c-app .ck{color:var(--purple);}
+    .locked{color:var(--border2) !important;}
+    .locked .ck{color:var(--border2) !important;}
 
-    .locked { color: #3a5060 !important; }
-    .locked::before { content: "🔒" !important; }
+    /* SECTION LABEL */
+    .feat-section{font-size:8px;letter-spacing:2px;color:var(--text3);margin-top:6px;margin-bottom:2px;text-transform:uppercase;}
 
-    .btn {
-      display: block;
-      text-align: center;
-      padding: 14px;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      text-decoration: none;
-      border: none;
-      transition: opacity 0.2s, transform 0.1s;
-      letter-spacing: 0.5px;
-    }
-    .btn:hover { opacity: 0.88; transform: scale(1.02); }
-    .btn:active { transform: scale(0.98); }
+    /* BUTTONS */
+    .btn{display:block;text-align:center;padding:14px;font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:2px;cursor:pointer;text-decoration:none;border:none;transition:all .2s;width:100%;}
+    .btn:hover{opacity:.88;transform:scale(1.02);}
+    .btn-trial{background:linear-gradient(135deg,var(--green),#00cc77);color:#000;}
+    .btn-basic{background:linear-gradient(135deg,var(--cyan),#1199cc);color:#000;}
+    .btn-pro{background:linear-gradient(135deg,var(--orange),#cc6600);color:#000;}
+    .btn-elite{background:linear-gradient(135deg,var(--gold),#e6a800);color:#000;}
+    .btn-app{background:linear-gradient(135deg,var(--purple),#8822cc);color:#fff;}
+    .btn-current{background:var(--bg3);color:var(--text3);border:1px solid var(--border);cursor:default;}
+    .btn-current:hover{opacity:1;transform:none;}
+    .btn-stores{display:flex;flex-direction:column;gap:8px;}
+    .btn-store{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;font-family:var(--head);font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;text-decoration:none;border:none;transition:all .2s;}
+    .btn-ios{background:#000;color:#fff;border:1px solid #333;}
+    .btn-android{background:linear-gradient(135deg,#34a853,#1a7a30);color:#fff;}
+    .btn-ios:hover,.btn-android:hover{opacity:.88;}
 
-    .btn-trial { background: linear-gradient(135deg, var(--green), #00cc77); color: #080c0f; }
-    .btn-basic { background: linear-gradient(135deg, var(--cyan), #1199cc); color: #080c0f; }
-    .btn-elite { background: linear-gradient(135deg, var(--gold), #e6a800); color: #080c0f; }
-    .btn-current { background: #1a2a3a; color: #8ba3b8; cursor: default; }
-    .btn-current:hover { opacity: 1; transform: none; }
+    .note{font-size:9px;color:var(--text3);text-align:center;letter-spacing:1px;}
 
-    .note { font-size: 0.78rem; color: #4a6a80; text-align: center; }
+    /* COMPARE TABLE */
+    .compare-wrap{max-width:1200px;margin:60px auto 0;padding:0 24px;}
+    .compare-title{font-family:var(--head);font-size:28px;font-weight:900;letter-spacing:3px;color:var(--text);margin-bottom:24px;text-align:center;}
+    .compare-title span{color:var(--gold);}
+    .compare-table{width:100%;border-collapse:collapse;font-size:10px;}
+    .compare-table th{padding:12px 16px;text-align:center;font-size:9px;letter-spacing:2px;border-bottom:2px solid var(--border);}
+    .compare-table th:first-child{text-align:left;color:var(--text3);}
+    .compare-table td{padding:10px 16px;text-align:center;border-bottom:1px solid var(--border);color:var(--text2);}
+    .compare-table td:first-child{text-align:left;color:var(--text3);}
+    .compare-table tr:hover td{background:rgba(255,255,255,.02);}
+    .th-trial{color:var(--text3);}
+    .th-basic{color:var(--cyan);}
+    .th-pro{color:var(--orange);}
+    .th-elite{color:var(--gold);}
+    .th-app{color:var(--purple);}
+    .yes{color:var(--green);font-size:14px;}
+    .no{color:var(--border2);font-size:14px;}
+    .cat-row td,.cat-row th{background:rgba(255,215,0,.03);color:var(--gold);font-size:8px;letter-spacing:2px;padding:8px 16px;}
 
-    /* ── FAQ strip ── */
-    .faq {
-      max-width: 700px;
-      width: 100%;
-      margin-top: 60px;
-      border-top: 1px solid var(--border);
-      padding-top: 40px;
-    }
-    .faq h2 { color: var(--cyan); margin-bottom: 24px; font-size: 1.2rem; text-align: center; }
-    .faq-item { margin-bottom: 20px; }
-    .faq-item strong { color: var(--text); font-size: 0.95rem; }
-    .faq-item p { color: #8ba3b8; font-size: 0.88rem; margin-top: 6px; line-height: 1.6; }
+    /* FAQ */
+    .faq-wrap{max-width:800px;margin:60px auto 0;padding:0 24px;}
+    .faq-title{font-family:var(--head);font-size:24px;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:24px;text-align:center;}
+    .faq-item{border-bottom:1px solid var(--border);padding:16px 0;}
+    .faq-q{font-size:11px;color:var(--text);letter-spacing:1px;margin-bottom:6px;}
+    .faq-a{font-size:10px;color:var(--text3);line-height:1.8;letter-spacing:.5px;}
   </style>
 </head>
 <body>
 
-  <div class="logo">🐺 Wolf Elite Options Terminal</div>
-  <h1>Choose Your Edge</h1>
-  <p class="subtitle">Start free. Scale when you're ready. Cancel anytime.</p>
+<nav class="nav">
+  <span class="nav-logo">🐺 JAYDAWOLFX</span>
+  <a href="{{ url_for('index') }}" class="nav-back">← TERMINAL</a>
+</nav>
 
-  {% with messages = get_flashed_messages(category_filter=["upgrade"]) %}
-    {% if messages %}
-      {% for msg in messages %}
-        <div class="flash-upgrade">⚡ {{ msg }}</div>
-      {% endfor %}
+<div class="hero">
+  <div class="hero-tag">CHOOSE YOUR EDGE</div>
+  <div class="hero-title">WOLF <span>PRICING</span></div>
+  <div class="hero-sub">Professional trading tools · Real AI analysis · Cancel anytime</div>
+</div>
+
+{% with messages = get_flashed_messages(category_filter=["upgrade"]) %}
+  {% if messages %}{% for msg in messages %}
+    <div class="flash">⚡ {{ msg }}</div>
+  {% endfor %}{% endif %}
+{% endwith %}
+
+<div class="grid">
+
+  <!-- FREE TRIAL -->
+  <div class="card c-trial">
+    <div>
+      <div class="plan-icon">🔓</div>
+      <div class="plan-name">FREE TRIAL</div>
+      <div class="plan-desc">Get started — no credit card needed</div>
+    </div>
+    <div class="price-wrap">
+      <div class="price-amount">$0</div>
+      <div class="price-period">20 DAYS FREE</div>
+    </div>
+    <ul class="features">
+      <li><span class="ck">✓</span>Greeks Calculator</li>
+      <li><span class="ck">✓</span>Basic options tools</li>
+      <li class="locked"><span class="ck">✗</span>AI Scanner</li>
+      <li class="locked"><span class="ck">✗</span>Forex Terminal</li>
+      <li class="locked"><span class="ck">✗</span>Wolf Analysis</li>
+    </ul>
+    {% if current_user.is_authenticated and current_user.plan == 'trial' %}
+      <a href="{{ url_for('index') }}" class="btn btn-current">CURRENT PLAN</a>
+    {% elif not current_user.is_authenticated %}
+      <a href="{{ url_for('auth.signup') }}" class="btn btn-trial">START FREE →</a>
+    {% else %}
+      <a href="{{ url_for('index') }}" class="btn btn-trial">GO TO APP →</a>
     {% endif %}
-  {% endwith %}
-
-  <div class="pricing-grid">
-
-    <!-- ── FREE TRIAL ── -->
-    <div class="card trial">
-      <div class="plan-name">Free Trial</div>
-      <div class="price-block">
-        <span class="price-dollar">$0</span>
-        <span class="price-period">/ 20 days</span>
-      </div>
-      <ul class="features">
-        <li>Greeks Calculator (full access)</li>
-        <li class="locked">AI Scanner</li>
-        <li class="locked">AI Chart Analysis</li>
-        <li class="locked">Wolf Elite Weekly Picks</li>
-      </ul>
-      {% if session.get('plan') == 'trial' %}
-        <a href="{{ url_for('index') }}" class="btn btn-current">Current Plan</a>
-      {% elif not session.get('logged_in') %}
-        <a href="{{ url_for('auth.signup') }}" class="btn btn-trial">Start Free Trial</a>
-      {% else %}
-        <a href="{{ url_for('index') }}" class="btn btn-trial">Go to App →</a>
-      {% endif %}
-      <p class="note">No credit card required</p>
-    </div>
-
-    <!-- ── BASIC ── -->
-    <div class="card basic">
-      <div class="badge badge-cyan">MOST POPULAR</div>
-      <div class="plan-name">Basic</div>
-      <div class="price-block">
-        <span class="price-dollar">$29</span>
-        <span class="price-period">/ month</span>
-      </div>
-      <ul class="features">
-        <li>Greeks Calculator</li>
-        <li>AI Scanner — Swing + Day Trader</li>
-        <li class="locked">AI Chart Analysis</li>
-        <li class="locked">Wolf Elite Weekly Picks</li>
-      </ul>
-      {% if session.get('plan') == 'basic' %}
-        <a href="{{ url_for('index') }}" class="btn btn-current">Current Plan</a>
-      {% else %}
-        <form action="{{ url_for('create_checkout_session') }}" method="POST">
-          <input type="hidden" name="plan" value="basic"/>
-          <button type="submit" class="btn btn-basic">Upgrade to Basic →</button>
-        </form>
-      {% endif %}
-      <p class="note">Billed monthly · Cancel anytime</p>
-    </div>
-
-    <!-- ── WOLF ELITE ── -->
-    <div class="card elite">
-      <div class="badge badge-gold">🐺 WOLF ELITE</div>
-      <div class="plan-name">Wolf Elite</div>
-      <div class="price-block">
-        <span class="price-dollar">$150</span>
-        <span class="price-period">/ month</span>
-      </div>
-      <ul class="features">
-        <li>Everything in Basic</li>
-        <li>AI Chart Analysis</li>
-        <li>Wolf Elite Weekly Picks + Tracker</li>
-        <li>Priority support</li>
-        <li>Early access to Forex Terminal 🔜</li>
-      </ul>
-      {% if session.get('plan') == 'elite' %}
-        <a href="{{ url_for('index') }}" class="btn btn-current">Current Plan ✓</a>
-      {% else %}
-        <form action="{{ url_for('create_checkout_session') }}" method="POST">
-          <input type="hidden" name="plan" value="elite"/>
-          <button type="submit" class="btn btn-elite">Go Wolf Elite →</button>
-        </form>
-      {% endif %}
-      <p class="note">Billed monthly · Cancel anytime</p>
-    </div>
-
+    <p class="note">No credit card required</p>
   </div>
 
-  <!-- ── FAQ ── -->
-  <div class="faq">
-    <h2>Common Questions</h2>
-    <div class="faq-item">
-      <strong>Can I try before I pay?</strong>
-      <p>Yes — new accounts get a 20-day free trial with access to the Greeks Calculator. No credit card required to start.</p>
+  <!-- BASIC -->
+  <div class="card c-basic">
+    <div class="badge b-popular">MOST POPULAR</div>
+    <div>
+      <div class="plan-icon">📊</div>
+      <div class="plan-name">BASIC</div>
+      <div class="plan-desc">Options tools + AI scanner for active traders</div>
     </div>
-    <div class="faq-item">
-      <strong>What happens when my trial ends?</strong>
-      <p>You'll be redirected here to choose a plan. Your data and settings are saved — nothing is lost.</p>
+    <div class="price-wrap">
+      <div class="price-amount">$49</div>
+      <div class="price-period">PER MONTH</div>
     </div>
-    <div class="faq-item">
-      <strong>Can I upgrade or downgrade anytime?</strong>
-      <p>Yes. Upgrades take effect immediately. Downgrades apply at the end of your current billing cycle.</p>
+    <ul class="features">
+      <div class="feat-section">OPTIONS</div>
+      <li><span class="ck">✓</span>Greeks Calculator</li>
+      <li><span class="ck">✓</span>AI Options Scanner</li>
+      <li><span class="ck">✓</span>P&L Simulator</li>
+      <div class="feat-section">FOREX</div>
+      <li class="locked"><span class="ck">✗</span>Forex Terminal</li>
+      <li class="locked"><span class="ck">✗</span>Wolf AI Analysis</li>
+      <li class="locked"><span class="ck">✗</span>Scanner</li>
+    </ul>
+    {% if current_user.is_authenticated and current_user.plan == 'basic' %}
+      <a href="{{ url_for('index') }}" class="btn btn-current">CURRENT PLAN ✓</a>
+    {% else %}
+      <form action="{{ url_for('create_checkout_session') }}" method="POST">
+        <input type="hidden" name="plan" value="basic"/>
+        <button type="submit" class="btn btn-basic">GET BASIC →</button>
+      </form>
+    {% endif %}
+    <p class="note">Billed monthly · Cancel anytime</p>
+  </div>
+
+  <!-- WOLF PRO -->
+  <div class="card c-pro">
+    <div class="badge b-popular" style="background:var(--orange);">🐺 WOLF PRO</div>
+    <div>
+      <div class="plan-icon">🐺</div>
+      <div class="plan-name">WOLF PRO</div>
+      <div class="plan-desc">Full forex terminal + options + AI analysis</div>
     </div>
-    <div class="faq-item">
-      <strong>What is the Forex Terminal?</strong>
-      <p>A full-featured Forex trading dashboard with AI signals — currently in development. Wolf Elite subscribers get early access when it launches.</p>
+    <div class="price-wrap">
+      <div class="price-amount">$99</div>
+      <div class="price-period">PER MONTH</div>
+    </div>
+    <ul class="features">
+      <div class="feat-section">OPTIONS</div>
+      <li><span class="ck">✓</span>Everything in Basic</li>
+      <div class="feat-section">FOREX TERMINAL</div>
+      <li><span class="ck">✓</span>Live forex prices</li>
+      <li><span class="ck">✓</span>Deep AI analysis</li>
+      <li><span class="ck">✓</span>Top 3 Day trades</li>
+      <li><span class="ck">✓</span>Top 3 Swing trades</li>
+      <li><span class="ck">✓</span>7 Scenario trades</li>
+      <li><span class="ck">✓</span>Conflict analysis</li>
+      <li class="locked"><span class="ck">✗</span>Wolf Scanner</li>
+    </ul>
+    {% if current_user.is_authenticated and current_user.plan == 'pro' %}
+      <a href="{{ url_for('index') }}" class="btn btn-current">CURRENT PLAN ✓</a>
+    {% else %}
+      <form action="{{ url_for('create_checkout_session') }}" method="POST">
+        <input type="hidden" name="plan" value="pro"/>
+        <button type="submit" class="btn btn-pro">GET WOLF PRO →</button>
+      </form>
+    {% endif %}
+    <p class="note">Billed monthly · Cancel anytime</p>
+  </div>
+
+  <!-- WOLF ELITE -->
+  <div class="card c-elite">
+    <div class="badge b-best">👑 BEST VALUE</div>
+    <div>
+      <div class="plan-icon">👑</div>
+      <div class="plan-name">WOLF ELITE</div>
+      <div class="plan-desc">Everything unlocked — the full wolf experience</div>
+    </div>
+    <div class="price-wrap">
+      <div class="price-amount">$199</div>
+      <div class="price-period">PER MONTH</div>
+    </div>
+    <ul class="features">
+      <div class="feat-section">EVERYTHING IN PRO PLUS</div>
+      <li><span class="ck">✓</span>🐺 Wolf Scanner (web)</li>
+      <li><span class="ck">✓</span>Real candlestick AI analysis</li>
+      <li><span class="ck">✓</span>EMA/RSI/MACD from real data</li>
+      <li><span class="ck">✓</span>Real S/R from swing highs/lows</li>
+      <li><span class="ck">✓</span>Wolf Elite weekly picks</li>
+      <li><span class="ck">✓</span>Priority support</li>
+      <li><span class="ck">✓</span>Early access to new features</li>
+    </ul>
+    {% if current_user.is_authenticated and current_user.plan in ['elite','admin'] %}
+      <a href="{{ url_for('index') }}" class="btn btn-current">CURRENT PLAN ✓</a>
+    {% else %}
+      <form action="{{ url_for('create_checkout_session') }}" method="POST">
+        <input type="hidden" name="plan" value="elite"/>
+        <button type="submit" class="btn btn-elite">GO WOLF ELITE →</button>
+      </form>
+    {% endif %}
+    <p class="note">Billed monthly · Cancel anytime</p>
+  </div>
+
+</div>
+
+<!-- WOLF TRADER APP -->
+<div style="max-width:1200px;margin:40px auto 0;padding:0 24px;">
+  <div style="background:linear-gradient(135deg,rgba(204,85,255,.08),rgba(100,0,200,.05));border:1px solid rgba(204,85,255,.3);padding:40px;display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center;">
+    <div>
+      <div style="font-size:9px;letter-spacing:3px;color:var(--purple);margin-bottom:10px;">📱 COMING SOON — APP STORE & GOOGLE PLAY</div>
+      <div style="font-family:var(--head);font-size:40px;font-weight:900;letter-spacing:2px;color:var(--purple);margin-bottom:10px;">WOLF TRADER APP</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:20px;max-width:600px;">
+        The full Wolf AI trading experience on your phone. Get real-time scenarios, deep analysis, 
+        top 3 swing trades, conflict analysis and TradingView charts — all in one powerful mobile app.
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+        {% for f in ['📊 Deep Analysis','⚡ Scenarios','📈 Top 3 Swings','⚔️ Conflicts','📉 TradingView Charts','🔔 Trade Alerts'] %}
+        <span style="font-size:9px;letter-spacing:1px;padding:5px 12px;background:rgba(204,85,255,.1);border:1px solid rgba(204,85,255,.25);color:var(--purple);">✓ {{f}}</span>
+        {% endfor %}
+      </div>
+      <div style="font-size:10px;color:var(--text3);">Join the waitlist — be first when it launches</div>
+    </div>
+    <div style="text-align:center;min-width:220px;">
+      <div style="font-family:var(--head);font-size:52px;font-weight:900;color:var(--purple);">$60</div>
+      <div style="font-size:10px;letter-spacing:2px;color:var(--text3);margin-bottom:20px;">PER MONTH</div>
+      <a href="mailto:jaydawolfx@gmail.com?subject=Wolf Trader App Waitlist" 
+         style="display:block;padding:14px 24px;background:linear-gradient(135deg,var(--purple),#8822cc);color:#fff;font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:2px;text-decoration:none;margin-bottom:10px;text-align:center;">
+        JOIN WAITLIST →
+      </a>
+      <div style="font-size:9px;color:var(--text3);letter-spacing:1px;">iOS & Android · Launching soon</div>
     </div>
   </div>
+</div>
+
+<!-- COMPARE TABLE -->
+<div class="compare-wrap">
+  <div class="compare-title">FULL <span>COMPARISON</span></div>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>FEATURE</th>
+        <th class="th-trial">FREE</th>
+        <th class="th-basic">BASIC<br>$49</th>
+        <th class="th-pro">PRO<br>$99</th>
+        <th class="th-elite">ELITE<br>$199</th>
+        <th class="th-app">APP<br>$60</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="cat-row"><td colspan="6">OPTIONS TOOLS</td></tr>
+      <tr><td>Greeks Calculator</td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">—</span></td></tr>
+      <tr><td>P&L Simulator</td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">—</span></td></tr>
+      <tr><td>AI Options Scanner</td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">—</span></td></tr>
+      <tr class="cat-row"><td colspan="6">FOREX TERMINAL</td></tr>
+      <tr><td>Live forex prices</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><td>Deep AI analysis</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><td>7 Scenario trades</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><td>Top 3 Day trades</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><td>Top 3 Swing trades</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><td>Conflict analysis</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      <tr><td>TradingView charts</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+      <tr class="cat-row"><td colspan="6">WOLF ELITE FEATURES</td></tr>
+      <tr><td>🐺 Wolf Scanner</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
+      <tr><td>Real candlestick AI</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
+      <tr><td>Real EMA/RSI/MACD</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
+      <tr><td>Wolf Elite picks</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
+      <tr><td>Priority support</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
+      <tr class="cat-row"><td colspan="6">PLATFORM</td></tr>
+      <tr><td>Web browser</td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">—</span></td></tr>
+      <tr><td>iOS & Android app</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- FAQ -->
+<div class="faq-wrap">
+  <div class="faq-title">COMMON QUESTIONS</div>
+  <div class="faq-item">
+    <div class="faq-q">Can I try before I pay?</div>
+    <div class="faq-a">Yes — new accounts get a 20-day free trial with access to the Greeks Calculator. No credit card required to start.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">What is the difference between Wolf Pro and Wolf Elite?</div>
+    <div class="faq-a">Wolf Pro gives you the full forex terminal with all AI analysis. Wolf Elite adds the exclusive Wolf Scanner, real candlestick-based analysis (actual EMA/RSI/MACD from real chart data), and Wolf Elite weekly picks.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">What is the Wolf Trader App?</div>
+    <div class="faq-a">A dedicated iOS and Android app launching soon. $60/month gives you scenarios, deep analysis, top 3 swing trades, conflict analysis and TradingView charts on your phone. Join the waitlist to be first.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Can I upgrade or cancel anytime?</div>
+    <div class="faq-a">Yes. Upgrades take effect immediately. Cancellations apply at end of current billing cycle. No hidden fees.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Is the AI analysis based on real chart data?</div>
+    <div class="faq-a">On Wolf Elite — yes. Real daily, weekly and hourly candles are fetched, actual EMA/RSI/MACD calculated, and real swing high/low S/R levels identified before Claude AI gives any analysis. Wolf Pro uses live prices + news. Both are far more accurate than generic AI signals.</div>
+  </div>
+</div>
 
 </body>
 </html>
