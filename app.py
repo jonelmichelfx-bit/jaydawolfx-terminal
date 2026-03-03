@@ -722,55 +722,41 @@ def get_session():
         return 'AFTER HOURS', []
     except: return 'UNKNOWN', []
 
-def _get_er_rates():
-    now = time.time()
-    if now - _er_cache['fetched_at'] < 60 and _er_cache['rates']:
-        return _er_cache['rates']
-    try:
-        r = http_requests.get('https://open.er-api.com/v6/latest/USD', timeout=5)
-        d = r.json()
-        if d.get('rates'):
-            _er_cache['rates'] = d['rates']
-            _er_cache['fetched_at'] = now
-            return d['rates']
-    except: pass
-    return {}
-
 def get_price(symbol):
-    if symbol == 'DXY':
-        try:
-            r = http_requests.get(f'https://api.twelvedata.com/quote?symbol=DXY&apikey={TWELVE_DATA_KEY}', timeout=4)
-            d = r.json()
-            if 'close' in d and 'code' not in d:
-                return {'price':float(d.get('close',0)),'open':float(d.get('open',0)),
-                        'high':float(d.get('high',0)),'low':float(d.get('low',0)),
-                        'change':float(d.get('change',0)),'percent_change':float(d.get('percent_change',0)),
-                        'symbol':'DXY','live':True}
-        except: pass
-        fb = FALLBACK.get('DXY')
-        if fb: return {'price':fb['price'],'open':fb['price'],'high':fb['high'],'low':fb['low'],
-                       'change':fb['change'],'percent_change':fb['pct'],'symbol':'DXY','live':False}
-        return None
+    """
+    Get live price using yfinance — same library as candlesticks.
+    100% free, accurate, no API key needed.
+    """
     try:
-        rates = _get_er_rates()
-        if rates:
-            base, quote = symbol.split('/')
-            if base == 'USD' and quote in rates:
-                price = float(rates[quote])
-                return {'price':price,'open':price,'high':round(price*1.002,5),
-                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,'symbol':symbol,'live':True}
-            elif quote == 'USD' and base in rates:
-                price = round(1.0 / float(rates[base]), 5)
-                return {'price':price,'open':price,'high':round(price*1.002,5),
-                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,'symbol':symbol,'live':True}
-            elif base in rates and quote in rates:
-                price = round(float(rates[quote]) / float(rates[base]), 5)
-                return {'price':price,'open':price,'high':round(price*1.002,5),
-                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,'symbol':symbol,'live':True}
-    except: pass
+        import yfinance as yf
+        sym = YF_MAP.get(symbol, symbol.replace('/', '') + '=X')
+        ticker = yf.Ticker(sym)
+        # Get today's data
+        df = ticker.history(period='2d', interval='1h')
+        if not df.empty:
+            latest = df.iloc[-1]
+            prev   = df.iloc[-2] if len(df) > 1 else df.iloc[-1]
+            price  = round(float(latest['Close']), 5)
+            prev_c = round(float(prev['Close']), 5)
+            change = round(price - prev_c, 5)
+            pct    = round((change / prev_c) * 100, 2) if prev_c else 0
+            high   = round(float(df['High'].tail(8).max()), 5)
+            low    = round(float(df['Low'].tail(8).min()),  5)
+            return {
+                'price': price, 'open': prev_c,
+                'high': high,   'low':  low,
+                'change': change, 'percent_change': pct,
+                'symbol': symbol, 'live': True
+            }
+    except Exception as e:
+        print(f'[yfinance price] {symbol}: {e}')
+
+    # Fallback to Twelve Data if yfinance fails
     try:
         sym = symbol.replace('/', '')
-        r = http_requests.get(f'https://api.twelvedata.com/quote?symbol={sym}&apikey={TWELVE_DATA_KEY}', timeout=4)
+        r = http_requests.get(
+            f'https://api.twelvedata.com/quote?symbol={sym}&apikey={TWELVE_DATA_KEY}',
+            timeout=4)
         d = r.json()
         if 'close' in d and 'code' not in d:
             return {'price':float(d.get('close',0)),'open':float(d.get('open',0)),
@@ -778,6 +764,8 @@ def get_price(symbol):
                     'change':float(d.get('change',0)),'percent_change':float(d.get('percent_change',0)),
                     'symbol':symbol,'live':True}
     except: pass
+
+    # Last resort — fallback prices
     fb = FALLBACK.get(symbol)
     if fb: return {'price':fb['price'],'open':fb['price'],'high':fb['high'],'low':fb['low'],
                    'change':fb['change'],'percent_change':fb['pct'],'symbol':symbol,'live':False}
