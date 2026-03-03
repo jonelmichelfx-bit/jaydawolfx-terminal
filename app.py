@@ -3,7 +3,7 @@ import anthropic
 from flask_login import LoginManager, current_user, login_required
 from models import db, User
 from auth import auth_bp
-from decorators import analysis_gate, basic_required, elite_required
+from decorators import analysis_gate, basic_required, pro_required, elite_required
 import stripe
 import numpy as np
 from scipy.stats import norm
@@ -30,6 +30,7 @@ app.config['SESSION_PERMANENT'] = True
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PRICES = {
     'basic': os.environ.get('STRIPE_BASIC_PRICE_ID', 'price_REPLACE_BASIC'),
+    'pro': os.environ.get('STRIPE_PRO_PRICE_ID', 'price_REPLACE_PRO'),
     'elite': os.environ.get('STRIPE_ELITE_PRICE_ID', 'price_REPLACE_ELITE'),
 }
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
@@ -104,12 +105,6 @@ _candle_cache = {}
 _candle_cache_ttl = 300  # 5 minutes
 
 def get_candles(pair, interval='1d', period='3mo'):
-    """
-    Fetch real OHLC candles from Yahoo Finance — completely free.
-    interval: '1h' (hourly), '1d' (daily), '1wk' (weekly)
-    period:   '5d','1mo','3mo','6mo','1y'
-    Returns list of candle dicts or empty list on failure.
-    """
     cache_key = f"{pair}_{interval}_{period}"
     now = time.time()
     if cache_key in _candle_cache:
@@ -141,7 +136,6 @@ def get_candles(pair, interval='1d', period='3mo'):
         return []
 
 def calc_ema(closes, period):
-    """Calculate EMA from list of closes"""
     if len(closes) < period:
         return None
     k = 2.0 / (period + 1)
@@ -151,7 +145,6 @@ def calc_ema(closes, period):
     return round(ema, 5)
 
 def calc_rsi(closes, period=14):
-    """Calculate RSI"""
     if len(closes) < period + 1:
         return None
     gains, losses = [], []
@@ -167,7 +160,6 @@ def calc_rsi(closes, period=14):
     return round(100 - (100 / (1 + rs)), 1)
 
 def calc_macd(closes):
-    """Calculate MACD line - EMA12 minus EMA26"""
     if len(closes) < 26:
         return None, None
     ema12 = calc_ema(closes[-50:], 12)
@@ -178,10 +170,6 @@ def calc_macd(closes):
     return None, None
 
 def find_sr_levels(candles, current_price, lookback=50):
-    """
-    Find real support and resistance from actual swing highs/lows.
-    Returns levels sorted by distance to current price.
-    """
     if len(candles) < 5:
         return []
 
@@ -192,19 +180,16 @@ def find_sr_levels(candles, current_price, lookback=50):
 
     levels = []
 
-    # Find swing highs (local maxima)
     for i in range(2, len(highs) - 2):
         if highs[i] > highs[i-1] and highs[i] > highs[i-2] and \
            highs[i] > highs[i+1] and highs[i] > highs[i+2]:
             levels.append({'price': highs[i], 'type': 'swing_high', 'strength': 1})
 
-    # Find swing lows (local minima)
     for i in range(2, len(lows) - 2):
         if lows[i] < lows[i-1] and lows[i] < lows[i-2] and \
            lows[i] < lows[i+1] and lows[i] < lows[i+2]:
             levels.append({'price': lows[i], 'type': 'swing_low', 'strength': 1})
 
-    # Add round numbers (psychological levels)
     is_jpy = current_price > 50
     is_gold = current_price > 1000
     if is_gold:
@@ -223,7 +208,6 @@ def find_sr_levels(candles, current_price, lookback=50):
         for i in [-200, -150, -100, -50, 0, 50, 100, 150, 200]:
             levels.append({'price': round(base + i * 0.0001, 4), 'type': 'round_number', 'strength': 1})
 
-    # Cluster nearby levels (within 0.1% of each other)
     threshold = current_price * 0.001
     clustered = []
     sorted_levels = sorted(levels, key=lambda x: x['price'])
@@ -237,7 +221,6 @@ def find_sr_levels(candles, current_price, lookback=50):
         if not merged:
             clustered.append({'price': lv['price'], 'type': lv['type'], 'strength': lv['strength']})
 
-    # Sort by distance to current price and take closest 6
     clustered.sort(key=lambda x: abs(x['price'] - current_price))
     result = []
     for lv in clustered[:8]:
@@ -256,10 +239,6 @@ def find_sr_levels(candles, current_price, lookback=50):
     return result
 
 def get_chart_analysis(pair, current_price):
-    """
-    Full technical analysis from real candle data.
-    Returns structured analysis for Claude to use.
-    """
     analysis = {
         'pair': pair,
         'current_price': current_price,
@@ -270,7 +249,6 @@ def get_chart_analysis(pair, current_price):
     }
 
     try:
-        # ── DAILY candles (3 months) ──────────────────────────
         daily = get_candles(pair, '1d', '3mo')
         if daily and len(daily) >= 20:
             d_closes = [c['close'] for c in daily]
@@ -283,11 +261,9 @@ def get_chart_analysis(pair, current_price):
             rsi    = calc_rsi(d_closes)
             macd_val, macd_bias = calc_macd(d_closes)
 
-            # Daily trend
             price_vs_ema200 = 'ABOVE' if (ema200 and current_price > ema200) else 'BELOW'
             daily_trend = 'BULLISH' if current_price > (ema50 or current_price) else 'BEARISH'
 
-            # Recent daily candles summary
             last5 = daily[-5:]
             bullish_candles = sum(1 for c in last5 if c['close'] > c['open'])
             bearish_candles = 5 - bullish_candles
@@ -304,10 +280,8 @@ def get_chart_analysis(pair, current_price):
                 '3mo_low':  round(min(d_lows),  5),
             }
 
-            # S/R from daily candles
             analysis['sr_levels'] = find_sr_levels(daily, current_price, lookback=60)
 
-        # ── WEEKLY candles (1 year) ───────────────────────────
         weekly = get_candles(pair, '1wk', '1y')
         if weekly and len(weekly) >= 10:
             w_closes = [c['close'] for c in weekly]
@@ -329,7 +303,6 @@ def get_chart_analysis(pair, current_price):
                 '52wk_low':  round(min(w_lows),  5),
             }
 
-        # ── HOURLY candles (5 days) ───────────────────────────
         hourly = get_candles(pair, '1h', '5d')
         if hourly and len(hourly) >= 20:
             h_closes = [c['close'] for c in hourly]
@@ -342,7 +315,6 @@ def get_chart_analysis(pair, current_price):
             last4_h = hourly[-4:]
             h_bull = sum(1 for c in last4_h if c['close'] > c['open'])
 
-            # Hourly S/R (closer levels)
             h_sr = find_sr_levels(hourly, current_price, lookback=40)
 
             analysis['hourly'] = {
@@ -355,7 +327,6 @@ def get_chart_analysis(pair, current_price):
                 'sr_levels': h_sr[:4]
             }
 
-        # ── Overall trend summary ─────────────────────────────
         w_trend = analysis['weekly'].get('trend', 'NEUTRAL')
         d_trend = analysis['daily'].get('trend', 'NEUTRAL')
         h_trend = analysis['hourly'].get('trend', 'NEUTRAL')
@@ -375,7 +346,6 @@ def get_chart_analysis(pair, current_price):
     return analysis
 
 def format_chart_analysis_for_prompt(ca):
-    """Format chart analysis into clean text for Claude prompt"""
     if not ca:
         return "Chart data unavailable"
 
@@ -389,18 +359,15 @@ def format_chart_analysis_for_prompt(ca):
              f"REAL CHART DATA FOR {ca['pair']} — Price: {ca['current_price']}",
              f"{'='*60}"]
 
-    # Trend summary
     lines.append(f"\nTREND ALIGNMENT: {ts.get('overall','?')} ({ts.get('alignment','?')})")
     lines.append(f"  Weekly: {ts.get('weekly','?')} | Daily: {ts.get('daily','?')} | Hourly: {ts.get('hourly','?')}")
 
-    # Weekly
     if w:
         lines.append(f"\nWEEKLY CHART (1 Year of data):")
         lines.append(f"  Trend: {w.get('trend','?')} | EMA20: {w.get('ema20','?')} | RSI: {w.get('rsi','?')}")
         lines.append(f"  52-Week High: {w.get('52wk_high','?')} | 52-Week Low: {w.get('52wk_low','?')}")
         lines.append(f"  Last 3 candles: {w.get('last_3_candles','?')}")
 
-    # Daily
     if d:
         lines.append(f"\nDAILY CHART (3 Months of data):")
         lines.append(f"  Trend: {d.get('trend','?')} | EMA20: {d.get('ema20','?')} | EMA50: {d.get('ema50','?')} | EMA200: {d.get('ema200','?')}")
@@ -408,7 +375,6 @@ def format_chart_analysis_for_prompt(ca):
         lines.append(f"  3-Month High: {d.get('3mo_high','?')} | 3-Month Low: {d.get('3mo_low','?')}")
         lines.append(f"  Last 5 candles: {d.get('last_5_candles','?')}")
 
-    # Hourly
     if h:
         lines.append(f"\nHOURLY CHART (5 Days of data):")
         lines.append(f"  Trend: {h.get('trend','?')} | EMA20: {h.get('ema20','?')} | EMA50: {h.get('ema50','?')}")
@@ -416,13 +382,11 @@ def format_chart_analysis_for_prompt(ca):
         lines.append(f"  24hr High: {h.get('recent_high','?')} | 24hr Low: {h.get('recent_low','?')}")
         lines.append(f"  Last 4 candles: {h.get('last_4_candles','?')}")
 
-    # S/R levels
     if sr:
         lines.append(f"\nREAL SUPPORT & RESISTANCE (from actual swing highs/lows):")
         for lv in sr[:6]:
             lines.append(f"  {lv['type']}: {lv['price']} — {lv['note']} ({lv['distance_pips']} pips away)")
 
-    # Hourly S/R
     h_sr = h.get('sr_levels', [])
     if h_sr:
         lines.append(f"\nHOURLY S/R (intraday levels):")
@@ -433,7 +397,6 @@ def format_chart_analysis_for_prompt(ca):
     return '\n'.join(lines)
 
 def get_multi_pair_chart_data(pairs, current_prices):
-    """Fetch chart data for multiple pairs in parallel"""
     results = {}
     def fetch_one(pair):
         price = current_prices.get(pair, {})
@@ -551,7 +514,7 @@ def wolf_elite(): return render_template('wolf_elite.html')
 @login_required
 def create_checkout_session():
     plan=request.form.get('plan')
-    if plan not in ('basic','elite'): flash('Invalid plan selected.','danger'); return redirect(url_for('pricing'))
+    if plan not in ('basic','pro','elite'): flash('Invalid plan selected.','danger'); return redirect(url_for('pricing'))
     try:
         checkout=stripe.checkout.Session.create(payment_method_types=['card'],mode='subscription',
             line_items=[{'price':STRIPE_PRICES[plan],'quantity':1}],
@@ -723,15 +686,10 @@ def get_session():
     except: return 'UNKNOWN', []
 
 def get_price(symbol):
-    """
-    Get live price using yfinance — same library as candlesticks.
-    100% free, accurate, no API key needed.
-    """
     try:
         import yfinance as yf
         sym = YF_MAP.get(symbol, symbol.replace('/', '') + '=X')
         ticker = yf.Ticker(sym)
-        # Get today's data
         df = ticker.history(period='2d', interval='1h')
         if not df.empty:
             latest = df.iloc[-1]
@@ -751,7 +709,6 @@ def get_price(symbol):
     except Exception as e:
         print(f'[yfinance price] {symbol}: {e}')
 
-    # Fallback to Twelve Data if yfinance fails
     try:
         sym = symbol.replace('/', '')
         r = http_requests.get(
@@ -765,7 +722,6 @@ def get_price(symbol):
                     'symbol':symbol,'live':True}
     except: pass
 
-    # Last resort — fallback prices
     fb = FALLBACK.get(symbol)
     if fb: return {'price':fb['price'],'open':fb['price'],'high':fb['high'],'low':fb['low'],
                    'change':fb['change'],'percent_change':fb['pct'],'symbol':symbol,'live':False}
@@ -822,7 +778,6 @@ def call_claude(prompt, max_tokens=2500):
     return msg.content[0].text
 
 def parse_json_response(text):
-    """Parse JSON — handles markdown fences and truncation gracefully"""
     text = text.strip()
     if text.startswith('```'):
         parts = text.split('```')
@@ -856,6 +811,7 @@ def parse_json_response(text):
 
 @app.route('/forex')
 @login_required
+@pro_required
 def forex(): return render_template('forex.html')
 
 @app.route('/forex-wolf')
@@ -864,6 +820,7 @@ def forex_wolf(): return render_template('forex_wolf.html')
 
 @app.route('/wolf-scanner')
 @login_required
+@elite_required
 def wolf_scanner_page(): return render_template('wolf_scanner.html')
 
 # ── Forex API ─────────────────────────────────────────────────
@@ -899,7 +856,6 @@ def forex_news():
 @app.route('/api/forex-analyze', methods=['POST'])
 @login_required
 def forex_analyze():
-    """Deep analysis with REAL candlestick data"""
     try:
         data = request.get_json()
         prompt = data.get('prompt', '')
@@ -914,7 +870,6 @@ def forex_analyze():
                 current_price = float(q['price'])
                 live_ctx = f"\nLIVE PRICE: {pair} = {current_price} | H:{q['high']} L:{q['low']} | Change: {q.get('percent_change',0):+.2f}% | Session: {session_name}\n"
 
-                # Add REAL chart analysis
                 chart = get_chart_analysis(pair, current_price)
                 live_ctx += format_chart_analysis_for_prompt(chart)
 
@@ -932,7 +887,6 @@ def forex_analyze():
 @app.route('/api/forex-scenarios', methods=['POST'])
 @login_required
 def forex_scenarios():
-    """7 best trades with REAL chart data"""
     try:
         date_str = datetime.now().strftime('%A, %B %d, %Y')
         session_name, _ = get_session()
@@ -940,13 +894,11 @@ def forex_scenarios():
         prices = get_prices_parallel(scan_pairs)
         news = get_news()
 
-        # Fetch real chart data for all pairs in parallel
         chart_data = get_multi_pair_chart_data(scan_pairs, prices)
 
         prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p,v in prices.items()])
         news_str = '\n'.join([f"- {n['title']}" for n in news[:5]]) or "- Markets await key economic data"
 
-        # Build real chart context for each pair
         chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
 
         prompt = f"""You are Wolf AI — professional forex trader. Today: {date_str}. Session: {session_name}.
@@ -976,7 +928,6 @@ Respond ONLY in valid JSON (no markdown, no backticks):
 @app.route('/api/forex-daily-picks', methods=['POST'])
 @login_required
 def forex_daily_picks():
-    """Top 3 day trades with REAL hourly candle data"""
     try:
         date_str = datetime.now().strftime('%A, %B %d, %Y')
         session_name, _ = get_session()
@@ -984,7 +935,6 @@ def forex_daily_picks():
         prices = get_prices_parallel(scan_pairs)
         news = get_news()
 
-        # Fetch real chart data
         chart_data = get_multi_pair_chart_data(scan_pairs, prices)
 
         prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p,v in prices.items()])
@@ -1017,7 +967,6 @@ Respond ONLY in valid JSON (no markdown):
 @app.route('/api/forex-weekly-picks', methods=['POST'])
 @login_required
 def forex_weekly_picks():
-    """Top 3 swing trades with REAL weekly/daily candle data"""
     try:
         date_str = datetime.now().strftime('%A, %B %d, %Y')
         session_name, _ = get_session()
@@ -1065,7 +1014,6 @@ def forex_picks():
 @app.route('/api/wolf-scan', methods=['POST'])
 @login_required
 def wolf_scan():
-    """Wolf Scanner with REAL candlestick data — most accurate analysis"""
     try:
         data = request.get_json() or {}
         scan_filter = data.get('filter', 'ALL')
@@ -1079,7 +1027,6 @@ def wolf_scan():
         elif scan_filter == 'LONDON': scan_pairs = ['EUR/USD','GBP/USD','EUR/GBP','USD/CHF','EUR/JPY']
         else: scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD','USD/CHF']
 
-        # Build price string
         prices_lines = []
         for p in scan_pairs:
             q = prices.get(p)
@@ -1091,7 +1038,6 @@ def wolf_scan():
         news_items = get_news()
         news_str = '\n'.join([f"- {n['title']} ({n['source']}, {n['published']})" for n in news_items[:6]]) or "- Monitor key economic events"
 
-        # Fetch REAL chart data for all scan pairs
         chart_data = get_multi_pair_chart_data(scan_pairs, prices)
         chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
 
@@ -1125,14 +1071,12 @@ Respond ONLY in valid JSON (no markdown, no backticks):
 
         result = parse_json_response(call_claude(prompt, 6000))
 
-        # Override prices with confirmed live data
         for trade in result.get('trades', []):
             pair = trade.get('pair', '')
             q = prices.get(pair)
             if q:
                 dp = 2 if 'JPY' in pair or pair == 'XAU/USD' else 4
                 trade['current_price'] = f"{float(q['price']):.{dp}f}"
-            # Inject real S/R levels if chart data available
             if pair in chart_data and chart_data[pair].get('sr_levels'):
                 trade['real_sr_levels'] = chart_data[pair]['sr_levels'][:6]
 
