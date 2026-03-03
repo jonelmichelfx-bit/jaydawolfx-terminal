@@ -467,6 +467,7 @@ input::placeholder{color:var(--text-dim);}
   <main class="main-area">
     <div class="tab-bar">
       <button class="tab-btn active" onclick="openTab('analysis',this)">📊 ANALYSIS</button>
+      <a href="/wolf-scanner" style="text-decoration:none;"><button class="tab-btn" style="color:var(--gold);border-bottom-color:transparent;" onmouseover="this.style.borderBottomColor='var(--gold)'" onmouseout="this.style.borderBottomColor='transparent'">🐺 WOLF SCANNER</button></a>
       <button class="tab-btn" onclick="openTab('scenarios',this)">⚡ SCENARIOS</button>
       <button class="tab-btn" onclick="openTab('timeframes',this)">🕐 TIMEFRAMES</button>
       <button class="tab-btn" onclick="openTab('sharingan',this)">👁 SHARINGAN</button>
@@ -739,18 +740,18 @@ let trades=JSON.parse(localStorage.getItem('wolf_fx_trades')||'[]');
 
 // Live prices cache
 let PRICES={
-  'EUR/USD':{p:1.0842,c:+0.0012,pct:+0.11,h:1.0871,l:1.0821,sp:1.2,tv:'EURUSD'},
-  'GBP/USD':{p:1.2634,c:-0.0021,pct:-0.17,h:1.2671,l:1.2601,sp:1.5,tv:'GBPUSD'},
-  'USD/JPY':{p:149.82,c:+0.44,pct:+0.29,h:150.21,l:149.41,sp:1.8,tv:'USDJPY'},
-  'USD/CHF':{p:0.8923,c:-0.0011,pct:-0.12,h:0.8951,l:0.8901,sp:1.3,tv:'USDCHF'},
-  'AUD/USD':{p:0.6521,c:-0.0015,pct:-0.23,h:0.6551,l:0.6501,sp:1.6,tv:'AUDUSD'},
-  'USD/CAD':{p:1.3541,c:+0.0022,pct:+0.16,h:1.3561,l:1.3511,sp:1.4,tv:'USDCAD'},
-  'NZD/USD':{p:0.6102,c:-0.0008,pct:-0.13,h:0.6121,l:0.6091,sp:1.7,tv:'NZDUSD'},
-  'EUR/GBP':{p:0.8582,c:+0.0009,pct:+0.10,h:0.8601,l:0.8561,sp:1.2,tv:'EURGBP'},
-  'EUR/JPY':{p:162.44,c:+0.55,pct:+0.34,h:162.91,l:161.88,sp:2.1,tv:'EURJPY'},
-  'GBP/JPY':{p:189.22,c:+0.31,pct:+0.16,h:189.81,l:188.61,sp:2.8,tv:'GBPJPY'},
-  'XAU/USD':{p:2650.50,c:+8.20,pct:+0.31,h:2661.30,l:2641.10,sp:0.35,tv:'XAUUSD'},
-  'BTC/USD':{p:67420,c:+1240,pct:+1.87,h:68100,l:66200,sp:25,tv:'BTCUSD'},
+  'EUR/USD':{p:1.0380,c:-0.0021,pct:-0.20,h:1.0412,l:1.0361,sp:1.2,tv:'EURUSD'},
+  'GBP/USD':{p:1.2621,c:-0.0018,pct:-0.14,h:1.2658,l:1.2598,sp:1.5,tv:'GBPUSD'},
+  'USD/JPY':{p:150.21,c:+0.38,pct:+0.25,h:150.58,l:149.81,sp:1.8,tv:'USDJPY'},
+  'USD/CHF':{p:0.8981,c:+0.0014,pct:+0.16,h:0.9001,l:0.8958,sp:1.3,tv:'USDCHF'},
+  'AUD/USD':{p:0.6241,c:-0.0019,pct:-0.30,h:0.6271,l:0.6221,sp:1.6,tv:'AUDUSD'},
+  'USD/CAD':{p:1.4431,c:+0.0028,pct:+0.19,h:1.4461,l:1.4401,sp:1.4,tv:'USDCAD'},
+  'NZD/USD':{p:0.5681,c:-0.0012,pct:-0.21,h:0.5701,l:0.5661,sp:1.7,tv:'NZDUSD'},
+  'EUR/GBP':{p:0.8221,c:+0.0008,pct:+0.10,h:0.8241,l:0.8201,sp:1.2,tv:'EURGBP'},
+  'EUR/JPY':{p:155.82,c:+0.21,pct:+0.13,h:156.21,l:155.41,sp:2.1,tv:'EURJPY'},
+  'GBP/JPY':{p:189.61,c:+0.42,pct:+0.22,h:190.21,l:189.01,sp:2.8,tv:'GBPJPY'},
+  'XAU/USD':{p:2857.40,c:+12.30,pct:+0.43,h:2868.20,l:2841.10,sp:0.35,tv:'XAUUSD'},
+  'BTC/USD':{p:85420,c:+1240,pct:+1.47,h:86100,l:84200,sp:25,tv:'BTCUSD'},
 };
 
 const TV_MAP={
@@ -787,7 +788,7 @@ function getSession(){
 }
 
 // Fetch ALL live prices from backend
-async async function fetchAllPrices(){
+async function fetchAllPrices(){
   try{
     const res=await fetch('/api/forex-prices');
     if(!res.ok)return;
