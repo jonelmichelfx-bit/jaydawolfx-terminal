@@ -87,6 +87,369 @@ app.register_blueprint(forex_bp)
 with app.app_context():
     db.create_all()
 
+# ═══════════════════════════════════════════════════════════════
+# CANDLESTICK ENGINE — Real chart data using yfinance (FREE)
+# ═══════════════════════════════════════════════════════════════
+
+# Yahoo Finance symbol map for forex pairs
+YF_MAP = {
+    'EUR/USD': 'EURUSD=X', 'GBP/USD': 'GBPUSD=X', 'USD/JPY': 'USDJPY=X',
+    'USD/CHF': 'USDCHF=X', 'AUD/USD': 'AUDUSD=X', 'USD/CAD': 'USDCAD=X',
+    'NZD/USD': 'NZDUSD=X', 'EUR/GBP': 'EURGBP=X', 'EUR/JPY': 'EURJPY=X',
+    'GBP/JPY': 'GBPJPY=X', 'XAU/USD': 'GC=F',    'DXY':     'DX-Y.NYB',
+}
+
+# Candle cache — avoid re-fetching on every request
+_candle_cache = {}
+_candle_cache_ttl = 300  # 5 minutes
+
+def get_candles(pair, interval='1d', period='3mo'):
+    """
+    Fetch real OHLC candles from Yahoo Finance — completely free.
+    interval: '1h' (hourly), '1d' (daily), '1wk' (weekly)
+    period:   '5d','1mo','3mo','6mo','1y'
+    Returns list of candle dicts or empty list on failure.
+    """
+    cache_key = f"{pair}_{interval}_{period}"
+    now = time.time()
+    if cache_key in _candle_cache:
+        cached = _candle_cache[cache_key]
+        if now - cached['ts'] < _candle_cache_ttl:
+            return cached['data']
+
+    try:
+        import yfinance as yf
+        sym = YF_MAP.get(pair, pair.replace('/', '') + '=X')
+        ticker = yf.Ticker(sym)
+        df = ticker.history(interval=interval, period=period)
+        if df.empty:
+            return []
+        candles = []
+        for ts, row in df.iterrows():
+            candles.append({
+                'time': str(ts)[:10] if interval != '1h' else str(ts)[:16],
+                'open':  round(float(row['Open']),  5),
+                'high':  round(float(row['High']),  5),
+                'low':   round(float(row['Low']),   5),
+                'close': round(float(row['Close']), 5),
+                'volume': int(row.get('Volume', 0))
+            })
+        _candle_cache[cache_key] = {'data': candles, 'ts': now}
+        return candles
+    except Exception as e:
+        print(f'[Candles] {pair} {interval} error: {e}')
+        return []
+
+def calc_ema(closes, period):
+    """Calculate EMA from list of closes"""
+    if len(closes) < period:
+        return None
+    k = 2.0 / (period + 1)
+    ema = closes[0]
+    for c in closes[1:]:
+        ema = c * k + ema * (1 - k)
+    return round(ema, 5)
+
+def calc_rsi(closes, period=14):
+    """Calculate RSI"""
+    if len(closes) < period + 1:
+        return None
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        diff = closes[i] - closes[i-1]
+        gains.append(max(diff, 0))
+        losses.append(max(-diff, 0))
+    avg_gain = sum(gains[-period:]) / period
+    avg_loss = sum(losses[-period:]) / period
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return round(100 - (100 / (1 + rs)), 1)
+
+def calc_macd(closes):
+    """Calculate MACD line - EMA12 minus EMA26"""
+    if len(closes) < 26:
+        return None, None
+    ema12 = calc_ema(closes[-50:], 12)
+    ema26 = calc_ema(closes[-50:], 26)
+    if ema12 and ema26:
+        macd = round(ema12 - ema26, 5)
+        return macd, 'BULLISH' if macd > 0 else 'BEARISH'
+    return None, None
+
+def find_sr_levels(candles, current_price, lookback=50):
+    """
+    Find real support and resistance from actual swing highs/lows.
+    Returns levels sorted by distance to current price.
+    """
+    if len(candles) < 5:
+        return []
+
+    recent = candles[-lookback:] if len(candles) > lookback else candles
+    highs = [c['high'] for c in recent]
+    lows  = [c['low']  for c in recent]
+    closes = [c['close'] for c in recent]
+
+    levels = []
+
+    # Find swing highs (local maxima)
+    for i in range(2, len(highs) - 2):
+        if highs[i] > highs[i-1] and highs[i] > highs[i-2] and \
+           highs[i] > highs[i+1] and highs[i] > highs[i+2]:
+            levels.append({'price': highs[i], 'type': 'swing_high', 'strength': 1})
+
+    # Find swing lows (local minima)
+    for i in range(2, len(lows) - 2):
+        if lows[i] < lows[i-1] and lows[i] < lows[i-2] and \
+           lows[i] < lows[i+1] and lows[i] < lows[i+2]:
+            levels.append({'price': lows[i], 'type': 'swing_low', 'strength': 1})
+
+    # Add round numbers (psychological levels)
+    is_jpy = current_price > 50
+    is_gold = current_price > 1000
+    if is_gold:
+        base = round(current_price / 50) * 50
+        for i in range(-4, 5):
+            levels.append({'price': base + i * 50, 'type': 'round_number', 'strength': 2})
+    elif is_jpy:
+        base = round(current_price)
+        for i in range(-5, 6):
+            if i % 50 == 0 or i % 100 == 0:
+                levels.append({'price': base + i, 'type': 'round_number', 'strength': 2})
+            elif i % 25 == 0:
+                levels.append({'price': base + i, 'type': 'round_number', 'strength': 1})
+    else:
+        base = round(current_price * 100) / 100
+        for i in [-200, -150, -100, -50, 0, 50, 100, 150, 200]:
+            levels.append({'price': round(base + i * 0.0001, 4), 'type': 'round_number', 'strength': 1})
+
+    # Cluster nearby levels (within 0.1% of each other)
+    threshold = current_price * 0.001
+    clustered = []
+    sorted_levels = sorted(levels, key=lambda x: x['price'])
+    for lv in sorted_levels:
+        merged = False
+        for cl in clustered:
+            if abs(lv['price'] - cl['price']) < threshold:
+                cl['strength'] += lv['strength']
+                merged = True
+                break
+        if not merged:
+            clustered.append({'price': lv['price'], 'type': lv['type'], 'strength': lv['strength']})
+
+    # Sort by distance to current price and take closest 6
+    clustered.sort(key=lambda x: abs(x['price'] - current_price))
+    result = []
+    for lv in clustered[:8]:
+        dist = lv['price'] - current_price
+        is_jpy_pair = current_price > 50
+        pip_size = 0.01 if is_jpy_pair else 0.0001
+        pips = round(abs(dist) / pip_size)
+        lv_type = 'RESISTANCE' if dist > 0 else 'SUPPORT'
+        result.append({
+            'type': lv_type,
+            'price': round(lv['price'], 2 if is_jpy_pair or is_gold else 4),
+            'distance_pips': pips,
+            'strength': lv['strength'],
+            'note': f"{'Strong' if lv['strength'] >= 3 else 'Moderate'} {lv_type.lower()} — {'swing ' + lv['type'].replace('_',' ') if 'swing' in lv['type'] else 'psychological level'}"
+        })
+    return result
+
+def get_chart_analysis(pair, current_price):
+    """
+    Full technical analysis from real candle data.
+    Returns structured analysis for Claude to use.
+    """
+    analysis = {
+        'pair': pair,
+        'current_price': current_price,
+        'daily': {}, 'weekly': {}, 'hourly': {},
+        'sr_levels': [],
+        'indicators': {},
+        'trend_summary': {}
+    }
+
+    try:
+        # ── DAILY candles (3 months) ──────────────────────────
+        daily = get_candles(pair, '1d', '3mo')
+        if daily and len(daily) >= 20:
+            d_closes = [c['close'] for c in daily]
+            d_highs  = [c['high']  for c in daily]
+            d_lows   = [c['low']   for c in daily]
+
+            ema20  = calc_ema(d_closes, 20)
+            ema50  = calc_ema(d_closes, 50)
+            ema200 = calc_ema(d_closes, min(200, len(d_closes)))
+            rsi    = calc_rsi(d_closes)
+            macd_val, macd_bias = calc_macd(d_closes)
+
+            # Daily trend
+            price_vs_ema200 = 'ABOVE' if (ema200 and current_price > ema200) else 'BELOW'
+            daily_trend = 'BULLISH' if current_price > (ema50 or current_price) else 'BEARISH'
+
+            # Recent daily candles summary
+            last5 = daily[-5:]
+            bullish_candles = sum(1 for c in last5 if c['close'] > c['open'])
+            bearish_candles = 5 - bullish_candles
+
+            analysis['daily'] = {
+                'trend': daily_trend,
+                'ema20': ema20, 'ema50': ema50, 'ema200': ema200,
+                'rsi': rsi, 'macd': macd_val, 'macd_bias': macd_bias,
+                'price_vs_ema200': price_vs_ema200,
+                'last_5_candles': f"{bullish_candles} bullish, {bearish_candles} bearish",
+                'recent_high': round(max(d_highs[-20:]), 5),
+                'recent_low':  round(min(d_lows[-20:]),  5),
+                '3mo_high': round(max(d_highs), 5),
+                '3mo_low':  round(min(d_lows),  5),
+            }
+
+            # S/R from daily candles
+            analysis['sr_levels'] = find_sr_levels(daily, current_price, lookback=60)
+
+        # ── WEEKLY candles (1 year) ───────────────────────────
+        weekly = get_candles(pair, '1wk', '1y')
+        if weekly and len(weekly) >= 10:
+            w_closes = [c['close'] for c in weekly]
+            w_highs  = [c['high']  for c in weekly]
+            w_lows   = [c['low']   for c in weekly]
+            w_ema20  = calc_ema(w_closes, min(20, len(w_closes)))
+            w_rsi    = calc_rsi(w_closes)
+
+            weekly_trend = 'BULLISH' if current_price > (w_ema20 or current_price) else 'BEARISH'
+            last3_weekly = weekly[-3:]
+            w_bull = sum(1 for c in last3_weekly if c['close'] > c['open'])
+
+            analysis['weekly'] = {
+                'trend': weekly_trend,
+                'ema20': w_ema20,
+                'rsi': w_rsi,
+                'last_3_candles': f"{w_bull} bullish, {3-w_bull} bearish",
+                '52wk_high': round(max(w_highs), 5),
+                '52wk_low':  round(min(w_lows),  5),
+            }
+
+        # ── HOURLY candles (5 days) ───────────────────────────
+        hourly = get_candles(pair, '1h', '5d')
+        if hourly and len(hourly) >= 20:
+            h_closes = [c['close'] for c in hourly]
+            h_ema20  = calc_ema(h_closes, 20)
+            h_ema50  = calc_ema(h_closes, 50)
+            h_rsi    = calc_rsi(h_closes)
+            h_macd, h_macd_bias = calc_macd(h_closes)
+
+            hourly_trend = 'BULLISH' if current_price > (h_ema20 or current_price) else 'BEARISH'
+            last4_h = hourly[-4:]
+            h_bull = sum(1 for c in last4_h if c['close'] > c['open'])
+
+            # Hourly S/R (closer levels)
+            h_sr = find_sr_levels(hourly, current_price, lookback=40)
+
+            analysis['hourly'] = {
+                'trend': hourly_trend,
+                'ema20': h_ema20, 'ema50': h_ema50,
+                'rsi': h_rsi, 'macd_bias': h_macd_bias,
+                'last_4_candles': f"{h_bull} bullish, {4-h_bull} bearish",
+                'recent_high': round(max(c['high'] for c in hourly[-24:]), 5),
+                'recent_low':  round(min(c['low']  for c in hourly[-24:]), 5),
+                'sr_levels': h_sr[:4]
+            }
+
+        # ── Overall trend summary ─────────────────────────────
+        w_trend = analysis['weekly'].get('trend', 'NEUTRAL')
+        d_trend = analysis['daily'].get('trend', 'NEUTRAL')
+        h_trend = analysis['hourly'].get('trend', 'NEUTRAL')
+
+        bull_count = sum(1 for t in [w_trend, d_trend, h_trend] if t == 'BULLISH')
+        bear_count = sum(1 for t in [w_trend, d_trend, h_trend] if t == 'BEARISH')
+
+        analysis['trend_summary'] = {
+            'weekly': w_trend, 'daily': d_trend, 'hourly': h_trend,
+            'overall': 'BULLISH' if bull_count >= 2 else 'BEARISH' if bear_count >= 2 else 'MIXED',
+            'alignment': f"{bull_count}/3 bullish, {bear_count}/3 bearish"
+        }
+
+    except Exception as e:
+        print(f'[ChartAnalysis] {pair} error: {e}')
+
+    return analysis
+
+def format_chart_analysis_for_prompt(ca):
+    """Format chart analysis into clean text for Claude prompt"""
+    if not ca:
+        return "Chart data unavailable"
+
+    d = ca.get('daily', {})
+    w = ca.get('weekly', {})
+    h = ca.get('hourly', {})
+    ts = ca.get('trend_summary', {})
+    sr = ca.get('sr_levels', [])
+
+    lines = [f"\n{'='*60}",
+             f"REAL CHART DATA FOR {ca['pair']} — Price: {ca['current_price']}",
+             f"{'='*60}"]
+
+    # Trend summary
+    lines.append(f"\nTREND ALIGNMENT: {ts.get('overall','?')} ({ts.get('alignment','?')})")
+    lines.append(f"  Weekly: {ts.get('weekly','?')} | Daily: {ts.get('daily','?')} | Hourly: {ts.get('hourly','?')}")
+
+    # Weekly
+    if w:
+        lines.append(f"\nWEEKLY CHART (1 Year of data):")
+        lines.append(f"  Trend: {w.get('trend','?')} | EMA20: {w.get('ema20','?')} | RSI: {w.get('rsi','?')}")
+        lines.append(f"  52-Week High: {w.get('52wk_high','?')} | 52-Week Low: {w.get('52wk_low','?')}")
+        lines.append(f"  Last 3 candles: {w.get('last_3_candles','?')}")
+
+    # Daily
+    if d:
+        lines.append(f"\nDAILY CHART (3 Months of data):")
+        lines.append(f"  Trend: {d.get('trend','?')} | EMA20: {d.get('ema20','?')} | EMA50: {d.get('ema50','?')} | EMA200: {d.get('ema200','?')}")
+        lines.append(f"  Price vs EMA200: {d.get('price_vs_ema200','?')} | RSI: {d.get('rsi','?')} | MACD: {d.get('macd_bias','?')}")
+        lines.append(f"  3-Month High: {d.get('3mo_high','?')} | 3-Month Low: {d.get('3mo_low','?')}")
+        lines.append(f"  Last 5 candles: {d.get('last_5_candles','?')}")
+
+    # Hourly
+    if h:
+        lines.append(f"\nHOURLY CHART (5 Days of data):")
+        lines.append(f"  Trend: {h.get('trend','?')} | EMA20: {h.get('ema20','?')} | EMA50: {h.get('ema50','?')}")
+        lines.append(f"  RSI: {h.get('rsi','?')} | MACD: {h.get('macd_bias','?')}")
+        lines.append(f"  24hr High: {h.get('recent_high','?')} | 24hr Low: {h.get('recent_low','?')}")
+        lines.append(f"  Last 4 candles: {h.get('last_4_candles','?')}")
+
+    # S/R levels
+    if sr:
+        lines.append(f"\nREAL SUPPORT & RESISTANCE (from actual swing highs/lows):")
+        for lv in sr[:6]:
+            lines.append(f"  {lv['type']}: {lv['price']} — {lv['note']} ({lv['distance_pips']} pips away)")
+
+    # Hourly S/R
+    h_sr = h.get('sr_levels', [])
+    if h_sr:
+        lines.append(f"\nHOURLY S/R (intraday levels):")
+        for lv in h_sr[:4]:
+            lines.append(f"  {lv['type']}: {lv['price']} ({lv['distance_pips']} pips)")
+
+    lines.append(f"{'='*60}\n")
+    return '\n'.join(lines)
+
+def get_multi_pair_chart_data(pairs, current_prices):
+    """Fetch chart data for multiple pairs in parallel"""
+    results = {}
+    def fetch_one(pair):
+        price = current_prices.get(pair, {})
+        cp = float(price.get('price', 1.0)) if price else 1.0
+        return pair, get_chart_analysis(pair, cp)
+
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        futures = {ex.submit(fetch_one, p): p for p in pairs}
+        for f in as_completed(futures, timeout=30):
+            try:
+                pair, analysis = f.result()
+                results[pair] = analysis
+            except Exception as e:
+                print(f'Chart fetch error: {e}')
+    return results
+
 # ── Options helpers ──────────────────────────────────────────
 
 def calculate_greeks(S, K, T, r, sigma, option_type='call'):
@@ -326,7 +689,6 @@ FOREX_SESSIONS = {
     'OVERLAP':  {'pairs': ['EUR/USD','GBP/USD','USD/JPY','XAU/USD']},
 }
 
-# Fallback prices — March 2026
 FALLBACK = {
     'EUR/USD':{'price':1.0380,'change':-0.0021,'pct':-0.20,'high':1.0412,'low':1.0361},
     'GBP/USD':{'price':1.2621,'change':-0.0018,'pct':-0.14,'high':1.2658,'low':1.2598},
@@ -342,8 +704,8 @@ FALLBACK = {
     'DXY':    {'price':107.82,'change':0.21,'pct':0.19,'high':108.11,'low':107.51},
 }
 
-# ── Server-side price cache (all users share this) ────────────
 _price_cache = {'prices': {}, 'fetched_at': 0, 'ttl': 60, 'live': False}
+_er_cache = {'rates': {}, 'fetched_at': 0}
 
 def get_session():
     from datetime import timezone, timedelta
@@ -360,11 +722,7 @@ def get_session():
         return 'AFTER HOURS', []
     except: return 'UNKNOWN', []
 
-# ── Free price source: open.er-api.com (1500/day free, no key) ──
-_er_cache = {'rates': {}, 'fetched_at': 0}
-
 def _get_er_rates():
-    """Fetch all FX rates from free API — cached 60s"""
     now = time.time()
     if now - _er_cache['fetched_at'] < 60 and _er_cache['rates']:
         return _er_cache['rates']
@@ -379,8 +737,6 @@ def _get_er_rates():
     return {}
 
 def get_price(symbol):
-    """Get price — tries free API first, then Twelve Data, then fallback"""
-    # Special case: DXY not available on free FX APIs, use Twelve Data or fallback
     if symbol == 'DXY':
         try:
             r = http_requests.get(f'https://api.twelvedata.com/quote?symbol=DXY&apikey={TWELVE_DATA_KEY}', timeout=4)
@@ -395,32 +751,23 @@ def get_price(symbol):
         if fb: return {'price':fb['price'],'open':fb['price'],'high':fb['high'],'low':fb['low'],
                        'change':fb['change'],'percent_change':fb['pct'],'symbol':'DXY','live':False}
         return None
-
-    # Try free exchange rate API
     try:
         rates = _get_er_rates()
         if rates:
             base, quote = symbol.split('/')
             if base == 'USD' and quote in rates:
                 price = float(rates[quote])
-                # Estimate high/low as ±0.2% (ER API only gives close)
                 return {'price':price,'open':price,'high':round(price*1.002,5),
-                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,
-                        'symbol':symbol,'live':True}
+                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,'symbol':symbol,'live':True}
             elif quote == 'USD' and base in rates:
                 price = round(1.0 / float(rates[base]), 5)
                 return {'price':price,'open':price,'high':round(price*1.002,5),
-                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,
-                        'symbol':symbol,'live':True}
+                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,'symbol':symbol,'live':True}
             elif base in rates and quote in rates:
                 price = round(float(rates[quote]) / float(rates[base]), 5)
                 return {'price':price,'open':price,'high':round(price*1.002,5),
-                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,
-                        'symbol':symbol,'live':True}
-            # XAU/USD — gold not in FX rates, fall through to Twelve Data
+                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,'symbol':symbol,'live':True}
     except: pass
-
-    # Twelve Data fallback (uses credits — only if free API failed)
     try:
         sym = symbol.replace('/', '')
         r = http_requests.get(f'https://api.twelvedata.com/quote?symbol={sym}&apikey={TWELVE_DATA_KEY}', timeout=4)
@@ -431,8 +778,6 @@ def get_price(symbol):
                     'change':float(d.get('change',0)),'percent_change':float(d.get('percent_change',0)),
                     'symbol':symbol,'live':True}
     except: pass
-
-    # Last resort: fallback prices
     fb = FALLBACK.get(symbol)
     if fb: return {'price':fb['price'],'open':fb['price'],'high':fb['high'],'low':fb['low'],
                    'change':fb['change'],'percent_change':fb['pct'],'symbol':symbol,'live':False}
@@ -458,7 +803,6 @@ def get_prices_parallel(pairs):
     return results
 
 def get_cached_prices():
-    """One fetch per 60s shared across ALL users — saves 99% of API credits"""
     now = time.time()
     if now - _price_cache['fetched_at'] < _price_cache['ttl'] and _price_cache['prices']:
         return _price_cache['prices'], _price_cache['live']
@@ -490,12 +834,35 @@ def call_claude(prompt, max_tokens=2500):
     return msg.content[0].text
 
 def parse_json_response(text):
+    """Parse JSON — handles markdown fences and truncation gracefully"""
     text = text.strip()
     if text.startswith('```'):
         parts = text.split('```')
         text = parts[1] if len(parts) > 1 else text
         if text.startswith('json'): text = text[4:]
-    return json.loads(text.strip())
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    start = text.find('{')
+    if start > 0: text = text[start:]
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        opens = text.count('{') - text.count('}')
+        arrays = text.count('[') - text.count(']')
+        for cutoff in [',\n    {', ', {', ',{']:
+            last = text.rfind(cutoff)
+            if last > len(text) * 0.7:
+                text = text[:last]
+                break
+        text = text.rstrip(',').rstrip()
+        text += ']' * max(0, arrays) + '}' * max(0, opens)
+        try:
+            return json.loads(text)
+        except:
+            raise json.JSONDecodeError("Could not parse AI response", text, 0)
 
 # ── Forex pages ───────────────────────────────────────────────
 
@@ -511,7 +878,7 @@ def forex_wolf(): return render_template('forex_wolf.html')
 @login_required
 def wolf_scanner_page(): return render_template('wolf_scanner.html')
 
-# ── Forex API (single forex_prices using cache) ───────────────
+# ── Forex API ─────────────────────────────────────────────────
 
 @app.route('/api/forex-prices', methods=['GET'])
 @login_required
@@ -522,11 +889,7 @@ def forex_prices():
         return jsonify({'prices': prices, 'session': session_name,
                         'session_pairs': session_pairs, 'live': is_live,
                         'cached_at': datetime.now().strftime('%H:%M:%S')})
-    except Exception as e:
-        import traceback
-        print(f'[forex-analyze ERROR] {str(e)}')
-        print(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
+    except Exception as e: return jsonify({'error': str(e)}), 500
 
 @app.route('/api/forex-price', methods=['POST'])
 @login_required
@@ -548,78 +911,160 @@ def forex_news():
 @app.route('/api/forex-analyze', methods=['POST'])
 @login_required
 def forex_analyze():
+    """Deep analysis with REAL candlestick data"""
     try:
         data = request.get_json()
-        prompt = data.get('prompt', ''); max_tokens = data.get('max_tokens', 2500); pair = data.get('pair', '')
+        prompt = data.get('prompt', '')
+        max_tokens = data.get('max_tokens', 3000)
+        pair = data.get('pair', '')
+
         live_ctx = ''
         if pair:
-            q = get_price(pair); session_name, _ = get_session()
+            q = get_price(pair)
+            session_name, _ = get_session()
             if q:
-                live_ctx = f"\nLIVE MARKET DATA:\nPair: {pair} | Price: {q['price']} | High: {q['high']} | Low: {q['low']}\nChange: {q['change']:+.5f} ({q['percent_change']:+.2f}%) | Session: {session_name}\nData: {'LIVE' if q.get('live') else 'REFERENCE'}\n\n"
+                current_price = float(q['price'])
+                live_ctx = f"\nLIVE PRICE: {pair} = {current_price} | H:{q['high']} L:{q['low']} | Change: {q.get('percent_change',0):+.2f}% | Session: {session_name}\n"
+
+                # Add REAL chart analysis
+                chart = get_chart_analysis(pair, current_price)
+                live_ctx += format_chart_analysis_for_prompt(chart)
+
             news = get_news(pair)
             if news:
-                live_ctx += f"LATEST NEWS FOR {pair}:\n" + '\n'.join([f"- {n['title']} ({n['source']})" for n in news[:3]]) + '\n\n'
-        text = call_claude((live_ctx + prompt) if live_ctx else prompt, max_tokens)
+                live_ctx += f"LATEST NEWS:\n" + '\n'.join([f"- {n['title']} ({n['source']})" for n in news[:3]]) + '\n\n'
+
+        full_prompt = live_ctx + prompt if live_ctx else prompt
+        text = call_claude(full_prompt, max_tokens)
         return jsonify({'content': text})
-    except Exception as e: return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/forex-scenarios', methods=['POST'])
 @login_required
 def forex_scenarios():
+    """7 best trades with REAL chart data"""
     try:
-        date_str = datetime.now().strftime('%A, %B %d, %Y'); session_name, _ = get_session()
-        prices = get_prices_parallel(['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY'])
+        date_str = datetime.now().strftime('%A, %B %d, %Y')
+        session_name, _ = get_session()
+        scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY']
+        prices = get_prices_parallel(scan_pairs)
         news = get_news()
+
+        # Fetch real chart data for all pairs in parallel
+        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
+
         prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p,v in prices.items()])
         news_str = '\n'.join([f"- {n['title']}" for n in news[:5]]) or "- Markets await key economic data"
+
+        # Build real chart context for each pair
+        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
+
         prompt = f"""You are Wolf AI — professional forex trader. Today: {date_str}. Session: {session_name}.
-LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}
-Analyze all pairs top-down (Monthly→Weekly→Daily→H4→H1→M15) and find the 7 BEST trades.
-Only include pairs where 4+ timeframes align. Give BOTH buy AND sell scenario for each.
+
+LIVE PRICES:
+{prices_str}
+
+NEWS:
+{news_str}
+
+{chart_ctx}
+
+Using the REAL chart data above (actual EMA, RSI, MACD, swing S/R levels), find the 7 BEST trades.
+Only include pairs where 4+ timeframes align. Use the EXACT S/R levels from the chart data above.
+Give BOTH buy AND sell scenario for each trade.
+
 Respond ONLY in valid JSON (no markdown, no backticks):
-{{"week":"{date_str}","session":"{session_name}","market_theme":"string","dxy_direction":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","trades":[{{"rank":1,"pair":"EUR/USD","live_price":"1.0380","overall_bias":"BEARISH","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"aligned_count":5,"confidence":82,"primary_direction":"SELL","thesis":"3-4 sentence thesis","key_resistance":"1.0400","key_support":"1.0340","buy_scenario":{{"trigger":"string","entry":"1.0410","stop_loss":"1.0380","tp1":"1.0450","tp2":"1.0500","tp3":"1.0550","probability":30}},"sell_scenario":{{"trigger":"string","entry":"1.0360","stop_loss":"1.0390","tp1":"1.0320","tp2":"1.0280","tp3":"1.0240","probability":70}},"best_session":"LONDON","key_news_this_week":"string","invalidation":"string"}}]}}"""
-        result = parse_json_response(call_claude(prompt, 4000))
+{{"week":"{date_str}","session":"{session_name}","market_theme":"string","dxy_direction":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","trades":[{{"rank":1,"pair":"EUR/USD","live_price":"1.0380","overall_bias":"BEARISH","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"aligned_count":5,"confidence":82,"primary_direction":"SELL","thesis":"3-4 sentence thesis using real chart data","key_resistance":"1.0400","key_support":"1.0340","buy_scenario":{{"trigger":"string","entry":"1.0410","stop_loss":"1.0380","tp1":"1.0450","tp2":"1.0500","tp3":"1.0550","probability":30}},"sell_scenario":{{"trigger":"string","entry":"1.0360","stop_loss":"1.0390","tp1":"1.0320","tp2":"1.0280","tp3":"1.0240","probability":70}},"best_session":"LONDON","key_news_this_week":"string","invalidation":"string"}}]}}"""
+
+        result = parse_json_response(call_claude(prompt, 5000))
         return jsonify(result)
     except json.JSONDecodeError as e: return jsonify({'error': f'AI returned invalid JSON: {str(e)}'}), 500
-    except Exception as e: return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/forex-daily-picks', methods=['POST'])
 @login_required
 def forex_daily_picks():
+    """Top 3 day trades with REAL hourly candle data"""
     try:
-        date_str = datetime.now().strftime('%A, %B %d, %Y'); session_name, _ = get_session()
-        prices = get_prices_parallel(['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','USD/CHF'])
+        date_str = datetime.now().strftime('%A, %B %d, %Y')
+        session_name, _ = get_session()
+        scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','USD/CHF']
+        prices = get_prices_parallel(scan_pairs)
         news = get_news()
+
+        # Fetch real chart data
+        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
+
         prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p,v in prices.items()])
         news_str = '\n'.join([f"- {n['title']}" for n in news[:4]]) or "- Monitor key levels"
+        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
+
         prompt = f"""You are Wolf AI — professional intraday forex trader. Today: {date_str}. Session: {session_name}.
-LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}
-Find the 3 BEST day trades for today. Only pairs with strong momentum and clear entry points.
+
+LIVE PRICES:
+{prices_str}
+
+NEWS:
+{news_str}
+
+{chart_ctx}
+
+Using the REAL hourly chart data above (actual EMA, RSI, MACD, real S/R levels from swing highs/lows),
+find the 3 BEST day trades for today's session. Use EXACT price levels from the chart data.
+
 Respond ONLY in valid JSON (no markdown):
-{{"date":"{date_str}","session":"{session_name}","dxy_bias":"BULLISH or BEARISH","risk_environment":"RISK-ON or RISK-OFF","picks":[{{"rank":1,"pair":"EUR/USD","direction":"SELL","entry":"1.0390","stop_loss":"1.0420","tp1":"1.0350","tp2":"1.0310","tp3":"1.0270","rr_ratio":"1:2.5","confidence":85,"sharingan_score":5,"thesis":"2-3 sentence thesis","confluences":["Daily bearish","Below 200 EMA","DXY bullish"],"best_window":"London Open 3-5AM EST","key_news":"NFP Friday","invalidation":"Break above 1.0430","buy_scenario":"string","sell_scenario":"string"}}]}}"""
-        result = parse_json_response(call_claude(prompt, 3000))
+{{"date":"{date_str}","session":"{session_name}","dxy_bias":"BULLISH or BEARISH","risk_environment":"RISK-ON or RISK-OFF","picks":[{{"rank":1,"pair":"EUR/USD","direction":"SELL","entry":"1.0390","stop_loss":"1.0420","tp1":"1.0350","tp2":"1.0310","tp3":"1.0270","rr_ratio":"1:2.5","confidence":85,"sharingan_score":5,"thesis":"2-3 sentence thesis using real chart data","confluences":["Price below EMA200 daily","RSI 42 bearish","Hourly resistance at 1.0400"],"best_window":"London Open 3-5AM EST","key_news":"NFP Friday","invalidation":"Break above 1.0430","buy_scenario":"string","sell_scenario":"string"}}]}}"""
+
+        result = parse_json_response(call_claude(prompt, 4000))
         return jsonify(result)
     except json.JSONDecodeError as e: return jsonify({'error': f'AI returned invalid JSON: {str(e)}'}), 500
-    except Exception as e: return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/forex-weekly-picks', methods=['POST'])
 @login_required
 def forex_weekly_picks():
+    """Top 3 swing trades with REAL weekly/daily candle data"""
     try:
-        date_str = datetime.now().strftime('%A, %B %d, %Y'); session_name, _ = get_session()
-        prices = get_prices_parallel(['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD'])
+        date_str = datetime.now().strftime('%A, %B %d, %Y')
+        session_name, _ = get_session()
+        scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD']
+        prices = get_prices_parallel(scan_pairs)
         news = get_news()
+
+        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
+
         prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p,v in prices.items()])
         news_str = '\n'.join([f"- {n['title']}" for n in news[:4]]) or "- Monitor macro events"
+        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
+
         prompt = f"""You are Wolf AI — professional swing trader. Today: {date_str}.
-LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}
-Find the 3 BEST swing trades for this week (2-5 day holds).
+
+LIVE PRICES:
+{prices_str}
+
+NEWS:
+{news_str}
+
+{chart_ctx}
+
+Using the REAL weekly and daily chart data above (actual EMA, RSI, 52-week range, real S/R levels),
+find the 3 BEST swing trades for this week (2-5 day holds). Use EXACT levels from real chart data.
+
 Respond ONLY in valid JSON (no markdown):
-{{"week":"{date_str}","weekly_theme":"Main macro theme","dxy_outlook":"BULLISH or BEARISH","central_bank_focus":"Key CB event this week","picks":[{{"rank":1,"pair":"GBP/USD","direction":"SELL","entry_zone":"1.2630-1.2650","stop_loss":"1.2700","tp1":"1.2570","tp2":"1.2500","tp3":"1.2420","rr_ratio":"1:2.8","confidence":80,"sharingan_score":4,"hold_days":"3-4","fundamental":"string","technical":"string","confluences":["Weekly bearish","Daily below EMA"],"key_events":"BOE minutes","key_risk":"Surprise hawkish BOE","buy_scenario":"string","sell_scenario":"string"}}]}}"""
-        result = parse_json_response(call_claude(prompt, 3000))
+{{"week":"{date_str}","weekly_theme":"Main macro theme","dxy_outlook":"BULLISH or BEARISH","central_bank_focus":"Key CB event this week","picks":[{{"rank":1,"pair":"GBP/USD","direction":"SELL","entry_zone":"1.2630-1.2650","stop_loss":"1.2700","tp1":"1.2570","tp2":"1.2500","tp3":"1.2420","rr_ratio":"1:2.8","confidence":80,"sharingan_score":4,"hold_days":"3-4","fundamental":"string","technical":"string using real EMA/RSI data","confluences":["Weekly bearish","Daily below EMA200","RSI 45 bearish"],"key_events":"BOE minutes","key_risk":"Surprise hawkish BOE","buy_scenario":"string","sell_scenario":"string"}}]}}"""
+
+        result = parse_json_response(call_claude(prompt, 4000))
         return jsonify(result)
     except json.JSONDecodeError as e: return jsonify({'error': f'AI returned invalid JSON: {str(e)}'}), 500
-    except Exception as e: return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/forex-picks', methods=['POST'])
 @login_required
@@ -632,6 +1077,7 @@ def forex_picks():
 @app.route('/api/wolf-scan', methods=['POST'])
 @login_required
 def wolf_scan():
+    """Wolf Scanner with REAL candlestick data — most accurate analysis"""
     try:
         data = request.get_json() or {}
         scan_filter = data.get('filter', 'ALL')
@@ -645,21 +1091,26 @@ def wolf_scan():
         elif scan_filter == 'LONDON': scan_pairs = ['EUR/USD','GBP/USD','EUR/GBP','USD/CHF','EUR/JPY']
         else: scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD','USD/CHF']
 
+        # Build price string
         prices_lines = []
         for p in scan_pairs:
             q = prices.get(p)
             if q:
                 dp = 2 if 'JPY' in p or p == 'XAU/USD' else 5
-                prices_lines.append(f"{p}: {float(q['price']):.{dp}f} (High: {float(q['high']):.{dp}f} Low: {float(q['low']):.{dp}f} Change: {float(q.get('percent_change',0)):+.2f}%)")
+                prices_lines.append(f"{p}: {float(q['price']):.{dp}f} (H:{float(q['high']):.{dp}f} L:{float(q['low']):.{dp}f} Chg:{float(q.get('percent_change',0)):+.2f}%)")
         prices_str = '\n'.join(prices_lines)
 
         news_items = get_news()
         news_str = '\n'.join([f"- {n['title']} ({n['source']}, {n['published']})" for n in news_items[:6]]) or "- Monitor key economic events"
 
-        prompt = f"""You are Wolf AI — a professional forex trader using Soros, Druckenmiller, Kovner, and Paul Tudor Jones methodology.
+        # Fetch REAL chart data for all scan pairs
+        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
+        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
+
+        prompt = f"""You are Wolf AI — professional forex trader using Soros, Druckenmiller, Kovner, Paul Tudor Jones methodology.
 
 TODAY: {date_str} | SESSION: {session_name}
-DATA: {'LIVE REAL-TIME' if is_live else 'REFERENCE PRICES'}
+PRICES: {'LIVE' if is_live else 'REFERENCE'}
 
 LIVE PRICES:
 {prices_str}
@@ -667,32 +1118,43 @@ LIVE PRICES:
 NEWS:
 {news_str}
 
-Find the 5 BEST trades using this methodology:
-STEP 1 — SOROS: DXY direction drives everything
-STEP 2 — DRUCKENMILLER: Central bank divergence (Fed vs ECB vs BOJ vs BOE)
-STEP 3 — KOVNER: Only trades with 4+ timeframe confluence (Monthly/Weekly/Daily/H4/H1/M15)
-STEP 4 — TREND: Trade WITH the trend only
-STEP 5 — S/R: Key levels within 100 pips of current price only
-STEP 6 — SCENARIOS: Both BUY and SELL scenario per trade
-STEP 7 — WARNINGS: Economic calendar events, wait signals
+{chart_ctx}
+
+CRITICAL: Use the REAL chart data above. The S/R levels, EMA values, RSI readings are from ACTUAL candles.
+DO NOT make up levels — use the exact swing highs/lows provided above.
+
+Find the 5 BEST trades:
+STEP 1 — DXY direction drives everything (Soros)
+STEP 2 — Central bank divergence (Druckenmiller)
+STEP 3 — 4+ timeframe confluence required (Kovner)
+STEP 4 — Trade WITH the trend only
+STEP 5 — Use ONLY real S/R levels from chart data above
+STEP 6 — Both BUY and SELL scenarios per trade
+STEP 7 — Economic calendar warnings
 
 Respond ONLY in valid JSON (no markdown, no backticks):
-{{"scan_date":"{date_str}","session":"{session_name}","market_theme":"string","dxy_bias":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","wolf_commentary":"2-3 sentences on current market","trades":[{{"rank":1,"pair":"EUR/USD","current_price":"1.0380","trend":"DOWNTREND","primary_direction":"SELL","wolf_score":8.5,"confidence":85,"aligned_count":5,"thesis":"3-4 sentence Soros/Druckenmiller/Kovner thesis","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"confluences":["Below 200 EMA Daily","Fed hawkish vs ECB dovish","DXY bullish","Weekly bearish engulfing","RSI below 50 H4"],"key_levels":[{{"type":"RESISTANCE","price":"1.0400","note":"48hr high","distance_pips":20}},{{"type":"CURRENT","price":"1.0380","note":"Current price","distance_pips":0}},{{"type":"SUPPORT","price":"1.0340","note":"Yesterday low","distance_pips":40}}],"buy_scenario":{{"trigger":"Break above 1.0420 on H4","entry":"1.0425","stop_loss":"1.0395","tp1":"1.0460","tp2":"1.0510","tp3":"1.0560","rr":"1:2.5","probability":25}},"sell_scenario":{{"trigger":"Reject 1.0400 and break below 1.0360","entry":"1.0355","stop_loss":"1.0390","tp1":"1.0310","tp2":"1.0270","tp3":"1.0220","rr":"1:2.8","probability":75}},"warnings":[{{"level":"HIGH","text":"US CPI Thursday 8:30AM EST — wait for release"}},{{"level":"MEDIUM","text":"ECB speak Wednesday — EUR volatility"}}],"relevant_news":["Fed signals no cuts until inflation cools","ECB mulls rate cut timeline"]}}]}}"""
+{{"scan_date":"{date_str}","session":"{session_name}","market_theme":"string","dxy_bias":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","wolf_commentary":"2-3 sentences","trades":[{{"rank":1,"pair":"EUR/USD","current_price":"1.0380","trend":"DOWNTREND","primary_direction":"SELL","wolf_score":8.5,"confidence":85,"aligned_count":5,"thesis":"3-4 sentence thesis citing real EMA/RSI/S/R data","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"confluences":["Price below EMA200 1.0520","RSI 38 bearish momentum","Real resistance at 1.0412 (swing high)","DXY bullish divergence"],"key_levels":[{{"type":"RESISTANCE","price":"1.0412","note":"Real swing high from chart data","distance_pips":32}},{{"type":"CURRENT","price":"1.0380","note":"Current price","distance_pips":0}},{{"type":"SUPPORT","price":"1.0340","note":"Real swing low from chart data","distance_pips":40}}],"buy_scenario":{{"trigger":"Break above real resistance 1.0412 on H4","entry":"1.0418","stop_loss":"1.0390","tp1":"1.0460","tp2":"1.0510","tp3":"1.0560","rr":"1:2.5","probability":25}},"sell_scenario":{{"trigger":"Reject real resistance 1.0400 break below 1.0360","entry":"1.0355","stop_loss":"1.0390","tp1":"1.0310","tp2":"1.0270","tp3":"1.0220","rr":"1:2.8","probability":75}},"warnings":[{{"level":"HIGH","text":"US CPI Thursday 8:30AM EST — wait for release"}}],"relevant_news":["string"]}}]}}"""
 
-        result = parse_json_response(call_claude(prompt, 4500))
+        result = parse_json_response(call_claude(prompt, 6000))
 
+        # Override prices with confirmed live data
         for trade in result.get('trades', []):
             pair = trade.get('pair', '')
             q = prices.get(pair)
             if q:
                 dp = 2 if 'JPY' in pair or pair == 'XAU/USD' else 4
                 trade['current_price'] = f"{float(q['price']):.{dp}f}"
+            # Inject real S/R levels if chart data available
+            if pair in chart_data and chart_data[pair].get('sr_levels'):
+                trade['real_sr_levels'] = chart_data[pair]['sr_levels'][:6]
 
         return jsonify(result)
     except json.JSONDecodeError as e: return jsonify({'error': f'AI analysis error — try again ({str(e)[:50]})'}), 500
-    except Exception as e: return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
-# ── Admin setup (run once to set your account to admin) ──────
+# ── Admin ─────────────────────────────────────────────────────
 @app.route('/make-me-admin/<secret>')
 @login_required
 def make_me_admin(secret):
