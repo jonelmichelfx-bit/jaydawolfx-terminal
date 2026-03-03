@@ -360,17 +360,79 @@ def get_session():
         return 'AFTER HOURS', []
     except: return 'UNKNOWN', []
 
+# ── Free price source: open.er-api.com (1500/day free, no key) ──
+_er_cache = {'rates': {}, 'fetched_at': 0}
+
+def _get_er_rates():
+    """Fetch all FX rates from free API — cached 60s"""
+    now = time.time()
+    if now - _er_cache['fetched_at'] < 60 and _er_cache['rates']:
+        return _er_cache['rates']
+    try:
+        r = http_requests.get('https://open.er-api.com/v6/latest/USD', timeout=5)
+        d = r.json()
+        if d.get('rates'):
+            _er_cache['rates'] = d['rates']
+            _er_cache['fetched_at'] = now
+            return d['rates']
+    except: pass
+    return {}
+
 def get_price(symbol):
+    """Get price — tries free API first, then Twelve Data, then fallback"""
+    # Special case: DXY not available on free FX APIs, use Twelve Data or fallback
+    if symbol == 'DXY':
+        try:
+            r = http_requests.get(f'https://api.twelvedata.com/quote?symbol=DXY&apikey={TWELVE_DATA_KEY}', timeout=4)
+            d = r.json()
+            if 'close' in d and 'code' not in d:
+                return {'price':float(d.get('close',0)),'open':float(d.get('open',0)),
+                        'high':float(d.get('high',0)),'low':float(d.get('low',0)),
+                        'change':float(d.get('change',0)),'percent_change':float(d.get('percent_change',0)),
+                        'symbol':'DXY','live':True}
+        except: pass
+        fb = FALLBACK.get('DXY')
+        if fb: return {'price':fb['price'],'open':fb['price'],'high':fb['high'],'low':fb['low'],
+                       'change':fb['change'],'percent_change':fb['pct'],'symbol':'DXY','live':False}
+        return None
+
+    # Try free exchange rate API
+    try:
+        rates = _get_er_rates()
+        if rates:
+            base, quote = symbol.split('/')
+            if base == 'USD' and quote in rates:
+                price = float(rates[quote])
+                # Estimate high/low as ±0.2% (ER API only gives close)
+                return {'price':price,'open':price,'high':round(price*1.002,5),
+                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,
+                        'symbol':symbol,'live':True}
+            elif quote == 'USD' and base in rates:
+                price = round(1.0 / float(rates[base]), 5)
+                return {'price':price,'open':price,'high':round(price*1.002,5),
+                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,
+                        'symbol':symbol,'live':True}
+            elif base in rates and quote in rates:
+                price = round(float(rates[quote]) / float(rates[base]), 5)
+                return {'price':price,'open':price,'high':round(price*1.002,5),
+                        'low':round(price*0.998,5),'change':0.0,'percent_change':0.0,
+                        'symbol':symbol,'live':True}
+            # XAU/USD — gold not in FX rates, fall through to Twelve Data
+    except: pass
+
+    # Twelve Data fallback (uses credits — only if free API failed)
     try:
         sym = symbol.replace('/', '')
         r = http_requests.get(f'https://api.twelvedata.com/quote?symbol={sym}&apikey={TWELVE_DATA_KEY}', timeout=4)
         d = r.json()
-        if 'close' in d:
+        if 'close' in d and 'code' not in d:
             return {'price':float(d.get('close',0)),'open':float(d.get('open',0)),
                     'high':float(d.get('high',0)),'low':float(d.get('low',0)),
                     'change':float(d.get('change',0)),'percent_change':float(d.get('percent_change',0)),
                     'symbol':symbol,'live':True}
     except: pass
+
+    # Last resort: fallback prices
     fb = FALLBACK.get(symbol)
     if fb: return {'price':fb['price'],'open':fb['price'],'high':fb['high'],'low':fb['low'],
                    'change':fb['change'],'percent_change':fb['pct'],'symbol':symbol,'live':False}

@@ -787,7 +787,7 @@ function getSession(){
 }
 
 // Fetch ALL live prices from backend
-async function fetchAllPrices(){
+async async function fetchAllPrices(){
   try{
     const res=await fetch('/api/forex-prices');
     if(!res.ok)return;
@@ -812,7 +812,12 @@ async function fetchAllPrices(){
         const cls=s==='LONDON'?'s-london':s==='NEW YORK'?'s-ny':s==='OVERLAP'?'s-overlap':s==='TOKYO'?'s-tokyo':'s-closed';
         pill.textContent=s;pill.className='sess-pill '+cls;
       }
-      console.log('✅ Live prices updated');
+      const cacheEl = document.getElementById('cache-badge');
+      if(cacheEl){
+        cacheEl.textContent = data.live ? '● LIVE' : '● REF';
+        cacheEl.style.color = data.live ? 'var(--green)' : 'var(--orange)';
+      }
+      console.log('✅ Prices updated - live:', data.live);
     }
   }catch(e){console.log('Price fetch error:',e);}
 
@@ -916,7 +921,7 @@ function selPair(pair,btn){
   updTVChart(pair);
 }
 
-function loadCustom(){
+async function loadCustom(){
   const v=document.getElementById('cpair').value.trim().toUpperCase();
   if(!v)return;
   currentPair=v;
