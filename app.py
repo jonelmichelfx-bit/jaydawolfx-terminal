@@ -54,7 +54,6 @@ def unauthorized():
         return jsonify({'error': 'Please log in to access this feature.', 'action': 'login'}), 401
     return redirect(url_for('auth.login_page'))
 
-
 @app.route('/api/server-time')
 def server_time():
     from datetime import timedelta, timezone
