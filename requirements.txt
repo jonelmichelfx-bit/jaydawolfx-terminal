@@ -9,3 +9,4 @@ Werkzeug>=3.0.1
 stripe
 gunicorn
 anthropic
+psycopg2-binary
