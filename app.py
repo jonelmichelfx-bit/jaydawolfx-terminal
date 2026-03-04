@@ -20,7 +20,10 @@ load_dotenv()
 app = Flask(__name__)
 
 app.secret_key = os.environ.get('SECRET_KEY', 'jaydawolfx-secret-2026')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///jaydawolfx.db')
+_db_url = os.environ.get('DATABASE_URL', 'sqlite:///jaydawolfx.db')
+if _db_url.startswith('postgres://'):
+    _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_DURATION'] = 60 * 60 * 24 * 30

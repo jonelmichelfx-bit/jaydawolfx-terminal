@@ -1,11 +1,8 @@
 # auth.py — Wolf Elite Options Terminal
-# encoding: utf-8
-
 from flask import Blueprint, render_template, redirect, request, session, jsonify
 from flask_login import login_user, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User
-from datetime import datetime, timedelta
+from datetime import datetime
 
 auth = Blueprint('auth', __name__)
 auth_bp = auth
@@ -26,15 +23,11 @@ def login_page():
 
     user = User.query.filter_by(email=identifier).first()
 
-    if not user or not check_password_hash(user.password_hash, password):
+    if not user or not user.check_password(password):
         return jsonify({'error': 'Invalid email or password.'}), 401
 
-    if user.plan == 'trial':
-        trial_end = user.created_at + timedelta(days=20)
-        if datetime.utcnow() > trial_end:
-            user.plan = 'expired'
-            db.session.commit()
-            return jsonify({'error': 'Your 20-day trial has expired. Please upgrade.'}), 403
+    if user.plan == 'expired':
+        return jsonify({'error': 'Your trial has expired. Please upgrade.'}), 403
 
     login_user(user, remember=remember)
     session.permanent = True
@@ -64,12 +57,10 @@ def signup():
     if User.query.filter_by(email=email).first():
         return jsonify({'error': 'An account with that email already exists.'}), 409
 
-    new_user = User(
-        email         = email,
-        password_hash = generate_password_hash(password),
-        plan          = 'trial',
-        created_at    = datetime.utcnow()
-    )
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'That username is already taken.'}), 409
+
+    new_user = User(email=email, username=username, password=password)
     db.session.add(new_user)
     db.session.commit()
 
