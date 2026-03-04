@@ -481,20 +481,41 @@ async function runScan(){
   }, 1200);
 
   try{
-    const r = await fetch('/api/wolf-scan', {
+    // Start the scan job
+    const startR = await fetch('/api/wolf-scan', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({filter})
     });
-    clearInterval(stepTimer);
+    const startData = await startR.json();
+    if(!startData.job_id) throw new Error('Failed to start scan — try again');
 
-    const ct = r.headers.get('content-type')||'';
-    if(!ct.includes('application/json')){
-      throw new Error('Server error — please try again');
-    }
-    const data = await r.json();
-    if(data.error) throw new Error(data.error);
-    renderResults(data);
+    // Poll for result every 3 seconds (no timeout!)
+    const jobId = startData.job_id;
+    const pollResult = await new Promise((resolve, reject) => {
+      const poll = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/wolf-scan-result/${jobId}`);
+          const d = await r.json();
+          if(d.status === 'done'){
+            clearInterval(poll);
+            resolve(d);
+          } else if(d.status === 'error'){
+            clearInterval(poll);
+            reject(new Error(d.error || 'Scan failed'));
+          }
+          // status === 'running' → keep polling
+        } catch(err){
+          clearInterval(poll);
+          reject(err);
+        }
+      }, 3000);
+    });
+
+    clearInterval(stepTimer);
+    if(pollResult.error) throw new Error(pollResult.error);
+    renderResults(pollResult);
+
   }catch(e){
     clearInterval(stepTimer);
     panel.innerHTML = `<div class="error-box">❌ ${e.message}<br><br><span style="color:var(--text3);font-size:10px;">Try again — if error persists check your connection</span></div>`;

@@ -1014,12 +1014,13 @@ def forex_picks():
         return jsonify({'content': call_claude(prompt, 2200)})
     except Exception as e: return jsonify({'error': str(e)}), 500
 
-@app.route('/api/wolf-scan', methods=['POST'])
-@login_required
-def wolf_scan():
+# ── Wolf Scan Job Store (in-memory) ──────────────────────────
+import threading, uuid
+_wolf_scan_jobs = {}
+
+def _run_wolf_scan_job(job_id, scan_filter):
     try:
-        data = request.get_json() or {}
-        scan_filter = data.get('filter', 'ALL')
+        _wolf_scan_jobs[job_id] = {'status': 'running'}
         date_str = datetime.now().strftime('%A, %B %d, %Y')
         session_name, _ = get_session()
         prices, is_live = get_cached_prices()
@@ -1028,7 +1029,7 @@ def wolf_scan():
         elif scan_filter == 'GOLD':   scan_pairs = ['XAU/USD','EUR/USD','USD/JPY','AUD/USD','NZD/USD']
         elif scan_filter == 'ASIAN':  scan_pairs = ['USD/JPY','EUR/JPY','GBP/JPY','AUD/USD','NZD/USD']
         elif scan_filter == 'LONDON': scan_pairs = ['EUR/USD','GBP/USD','EUR/GBP','USD/CHF','EUR/JPY']
-        else: scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD']
+        else: scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD','USD/CHF']
 
         prices_lines = []
         for p in scan_pairs:
@@ -1072,7 +1073,7 @@ STEP 7 — Economic calendar warnings
 Respond ONLY in valid JSON (no markdown, no backticks):
 {{"scan_date":"{date_str}","session":"{session_name}","market_theme":"string","dxy_bias":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","wolf_commentary":"2-3 sentences","trades":[{{"rank":1,"pair":"EUR/USD","current_price":"1.0380","trend":"DOWNTREND","primary_direction":"SELL","wolf_score":8.5,"confidence":85,"aligned_count":5,"thesis":"3-4 sentence thesis citing real EMA/RSI/S/R data","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"confluences":["Price below EMA200 1.0520","RSI 38 bearish momentum","Real resistance at 1.0412 (swing high)","DXY bullish divergence"],"key_levels":[{{"type":"RESISTANCE","price":"1.0412","note":"Real swing high from chart data","distance_pips":32}},{{"type":"CURRENT","price":"1.0380","note":"Current price","distance_pips":0}},{{"type":"SUPPORT","price":"1.0340","note":"Real swing low from chart data","distance_pips":40}}],"buy_scenario":{{"trigger":"Break above real resistance 1.0412 on H4","entry":"1.0418","stop_loss":"1.0390","tp1":"1.0460","tp2":"1.0510","tp3":"1.0560","rr":"1:2.5","probability":25}},"sell_scenario":{{"trigger":"Reject real resistance 1.0400 break below 1.0360","entry":"1.0355","stop_loss":"1.0390","tp1":"1.0310","tp2":"1.0270","tp3":"1.0220","rr":"1:2.8","probability":75}},"warnings":[{{"level":"HIGH","text":"US CPI Thursday 8:30AM EST — wait for release"}}],"relevant_news":["string"]}}]}}"""
 
-        result = parse_json_response(call_claude(prompt, 3000))
+        result = parse_json_response(call_claude(prompt, 6000))
 
         for trade in result.get('trades', []):
             pair = trade.get('pair', '')
@@ -1083,11 +1084,37 @@ Respond ONLY in valid JSON (no markdown, no backticks):
             if pair in chart_data and chart_data[pair].get('sr_levels'):
                 trade['real_sr_levels'] = chart_data[pair]['sr_levels'][:6]
 
-        return jsonify(result)
-    except json.JSONDecodeError as e: return jsonify({'error': f'AI analysis error — try again ({str(e)[:50]})'}), 500
+        _wolf_scan_jobs[job_id] = {'status': 'done', 'result': result}
     except Exception as e:
         import traceback; print(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
+        _wolf_scan_jobs[job_id] = {'status': 'error', 'error': str(e)}
+
+@app.route('/api/wolf-scan', methods=['POST'])
+@login_required
+def wolf_scan():
+    data = request.get_json() or {}
+    scan_filter = data.get('filter', 'ALL')
+    job_id = str(uuid.uuid4())
+    t = threading.Thread(target=_run_wolf_scan_job, args=(job_id, scan_filter))
+    t.daemon = True
+    t.start()
+    return jsonify({'job_id': job_id, 'status': 'running'})
+
+@app.route('/api/wolf-scan-result/<job_id>', methods=['GET'])
+@login_required
+def wolf_scan_result(job_id):
+    job = _wolf_scan_jobs.get(job_id)
+    if not job:
+        return jsonify({'status': 'not_found'}), 404
+    if job['status'] == 'running':
+        return jsonify({'status': 'running'})
+    if job['status'] == 'error':
+        return jsonify({'status': 'error', 'error': job.get('error', 'Unknown error')}), 500
+    result = job['result']
+    result['status'] = 'done'
+    # Clean up old job
+    _wolf_scan_jobs.pop(job_id, None)
+    return jsonify(result)
 
 # ── Admin ─────────────────────────────────────────────────────
 @app.route('/make-me-admin/<secret>')
