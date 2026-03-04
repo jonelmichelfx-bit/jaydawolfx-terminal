@@ -1362,7 +1362,7 @@ def byakugan_page():
     return render_template('wolf_stocks.html')
 
 # ── Wolf Stock Scanner API ────────────────────────────────────
-@app.route('/api/wolf-stock-scan', methods=['POST'])
+@app.route('/api/byakugan-scan', methods=['POST'])
 @login_required
 @elite_required
 def byakugan_scan():
