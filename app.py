@@ -773,7 +773,7 @@ def get_news(pair=''):
 
 def call_claude(prompt, max_tokens=2500):
     client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
-    msg = client.messages.create(model='claude-opus-4-6', max_tokens=max_tokens,
+    msg = client.messages.create(model='claude-sonnet-4-5', max_tokens=max_tokens,
                                   messages=[{'role':'user','content':prompt}])
     return msg.content[0].text
 
