@@ -54,11 +54,6 @@ def unauthorized():
         return jsonify({'error': 'Please log in to access this feature.', 'action': 'login'}), 401
     return redirect(url_for('auth.login_page'))
 
-@app.route('/')
-def home():
-    if current_user.is_authenticated:
-        return redirect(url_for('get_candle_data', pair='EUR/USD'))
-    return redirect(url_for('auth.login_page'))
 
 @app.route('/api/server-time')
 def server_time():
