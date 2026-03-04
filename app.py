@@ -1366,20 +1366,13 @@ def byakugan_page():
 @login_required
 @elite_required
 def byakugan_scan():
-    """
-    Byakugan — The All Eye: full stock options scanner:
-    1. Market regime (SPY + VIX)
-    2. Score all stocks in universe
-    3. Pick top 5
-    4. Fetch news for each
-    5. Claude AI top-down analysis with entry/exit/options setup
-    """
+    """Byakugan — The All Eye: pro stock options scanner with Greeks + 0DTE/1DTE + tomorrow game plan"""
     try:
         data = request.get_json() or {}
         scan_filter = data.get('filter', 'ALL')
         date_str = datetime.now().strftime('%A, %B %d, %Y')
 
-        # Filter universe
+        # ── Universe by filter ────────────────────────────────
         if scan_filter == 'TECH':
             universe = ['AAPL','MSFT','NVDA','AMD','META','GOOGL','AMZN','NFLX','COIN','PLTR','SMCI','ARM','AVGO','MU','INTC','CRM','SNOW']
         elif scan_filter == 'MEME':
@@ -1388,93 +1381,123 @@ def byakugan_scan():
             universe = ['AAPL','MSFT','GOOGL','AMZN','META','JPM','GS','C','BAC','XOM','CVX','DIS','BA']
         elif scan_filter == 'ETF':
             universe = ['SPY','QQQ','IWM','GLD','TLT','XLK','XLF','XLE','XLV','ARKK']
+        elif scan_filter == 'DEFENSE':
+            universe = ['LMT','RTX','NOC','GD','BA','HII','LHX','LDOS','CACI','AXON','KTOS','PLTR']
         else:
             universe = SCAN_UNIVERSE
 
-        # Get market regime
+        # ── Market regime ─────────────────────────────────────
         regime = get_market_regime()
+        vix = float(regime.get('vix', 20))
 
-        # Score all stocks in parallel
+        # ── Score all stocks ──────────────────────────────────
         scored = []
         with ThreadPoolExecutor(max_workers=8) as ex:
             futures = {ex.submit(score_stock, sym): sym for sym in universe}
             for f in as_completed(futures, timeout=45):
-                result = futures[f]
+                sym = futures[f]
                 try:
                     s = f.result()
-                    if s and s['score'] > 20:
+                    if s and s['score'] > 15:
                         scored.append(s)
                 except Exception as e:
-                    print(f'[StockScan] {result}: {e}')
+                    print(f'[Byakugan] {sym}: {e}')
 
-        # Sort by score, take top 5
         scored.sort(key=lambda x: x['score'], reverse=True)
         top5 = scored[:5]
 
         if not top5:
             return jsonify({'error': 'No qualifying stocks found — market may be closed or data unavailable'}), 500
 
-        # Fetch news for each top stock
+        # ── News for each pick ────────────────────────────────
         for stock in top5:
             try:
-                news = get_news(stock['ticker'])
-                stock['news'] = news[:3]
+                stock['news'] = get_news(stock['ticker'])[:3]
             except:
                 stock['news'] = []
 
-        # Build prompt for Claude
-        regime_str = f"SPY: {regime['spy_price']} ({regime['spy_change']:+.2f}%) | VIX: {regime['vix']} | Sentiment: {regime['fear_greed']} | Regime: {regime['regime']}"
+        # ── Greeks for each pick (real Black-Scholes) ─────────
+        for stock in top5:
+            try:
+                S = stock['price']
+                # Use ATM strike, 3DTE for short-term play
+                K = round(S / 5) * 5  # Round to nearest $5 strike
+                T = 3 / 365  # 3 days to expiry
+                r = 0.045
+                iv = 0.35 if not stock.get('iv_rank') else max(0.15, min(0.80, stock['iv_rank'] / 100))
+                direction = stock.get('direction', 'BULLISH')
+                opt_type = 'call' if direction == 'BULLISH' else 'put'
+                greeks = calculate_greeks(S, K, T, r, iv, opt_type)
+                stock['greeks'] = greeks
+                stock['atm_strike'] = K
+                stock['iv_estimate'] = round(iv * 100, 1)
+            except Exception as e:
+                stock['greeks'] = None
+                print(f'[Greeks {stock["ticker"]}] {e}')
+
+        # ── Build Claude prompt ───────────────────────────────
+        regime_str = f"SPY: {regime['spy_price']} ({regime['spy_change']:+.2f}%) | VIX: {vix} | Sentiment: {regime['fear_greed']} | Regime: {regime['regime']}"
+
+        # VIX-based strategy guidance
+        if vix > 30:
+            vix_guide = "VIX EXTREME FEAR >30: Sell premium (Iron Condors, Credit Spreads). Avoid buying naked options."
+        elif vix > 20:
+            vix_guide = "VIX ELEVATED 20-30: Favor defined-risk spreads. Short-dated buys OK with tight stops."
+        elif vix < 15:
+            vix_guide = "VIX LOW <15: Buy directional calls/puts. Premium is cheap. 0DTE/1DTE plays viable on SPY/QQQ."
+        else:
+            vix_guide = "VIX NORMAL 15-20: Debit spreads and directional plays with 3-7 DTE are ideal."
 
         stocks_ctx = ''
         for s in top5:
+            g = s.get('greeks') or {}
             stocks_ctx += f"""
-{'='*50}
-{s['ticker']} — Score: {s['score']}/100 | ${s['price']} | Direction: {s['direction']}
-EMA20: {s['ema20']} | EMA50: {s['ema50']} | EMA200: {s['ema200']}
-RSI: {s['rsi']} | MACD: {s['macd_bias']} | Vol Ratio: {s['vol_ratio']}x
-IV Rank: {s['iv_rank']} | Options Activity: {s['unusual_activity']}x | Calls: {s['call_vol']} | Puts: {s['put_vol']}
-Sector: {s['sector']} | Near Earnings: {s['near_earnings']}
-Signals: {' | '.join(s['signals'][:4])}
-S/R Levels: {[(l['type'], l['price']) for l in s['sr_levels'][:3]]}
-Recent News: {' | '.join([n['title'][:60] for n in s['news']]) if s['news'] else 'No recent news'}
-{'='*50}"""
+{'='*55}
+{s['ticker']} | ${s['price']} | Score: {s['score']}/100 | {s['direction']}
+TECHNICALS: EMA20:{s['ema20']} EMA50:{s['ema50']} EMA200:{s['ema200']} RSI:{s['rsi']} MACD:{s['macd_bias']}
+OPTIONS DATA: IV~{s.get('iv_estimate','?')}% | Vol:{s['vol_ratio']}x | UOA:{s['unusual_activity']}x | Calls:{s['call_vol']} Puts:{s['put_vol']}
+GREEKS (ATM ${s.get('atm_strike','?')} 3DTE): Delta:{g.get('delta','?')} Gamma:{g.get('gamma','?')} Theta:{g.get('theta','?')}/day Vega:{g.get('vega','?')}
+S/R: {[(l['type'],l['price']) for l in s['sr_levels'][:3]]}
+NEWS: {' | '.join([n['title'][:70] for n in s['news']]) if s['news'] else 'No catalyst'}
+{'='*55}"""
 
-        prompt = f"""You are Wolf AI — elite options trader using Paul Tudor Jones, Tom Sosnoff, and Jesse Livermore methodology.
+        prompt = f"""You are Byakugan — Wall Street elite options trader. You see ALL. Paul Tudor Jones discipline. Tom Sosnoff premium selling mastery. Jesse Livermore trend following. You analyze tonight so the trader knows EXACTLY what to do when market opens tomorrow.
 
 TODAY: {date_str}
-MARKET REGIME: {regime_str}
+MARKET: {regime_str}
+VIX STRATEGY: {vix_guide}
 
-TOP 5 SCANNED STOCKS (ranked by Wolf Score):
+TOP 5 STOCKS SCANNED WITH REAL DATA:
 {stocks_ctx}
 
-Using the REAL data above, give a professional top-down options analysis for each stock.
-Consider the news for each stock in your analysis — news is a KEY catalyst for options moves.
-Use actual EMA/RSI/S/R levels. Give EXACT entry, stop, and targets.
+CRITICAL RULES — YOU ARE A PRO:
+1. EXPIRATION: Single stocks use THIS FRIDAY weekly (1-5 DTE). SPY/QQQ/SPX can use 0DTE or 1DTE.
+2. GREEKS: Delta 0.35-0.50 = directional play. Delta 0.15-0.25 = high leverage lottery. Always show Greeks.
+3. CONFIDENCE: Be DECISIVE. If setup is clear — 80-92%. If mixed — 65-75%. Never below 60% if you're picking it.
+4. TOMORROW GAME PLAN: Tell trader exactly when to enter (market open? wait for pullback? pre-market?), what price triggers the trade, and when to walk away.
+5. NEWS IS EVERYTHING: If there's a news catalyst — that's your thesis. Trade the news.
+6. VIX > 25 = sell premium or use spreads. VIX < 15 = buy directional cheap premium.
+7. Use REAL S/R levels from data above for exact entries and stops.
+8. Greeks MUST be included — Delta, Gamma, Theta, Vega for the recommended strike.
 
-Rules:
-- If VIX > 25, favor buying puts or credit spreads over naked calls
-- If near earnings, warn about IV crush
-- Use the S/R levels for entry/exit zones
-- News catalyst = higher confidence score
-- Recommend specific strike and expiration (weekly vs monthly)
+Respond ONLY in valid JSON (no markdown, no backticks):
+{{"scan_date":"{date_str}","market_regime":{{"spy":"{regime['spy_price']}","spy_change":"{regime['spy_change']:+.2f}%","vix":"{vix}","sentiment":"{regime['fear_greed']}","regime":"{regime['regime']}","wolf_market_read":"2 confident sentences on what market is doing and what that means for options tomorrow"}},"tomorrow_game_plan":"3 sentence overall game plan for when market opens tomorrow — what is the macro setup, what sectors to focus, what to avoid","picks":[{{"rank":1,"ticker":"NVDA","price":"875.00","wolf_score":88,"confidence":85,"direction":"BULLISH","sector":"Technology","thesis":"3-4 sentence thesis. Be specific. Reference real EMA/RSI/news data. Tell me WHY this moves tomorrow.","news_catalyst":"Exact news item driving this — be specific","technical_setup":"Price above EMA200 at 820, RSI 58 building momentum, volume 2.3x — breakout continuation","entry_zone":"870-875","key_support":"858","key_resistance":"890","stop_loss":"852","target_1":"895","target_2":"915","target_3":"940","tomorrow_entry":"Wait for first 15 min candle to close above 878 — enter on confirmation, not before open","options_play":{{"strategy":"LONG CALL","recommended_strike":"880C","expiration":"This Friday (3 DTE)","entry_price":"8.50-10.00","max_risk":"$1000 per contract","target_exit":"$20.00+","stop_exit":"$4.00","greeks":{{"delta":0.42,"gamma":0.008,"theta":-0.85,"vega":0.45}},"iv_environment":"IV at 38% — moderate, debit spread or long call both work","note":"High gamma near ATM — if NVDA breaks 880 this explodes fast"}},"confluences":["Above EMA200","RSI building","Volume surge 2.3x","Earnings beat catalyst","Unusual call activity 1.8x"],"warnings":["Resistance at 890 — take partial profits","Broad market selloff would invalidate"],"invalidation":"Close below 852 stop — exit immediately"}}]}}"""
 
-Respond ONLY in valid JSON (no markdown):
-{{"scan_date":"{date_str}","market_regime":{{"spy":"{regime['spy_price']}","spy_change":"{regime['spy_change']:+.2f}%","vix":"{regime['vix']}","sentiment":"{regime['fear_greed']}","regime":"{regime['regime']}","wolf_market_read":"2 sentence market read"}},"picks":[{{"rank":1,"ticker":"AAPL","price":"182.50","wolf_score":85,"direction":"BULLISH","sector":"Technology","thesis":"3-4 sentence thesis using real EMA/RSI/news data","news_catalyst":"Key news driving this move","technical_setup":"EMA alignment + RSI + S/R","entry_zone":"180.00-181.50","key_support":"178.00","key_resistance":"185.00","stop_loss":"176.50","target_1":"188.00","target_2":"195.00","target_3":"205.00","options_play":{{"strategy":"LONG CALL","recommended_strike":"185C","expiration":"21 DTE","entry_price":"2.50-3.00","max_risk":"$300 per contract","target_exit":"$6.00+","stop_exit":"$1.25","iv_rank":35,"note":"Low IV — good time to buy premium"}},"confluences":["Price above EMA200","RSI 55 momentum","Volume 2.1x surge","Bullish news catalyst"],"warnings":["Earnings in 15 days — consider closing before","Resistance at 185"],"confidence":82}}]}}"""
+        result = parse_json_response(call_claude(prompt, 7000))
 
-        result = parse_json_response(call_claude(prompt, 6000))
-
-        # Inject real scored data back
+        # ── Inject real data back ─────────────────────────────
         for pick in result.get('picks', []):
             ticker = pick.get('ticker', '')
             match = next((s for s in top5 if s['ticker'] == ticker), None)
             if match:
-                pick['real_score']    = match['score']
-                pick['real_rsi']      = match['rsi']
-                pick['real_vol_ratio']= match['vol_ratio']
-                pick['real_iv_rank']  = match['iv_rank']
-                pick['real_signals']  = match['signals']
-                pick['sr_levels']     = match['sr_levels']
-                pick['news']          = match['news']
+                pick['real_score']     = match['score']
+                pick['real_rsi']       = match['rsi']
+                pick['real_vol_ratio'] = match['vol_ratio']
+                pick['real_iv_rank']   = match['iv_rank']
+                pick['real_signals']   = match['signals']
+                pick['sr_levels']      = match['sr_levels']
+                pick['news']           = match['news']
+                pick['real_greeks']    = match.get('greeks')
 
         result['market_regime'] = regime
         return jsonify(result)
