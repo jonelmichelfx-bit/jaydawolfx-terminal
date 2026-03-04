@@ -1028,7 +1028,7 @@ def wolf_scan():
         elif scan_filter == 'GOLD':   scan_pairs = ['XAU/USD','EUR/USD','USD/JPY','AUD/USD','NZD/USD']
         elif scan_filter == 'ASIAN':  scan_pairs = ['USD/JPY','EUR/JPY','GBP/JPY','AUD/USD','NZD/USD']
         elif scan_filter == 'LONDON': scan_pairs = ['EUR/USD','GBP/USD','EUR/GBP','USD/CHF','EUR/JPY']
-        else: scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD','USD/CHF']
+        else: scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD']
 
         prices_lines = []
         for p in scan_pairs:
@@ -1072,7 +1072,7 @@ STEP 7 — Economic calendar warnings
 Respond ONLY in valid JSON (no markdown, no backticks):
 {{"scan_date":"{date_str}","session":"{session_name}","market_theme":"string","dxy_bias":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","wolf_commentary":"2-3 sentences","trades":[{{"rank":1,"pair":"EUR/USD","current_price":"1.0380","trend":"DOWNTREND","primary_direction":"SELL","wolf_score":8.5,"confidence":85,"aligned_count":5,"thesis":"3-4 sentence thesis citing real EMA/RSI/S/R data","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"confluences":["Price below EMA200 1.0520","RSI 38 bearish momentum","Real resistance at 1.0412 (swing high)","DXY bullish divergence"],"key_levels":[{{"type":"RESISTANCE","price":"1.0412","note":"Real swing high from chart data","distance_pips":32}},{{"type":"CURRENT","price":"1.0380","note":"Current price","distance_pips":0}},{{"type":"SUPPORT","price":"1.0340","note":"Real swing low from chart data","distance_pips":40}}],"buy_scenario":{{"trigger":"Break above real resistance 1.0412 on H4","entry":"1.0418","stop_loss":"1.0390","tp1":"1.0460","tp2":"1.0510","tp3":"1.0560","rr":"1:2.5","probability":25}},"sell_scenario":{{"trigger":"Reject real resistance 1.0400 break below 1.0360","entry":"1.0355","stop_loss":"1.0390","tp1":"1.0310","tp2":"1.0270","tp3":"1.0220","rr":"1:2.8","probability":75}},"warnings":[{{"level":"HIGH","text":"US CPI Thursday 8:30AM EST — wait for release"}}],"relevant_news":["string"]}}]}}"""
 
-        result = parse_json_response(call_claude(prompt, 6000))
+        result = parse_json_response(call_claude(prompt, 3000))
 
         for trade in result.get('trades', []):
             pair = trade.get('pair', '')
