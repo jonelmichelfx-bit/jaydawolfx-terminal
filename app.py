@@ -1095,6 +1095,395 @@ def make_me_admin(secret):
     current_user.plan = 'admin'
     db.session.commit()
     return f'✅ {current_user.email} is now ADMIN — full access unlocked! <a href="/">Go to terminal</a>'
+# ═══════════════════════════════════════════════════════════════
+# WOLF STOCK SCANNER — Add these to app.py
+# ═══════════════════════════════════════════════════════════════
+
+# ── Stock Scanner watchlist (high volume, optionable stocks) ──
+SCAN_UNIVERSE = [
+    'AAPL','MSFT','NVDA','TSLA','AMD','META','GOOGL','AMZN','NFLX','SPY',
+    'QQQ','BABA','COIN','PLTR','SOFI','MARA','RIOT','HOOD','UBER','LYFT',
+    'DIS','BA','GS','JPM','C','BAC','XOM','CVX','RIVN','NIO',
+    'SMCI','ARM','AVGO','MU','INTC','CRM','SNOW','SHOP','SQ','PYPL'
+]
+
+# ── Market regime from SPY + VIX ─────────────────────────────
+def get_market_regime():
+    try:
+        import yfinance as yf
+        spy = yf.Ticker('SPY').history(period='5d', interval='1d')
+        vix = yf.Ticker('^VIX').history(period='5d', interval='1d')
+
+        spy_close = float(spy['Close'].iloc[-1])
+        spy_prev  = float(spy['Close'].iloc[-2])
+        spy_change = round(((spy_close - spy_prev) / spy_prev) * 100, 2)
+
+        vix_level = float(vix['Close'].iloc[-1]) if not vix.empty else 20.0
+
+        if vix_level > 30:   fear = 'EXTREME FEAR'; regime = 'BEARISH'
+        elif vix_level > 20: fear = 'FEAR';          regime = 'CAUTION'
+        elif vix_level > 15: fear = 'NEUTRAL';       regime = 'NEUTRAL'
+        else:                fear = 'GREED';          regime = 'BULLISH'
+
+        spy_trend = 'BULLISH' if spy_change > 0 else 'BEARISH'
+
+        return {
+            'spy_price': round(spy_close, 2),
+            'spy_change': spy_change,
+            'spy_trend': spy_trend,
+            'vix': round(vix_level, 1),
+            'fear_greed': fear,
+            'regime': regime
+        }
+    except Exception as e:
+        print(f'[MarketRegime] {e}')
+        return {'spy_price': 0, 'spy_change': 0, 'spy_trend': 'UNKNOWN', 'vix': 20, 'fear_greed': 'NEUTRAL', 'regime': 'NEUTRAL'}
+
+# ── Score a single stock ──────────────────────────────────────
+def score_stock(ticker_sym):
+    """
+    Score a stock 0-100 based on:
+    - Trend alignment (EMA20/50/200)
+    - RSI momentum
+    - Volume surge
+    - IV Rank (options attractiveness)
+    - Unusual options activity (vol/OI ratio)
+    - No earnings within 3 days
+    Returns dict with score and all data, or None if fails
+    """
+    try:
+        import yfinance as yf
+        import numpy as np
+        from datetime import datetime, timedelta
+
+        ticker = yf.Ticker(ticker_sym)
+
+        # ── Price + Volume history ────────────────────────────
+        hist = ticker.history(period='1y', interval='1d')
+        if hist.empty or len(hist) < 50:
+            return None
+
+        closes  = hist['Close'].tolist()
+        volumes = hist['Volume'].tolist()
+        current_price = round(closes[-1], 2)
+
+        # ── EMAs ─────────────────────────────────────────────
+        ema20  = calc_ema(closes, 20)
+        ema50  = calc_ema(closes, 50)
+        ema200 = calc_ema(closes, min(200, len(closes)))
+        rsi    = calc_rsi(closes)
+        macd_val, macd_bias = calc_macd(closes)
+
+        # ── Volume surge ──────────────────────────────────────
+        avg_vol_20 = sum(volumes[-21:-1]) / 20 if len(volumes) >= 21 else 1
+        today_vol  = volumes[-1]
+        vol_ratio  = round(today_vol / avg_vol_20, 2) if avg_vol_20 > 0 else 1.0
+
+        # ── IV Rank (from options chain) ──────────────────────
+        iv_rank = None
+        unusual_activity = 0.0
+        call_vol = 0; put_vol = 0; total_oi = 0
+        options_strategy = 'LONG CALL'
+
+        try:
+            exps = ticker.options
+            if exps:
+                # Use nearest expiration for IV scan
+                chain = ticker.option_chain(exps[0])
+                calls = chain.calls
+                puts  = chain.puts
+
+                # IV from ATM options
+                atm_calls = calls[abs(calls['strike'] - current_price) < current_price * 0.05]
+                if not atm_calls.empty:
+                    iv_now = float(atm_calls['impliedVolatility'].mean())
+                else:
+                    iv_now = float(calls['impliedVolatility'].mean()) if not calls.empty else 0.3
+
+                # Volume and OI
+                call_vol = int(calls['volume'].sum()) if not calls.empty else 0
+                put_vol  = int(puts['volume'].sum())  if not puts.empty else 0
+                call_oi  = int(calls['openInterest'].sum()) if not calls.empty else 1
+                put_oi   = int(puts['openInterest'].sum())  if not puts.empty else 1
+                total_oi = call_oi + put_oi
+
+                # Unusual activity = volume/OI ratio (>1.0 = unusual)
+                unusual_activity = round((call_vol + put_vol) / max(total_oi, 1), 3)
+
+                # IV Rank approximation (compare to 52wk high/low IV proxy via price range)
+                high_52 = max(hist['High'].tail(252).tolist())
+                low_52  = min(hist['Low'].tail(252).tolist())
+                price_range = high_52 - low_52
+                iv_rank_approx = round(((current_price - low_52) / price_range) * 100) if price_range > 0 else 50
+                iv_rank = iv_rank_approx
+
+                # Strategy selection based on IV rank
+                if iv_rank > 60:
+                    options_strategy = 'CREDIT SPREAD'
+                elif iv_rank < 30:
+                    options_strategy = 'LONG CALL/PUT'
+                else:
+                    options_strategy = 'DEBIT SPREAD'
+
+        except Exception as ex:
+            print(f'[Options {ticker_sym}] {ex}')
+
+        # ── Earnings check ────────────────────────────────────
+        near_earnings = False
+        try:
+            cal = ticker.calendar
+            if cal is not None and not cal.empty:
+                # earnings date
+                earn_dates = cal.columns.tolist() if hasattr(cal, 'columns') else []
+                if earn_dates:
+                    earn_dt = datetime.strptime(str(earn_dates[0])[:10], '%Y-%m-%d')
+                    days_to_earn = abs((earn_dt - datetime.now()).days)
+                    near_earnings = days_to_earn <= 3
+        except:
+            pass
+
+        # ── Sector ───────────────────────────────────────────
+        sector = 'Unknown'
+        try:
+            info = ticker.fast_info
+            sector = getattr(info, 'sector', 'Unknown') or 'Unknown'
+        except:
+            pass
+
+        # ── Scoring ───────────────────────────────────────────
+        score = 0
+        direction = 'NEUTRAL'
+        signals = []
+
+        # Trend alignment (40 pts max)
+        above_ema20  = current_price > (ema20  or 0)
+        above_ema50  = current_price > (ema50  or 0)
+        above_ema200 = current_price > (ema200 or 0)
+
+        if above_ema200:
+            score += 15; signals.append('Above EMA200 (bullish structure)')
+        else:
+            score -= 5;  signals.append('Below EMA200 (bearish structure)')
+
+        if above_ema50:
+            score += 12; signals.append(f'Above EMA50 ({round(ema50,2)})')
+        if above_ema20:
+            score += 8;  signals.append(f'Above EMA20 ({round(ema20,2)})')
+
+        # RSI (20 pts)
+        if rsi:
+            if 45 <= rsi <= 65:
+                score += 20; signals.append(f'RSI {rsi} — momentum building')
+            elif 35 <= rsi < 45:
+                score += 12; signals.append(f'RSI {rsi} — oversold bounce potential')
+            elif rsi > 70:
+                score -= 10; signals.append(f'RSI {rsi} — overbought warning')
+            elif rsi < 30:
+                score += 8;  signals.append(f'RSI {rsi} — deep oversold')
+
+        # Volume surge (20 pts)
+        if vol_ratio >= 2.5:
+            score += 20; signals.append(f'Volume {vol_ratio}x average — strong conviction')
+        elif vol_ratio >= 1.5:
+            score += 12; signals.append(f'Volume {vol_ratio}x average — elevated')
+        elif vol_ratio >= 1.2:
+            score += 6;  signals.append(f'Volume {vol_ratio}x average — slightly elevated')
+
+        # Unusual options activity (15 pts)
+        if unusual_activity >= 1.5:
+            score += 15; signals.append(f'Unusual options activity {unusual_activity}x — institutional interest')
+        elif unusual_activity >= 0.8:
+            score += 8;  signals.append(f'Options activity {unusual_activity}x — moderate')
+
+        # MACD (5 pts)
+        if macd_bias == 'BULLISH':
+            score += 5; signals.append('MACD bullish crossover')
+        else:
+            signals.append('MACD bearish')
+
+        # Earnings penalty
+        if near_earnings:
+            score -= 20; signals.append('⚠️ EARNINGS WITHIN 3 DAYS — high IV crush risk')
+
+        # Direction
+        bull_signals = sum([above_ema20, above_ema50, above_ema200, macd_bias == 'BULLISH'])
+        if bull_signals >= 3:   direction = 'BULLISH'
+        elif bull_signals <= 1: direction = 'BEARISH'
+        else:                   direction = 'NEUTRAL'
+
+        # Recommended option
+        if direction == 'BULLISH':
+            rec_option = 'BUY CALLS'
+        elif direction == 'BEARISH':
+            rec_option = 'BUY PUTS'
+        else:
+            rec_option = 'WAIT FOR SETUP'
+
+        # S/R from daily candles
+        candles = []
+        for i, (ts, row) in enumerate(hist.tail(60).iterrows()):
+            candles.append({'high': float(row['High']), 'low': float(row['Low']),
+                           'open': float(row['Open']), 'close': float(row['Close'])})
+        sr_levels = find_sr_levels(candles, current_price, lookback=60) if candles else []
+
+        return {
+            'ticker': ticker_sym,
+            'price': current_price,
+            'score': max(0, min(100, score)),
+            'direction': direction,
+            'rec_option': rec_option,
+            'options_strategy': options_strategy,
+            'signals': signals,
+            'ema20': round(ema20, 2) if ema20 else None,
+            'ema50': round(ema50, 2) if ema50 else None,
+            'ema200': round(ema200, 2) if ema200 else None,
+            'rsi': rsi,
+            'macd_bias': macd_bias,
+            'vol_ratio': vol_ratio,
+            'iv_rank': iv_rank,
+            'unusual_activity': unusual_activity,
+            'call_vol': call_vol,
+            'put_vol': put_vol,
+            'near_earnings': near_earnings,
+            'sector': sector,
+            'sr_levels': sr_levels[:4],
+            'options_strategy': options_strategy,
+        }
+
+    except Exception as e:
+        print(f'[ScoreStock {ticker_sym}] {e}')
+        return None
+
+# ── Wolf Stock Scanner page ───────────────────────────────────
+@app.route('/byakugan')
+@login_required
+@elite_required
+def byakugan_page():
+    return render_template('wolf_stocks.html')
+
+# ── Wolf Stock Scanner API ────────────────────────────────────
+@app.route('/api/wolf-stock-scan', methods=['POST'])
+@login_required
+@elite_required
+def byakugan_scan():
+    """
+    Byakugan — The All Eye: full stock options scanner:
+    1. Market regime (SPY + VIX)
+    2. Score all stocks in universe
+    3. Pick top 5
+    4. Fetch news for each
+    5. Claude AI top-down analysis with entry/exit/options setup
+    """
+    try:
+        data = request.get_json() or {}
+        scan_filter = data.get('filter', 'ALL')
+        date_str = datetime.now().strftime('%A, %B %d, %Y')
+
+        # Filter universe
+        if scan_filter == 'TECH':
+            universe = ['AAPL','MSFT','NVDA','AMD','META','GOOGL','AMZN','NFLX','COIN','PLTR','SMCI','ARM','AVGO','MU','INTC','CRM','SNOW']
+        elif scan_filter == 'MEME':
+            universe = ['TSLA','MARA','RIOT','HOOD','SOFI','RIVN','NIO','BABA','COIN','PLTR','SQ','PYPL']
+        elif scan_filter == 'BLUE':
+            universe = ['AAPL','MSFT','GOOGL','AMZN','META','JPM','GS','C','BAC','XOM','CVX','DIS','BA']
+        elif scan_filter == 'ETF':
+            universe = ['SPY','QQQ','IWM','GLD','TLT','XLK','XLF','XLE','XLV','ARKK']
+        else:
+            universe = SCAN_UNIVERSE
+
+        # Get market regime
+        regime = get_market_regime()
+
+        # Score all stocks in parallel
+        scored = []
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            futures = {ex.submit(score_stock, sym): sym for sym in universe}
+            for f in as_completed(futures, timeout=45):
+                result = futures[f]
+                try:
+                    s = f.result()
+                    if s and s['score'] > 20:
+                        scored.append(s)
+                except Exception as e:
+                    print(f'[StockScan] {result}: {e}')
+
+        # Sort by score, take top 5
+        scored.sort(key=lambda x: x['score'], reverse=True)
+        top5 = scored[:5]
+
+        if not top5:
+            return jsonify({'error': 'No qualifying stocks found — market may be closed or data unavailable'}), 500
+
+        # Fetch news for each top stock
+        for stock in top5:
+            try:
+                news = get_news(stock['ticker'])
+                stock['news'] = news[:3]
+            except:
+                stock['news'] = []
+
+        # Build prompt for Claude
+        regime_str = f"SPY: {regime['spy_price']} ({regime['spy_change']:+.2f}%) | VIX: {regime['vix']} | Sentiment: {regime['fear_greed']} | Regime: {regime['regime']}"
+
+        stocks_ctx = ''
+        for s in top5:
+            stocks_ctx += f"""
+{'='*50}
+{s['ticker']} — Score: {s['score']}/100 | ${s['price']} | Direction: {s['direction']}
+EMA20: {s['ema20']} | EMA50: {s['ema50']} | EMA200: {s['ema200']}
+RSI: {s['rsi']} | MACD: {s['macd_bias']} | Vol Ratio: {s['vol_ratio']}x
+IV Rank: {s['iv_rank']} | Options Activity: {s['unusual_activity']}x | Calls: {s['call_vol']} | Puts: {s['put_vol']}
+Sector: {s['sector']} | Near Earnings: {s['near_earnings']}
+Signals: {' | '.join(s['signals'][:4])}
+S/R Levels: {[(l['type'], l['price']) for l in s['sr_levels'][:3]]}
+Recent News: {' | '.join([n['title'][:60] for n in s['news']]) if s['news'] else 'No recent news'}
+{'='*50}"""
+
+        prompt = f"""You are Wolf AI — elite options trader using Paul Tudor Jones, Tom Sosnoff, and Jesse Livermore methodology.
+
+TODAY: {date_str}
+MARKET REGIME: {regime_str}
+
+TOP 5 SCANNED STOCKS (ranked by Wolf Score):
+{stocks_ctx}
+
+Using the REAL data above, give a professional top-down options analysis for each stock.
+Consider the news for each stock in your analysis — news is a KEY catalyst for options moves.
+Use actual EMA/RSI/S/R levels. Give EXACT entry, stop, and targets.
+
+Rules:
+- If VIX > 25, favor buying puts or credit spreads over naked calls
+- If near earnings, warn about IV crush
+- Use the S/R levels for entry/exit zones
+- News catalyst = higher confidence score
+- Recommend specific strike and expiration (weekly vs monthly)
+
+Respond ONLY in valid JSON (no markdown):
+{{"scan_date":"{date_str}","market_regime":{{"spy":"{regime['spy_price']}","spy_change":"{regime['spy_change']:+.2f}%","vix":"{regime['vix']}","sentiment":"{regime['fear_greed']}","regime":"{regime['regime']}","wolf_market_read":"2 sentence market read"}},"picks":[{{"rank":1,"ticker":"AAPL","price":"182.50","wolf_score":85,"direction":"BULLISH","sector":"Technology","thesis":"3-4 sentence thesis using real EMA/RSI/news data","news_catalyst":"Key news driving this move","technical_setup":"EMA alignment + RSI + S/R","entry_zone":"180.00-181.50","key_support":"178.00","key_resistance":"185.00","stop_loss":"176.50","target_1":"188.00","target_2":"195.00","target_3":"205.00","options_play":{{"strategy":"LONG CALL","recommended_strike":"185C","expiration":"21 DTE","entry_price":"2.50-3.00","max_risk":"$300 per contract","target_exit":"$6.00+","stop_exit":"$1.25","iv_rank":35,"note":"Low IV — good time to buy premium"}},"confluences":["Price above EMA200","RSI 55 momentum","Volume 2.1x surge","Bullish news catalyst"],"warnings":["Earnings in 15 days — consider closing before","Resistance at 185"],"confidence":82}}]}}"""
+
+        result = parse_json_response(call_claude(prompt, 6000))
+
+        # Inject real scored data back
+        for pick in result.get('picks', []):
+            ticker = pick.get('ticker', '')
+            match = next((s for s in top5 if s['ticker'] == ticker), None)
+            if match:
+                pick['real_score']    = match['score']
+                pick['real_rsi']      = match['rsi']
+                pick['real_vol_ratio']= match['vol_ratio']
+                pick['real_iv_rank']  = match['iv_rank']
+                pick['real_signals']  = match['signals']
+                pick['sr_levels']     = match['sr_levels']
+                pick['news']          = match['news']
+
+        result['market_regime'] = regime
+        return jsonify(result)
+
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'AI analysis error — try again ({str(e)[:50]})'}), 500
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Byakugan — The All Eye 🐺</title>
+<style>
+  :root {
+    --bg:#000;--bg2:#0a0a0a;--bg3:#111;--bg4:#161616;
+    --green:#00ff99;--red:#ff4466;--yellow:#ffe033;--orange:#ff7744;
+    --purple:#cc55ff;--blue:#33aaff;--white:#e8e8e8;--text2:#999;--text3:#555;
+    --border:rgba(255,255,255,.07);--head:'Courier New',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--white);font-family:var(--head);min-height:100vh;}
+
+  /* ── HEADER ── */
+  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--bg2);}
+  .header-left{display:flex;align-items:center;gap:16px;}
+  .wolf-logo{font-size:22px;font-weight:900;letter-spacing:3px;color:var(--purple);}
+  .wolf-logo span{color:var(--white);}
+  .eye-glow{text-shadow:0 0 20px rgba(204,85,255,.8),0 0 40px rgba(204,85,255,.4);}
+  .page-tag{font-size:9px;letter-spacing:3px;color:var(--text2);padding:4px 10px;border:1px solid var(--border);}
+  .back-btn{font-size:10px;letter-spacing:2px;color:var(--text2);text-decoration:none;padding:6px 14px;border:1px solid var(--border);}
+  .back-btn:hover{color:var(--green);border-color:var(--green);}
+
+  /* ── MARKET REGIME BAR ── */
+  .regime-bar{display:flex;gap:0;border-bottom:1px solid var(--border);overflow-x:auto;}
+  .regime-item{flex:1;min-width:120px;padding:12px 16px;border-right:1px solid var(--border);text-align:center;}
+  .regime-label{font-size:8px;letter-spacing:2px;color:var(--text3);margin-bottom:4px;}
+  .regime-val{font-size:13px;font-weight:700;letter-spacing:1px;}
+  .regime-val.bull{color:var(--green);}
+  .regime-val.bear{color:var(--red);}
+  .regime-val.neutral{color:var(--yellow);}
+
+  /* ── CONTROLS ── */
+  .controls{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg2);}
+  .ctrl-label{font-size:9px;letter-spacing:2px;color:var(--text3);}
+  .filter-btn{font-size:10px;letter-spacing:2px;padding:8px 16px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.2s;}
+  .filter-btn:hover,.filter-btn.active{border-color:var(--green);color:var(--green);background:rgba(0,255,153,.05);}
+  .scan-btn{font-size:11px;letter-spacing:3px;padding:10px 28px;background:var(--purple);color:#000;border:none;cursor:pointer;font-weight:900;font-family:var(--head);margin-left:auto;box-shadow:0 0 20px rgba(204,85,255,.4);}
+  .scan-btn:hover{background:#bb33ee;box-shadow:0 0 30px rgba(204,85,255,.6);}
+  .scan-btn:disabled{background:var(--text3);cursor:not-allowed;box-shadow:none;}
+
+  /* ── LOADING ── */
+  .loading{display:none;text-align:center;padding:80px 24px;}
+  .loading.show{display:block;}
+  .loading-title{font-size:11px;letter-spacing:4px;color:var(--green);margin-bottom:20px;}
+  .loading-steps{display:flex;flex-direction:column;gap:8px;max-width:400px;margin:0 auto;}
+  .step{font-size:10px;letter-spacing:2px;color:var(--text3);padding:8px 16px;border:1px solid var(--border);text-align:left;}
+  .step.active{color:var(--green);border-color:var(--green);}
+  .step.done{color:var(--text2);}
+  .pulse{display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+  /* ── RESULTS ── */
+  .results{display:none;padding:24px;}
+  .results.show{display:block;}
+
+  /* Market read banner */
+  .market-read{background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--yellow);padding:16px 20px;margin-bottom:24px;}
+  .market-read-label{font-size:8px;letter-spacing:3px;color:var(--yellow);margin-bottom:6px;}
+  .market-read-text{font-size:11px;line-height:1.7;color:var(--white);}
+
+  /* ── PICK CARDS ── */
+  .picks-grid{display:flex;flex-direction:column;gap:20px;}
+
+  .pick-card{background:var(--bg3);border:1px solid var(--border);overflow:hidden;}
+  .pick-card.bull{border-top:3px solid var(--green);}
+  .pick-card.bear{border-top:3px solid var(--red);}
+  .pick-card.neutral{border-top:3px solid var(--yellow);}
+
+  /* Card header */
+  .pick-header{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:16px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);}
+  .pick-rank{font-size:28px;font-weight:900;color:var(--text3);min-width:32px;}
+  .pick-ticker{font-size:28px;font-weight:900;letter-spacing:2px;color:var(--white);}
+  .pick-price{font-size:13px;color:var(--text2);}
+  .pick-direction{font-size:10px;letter-spacing:2px;padding:5px 12px;font-weight:700;}
+  .pick-direction.bull{background:rgba(0,255,153,.1);color:var(--green);border:1px solid rgba(0,255,153,.3);}
+  .pick-direction.bear{background:rgba(255,68,102,.1);color:var(--red);border:1px solid rgba(255,68,102,.3);}
+  .pick-score-wrap{text-align:center;}
+  .pick-score{font-size:24px;font-weight:900;color:var(--green);}
+  .pick-score-label{font-size:8px;letter-spacing:2px;color:var(--text3);}
+
+  /* Card body */
+  .pick-body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;}
+  @media(max-width:900px){.pick-body{grid-template-columns:1fr;}}
+
+  .pick-section{padding:16px 20px;border-right:1px solid var(--border);}
+  .pick-section:last-child{border-right:none;}
+  .section-label{font-size:8px;letter-spacing:3px;color:var(--text3);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;}
+
+  /* Thesis */
+  .thesis-text{font-size:10px;line-height:1.8;color:var(--white);margin-bottom:10px;}
+  .news-item{font-size:9px;color:var(--blue);line-height:1.5;margin-bottom:4px;padding-left:8px;border-left:2px solid rgba(51,170,255,.3);}
+  .news-item .news-source{color:var(--text3);}
+
+  /* Levels */
+  .level-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+  .level-label{font-size:9px;letter-spacing:1px;color:var(--text3);}
+  .level-val{font-size:11px;font-weight:700;}
+  .level-val.res{color:var(--red);}
+  .level-val.sup{color:var(--green);}
+  .level-val.entry{color:var(--yellow);}
+  .level-val.stop{color:var(--orange);}
+  .level-val.tp{color:var(--green);}
+
+  /* Options box */
+  .options-box{background:rgba(0,0,0,.4);border:1px solid var(--border);padding:12px;margin-top:8px;}
+  .opt-strategy{font-size:11px;letter-spacing:2px;color:var(--purple);font-weight:700;margin-bottom:8px;}
+  .opt-row{display:flex;justify-content:space-between;padding:3px 0;}
+  .opt-key{font-size:9px;color:var(--text3);}
+  .opt-val{font-size:10px;color:var(--white);font-weight:700;}
+
+  /* Signals */
+  .signals-list{display:flex;flex-direction:column;gap:4px;}
+  .signal-item{font-size:9px;letter-spacing:1px;padding:4px 8px;border-left:2px solid;}
+  .signal-item.bull{border-color:var(--green);color:var(--white);}
+  .signal-item.bear{border-color:var(--red);color:var(--white);}
+  .signal-item.warn{border-color:var(--orange);color:var(--orange);}
+
+  /* Confidence bar */
+  .conf-wrap{margin-top:12px;}
+  .conf-label{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:4px;}
+  .conf-bar{height:3px;background:var(--bg);border-radius:2px;overflow:hidden;}
+  .conf-fill{height:100%;background:var(--green);border-radius:2px;}
+
+  /* Tech indicators */
+  .indicators-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .ind-chip{font-size:8px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--border);}
+  .ind-chip.bull{border-color:rgba(0,255,153,.3);color:var(--green);}
+  .ind-chip.bear{border-color:rgba(255,68,102,.3);color:var(--red);}
+  .ind-chip.neutral{border-color:var(--border);color:var(--text2);}
+
+  /* Error */
+  .error-box{background:rgba(255,68,102,.08);border:1px solid rgba(255,68,102,.3);padding:20px;color:var(--red);font-size:11px;text-align:center;margin:24px;}
+
+  /* Empty state */
+  .empty{text-align:center;padding:80px 24px;color:var(--text3);}
+  .empty-icon{font-size:48px;margin-bottom:16px;}
+  .empty-text{font-size:11px;letter-spacing:2px;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="wolf-logo eye-glow">👁 BYAKU<span>GAN</span></div>
+    <div class="page-tag">THE ALL EYE — STOCK SCANNER</div>
+  </div>
+  <a href="/" class="back-btn">← TERMINAL</a>
+</div>
+
+<!-- MARKET REGIME BAR -->
+<div class="regime-bar" id="regimeBar">
+  <div class="regime-item">
+    <div class="regime-label">SPY</div>
+    <div class="regime-val" id="spyVal">—</div>
+  </div>
+  <div class="regime-item">
+    <div class="regime-label">SPY CHANGE</div>
+    <div class="regime-val" id="spyChange">—</div>
+  </div>
+  <div class="regime-item">
+    <div class="regime-label">VIX</div>
+    <div class="regime-val" id="vixVal">—</div>
+  </div>
+  <div class="regime-item">
+    <div class="regime-label">SENTIMENT</div>
+    <div class="regime-val" id="sentimentVal">—</div>
+  </div>
+  <div class="regime-item">
+    <div class="regime-label">REGIME</div>
+    <div class="regime-val" id="regimeVal">—</div>
+  </div>
+  <div class="regime-item" style="flex:2;">
+    <div class="regime-label">WOLF MARKET READ</div>
+    <div class="regime-val neutral" id="marketRead" style="font-size:10px;">Activate Byakugan to see all</div>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="ctrl-label">SCAN UNIVERSE:</div>
+  <button class="filter-btn active" onclick="setFilter('ALL',this)">ALL STOCKS</button>
+  <button class="filter-btn" onclick="setFilter('TECH',this)">TECH</button>
+  <button class="filter-btn" onclick="setFilter('MEME',this)">HIGH BETA</button>
+  <button class="filter-btn" onclick="setFilter('BLUE',this)">BLUE CHIP</button>
+  <button class="filter-btn" onclick="setFilter('ETF',this)">ETFs</button>
+  <button class="scan-btn" id="scanBtn" onclick="runScan()">👁 ACTIVATE BYAKUGAN</button>
+</div>
+
+<!-- LOADING -->
+<div class="loading" id="loading">
+  <div class="loading-title">👁 BYAKUGAN ACTIVATING...</div>
+  <div class="loading-steps">
+    <div class="step" id="step1">→ Checking SPY + VIX market regime...</div>
+    <div class="step" id="step2">→ Scoring stocks: EMA, RSI, Volume, IV...</div>
+    <div class="step" id="step3">→ Detecting unusual options activity...</div>
+    <div class="step" id="step4">→ Fetching news catalysts...</div>
+    <div class="step" id="step5">→ Byakugan analyzing all dimensions......</div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="results" id="results">
+  <!-- Market read -->
+  <div class="market-read" id="marketReadBanner" style="display:none;">
+    <div class="market-read-label">👁 BYAKUGAN MARKET READ</div>
+    <div class="market-read-text" id="marketReadText"></div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox" style="display:none;"></div>
+
+  <!-- Picks -->
+  <div class="picks-grid" id="picksGrid"></div>
+</div>
+
+<!-- Empty state -->
+<div class="empty" id="emptyState">
+  <div class="empty-icon">🐺</div>
+  <div class="empty-text">ACTIVATE BYAKUGAN TO SEE ALL</div>
+  <div style="font-size:9px;color:var(--text3);margin-top:8px;letter-spacing:1px;">Byakugan sees all — 40+ stocks · EMA/RSI/IV · News catalysts · AI top-down analysis</div>
+</div>
+
+<script>
+let currentFilter = 'ALL';
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function animateSteps() {
+  const steps = ['step1','step2','step3','step4','step5'];
+  const delays = [0, 2000, 5000, 10000, 15000];
+  steps.forEach((id, i) => {
+    setTimeout(() => {
+      document.getElementById(id).classList.add('active');
+      if (i > 0) document.getElementById(steps[i-1]).classList.remove('active');
+    }, delays[i]);
+  });
+}
+
+async function runScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.textContent = '👁 SCANNING ALL...';
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('errorBox').style.display = 'none';
+
+  animateSteps();
+
+  try {
+    const res = await fetch('/api/byakugan-scan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({filter: currentFilter})
+    });
+    const data = await res.json();
+
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('results').classList.add('show');
+
+    if (data.error) {
+      document.getElementById('errorBox').style.display = 'block';
+      document.getElementById('errorBox').textContent = '⚠️ ' + data.error;
+      return;
+    }
+
+    renderRegime(data.market_regime);
+    renderPicks(data);
+
+  } catch(e) {
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('results').classList.add('show');
+    document.getElementById('errorBox').style.display = 'block';
+    document.getElementById('errorBox').textContent = '⚠️ Scan failed — ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '👁 ACTIVATE BYAKUGAN';
+  }
+}
+
+function renderRegime(r) {
+  if (!r) return;
+  const spyChange = parseFloat(r.spy_change) || 0;
+  document.getElementById('spyVal').textContent = '$' + r.spy_price;
+  document.getElementById('spyVal').className = 'regime-val ' + (spyChange >= 0 ? 'bull' : 'bear');
+  document.getElementById('spyChange').textContent = (spyChange >= 0 ? '+' : '') + spyChange + '%';
+  document.getElementById('spyChange').className = 'regime-val ' + (spyChange >= 0 ? 'bull' : 'bear');
+  document.getElementById('vixVal').textContent = r.vix;
+  const vix = parseFloat(r.vix);
+  document.getElementById('vixVal').className = 'regime-val ' + (vix > 25 ? 'bear' : vix < 15 ? 'bull' : 'neutral');
+  document.getElementById('sentimentVal').textContent = r.fear_greed || '—';
+  document.getElementById('sentimentVal').className = 'regime-val ' + (r.fear_greed === 'GREED' ? 'bull' : r.fear_greed === 'FEAR' || r.fear_greed === 'EXTREME FEAR' ? 'bear' : 'neutral');
+  document.getElementById('regimeVal').textContent = r.regime || '—';
+  document.getElementById('regimeVal').className = 'regime-val ' + (r.regime === 'BULLISH' ? 'bull' : r.regime === 'BEARISH' ? 'bear' : 'neutral');
+}
+
+function renderPicks(data) {
+  const grid = document.getElementById('picksGrid');
+  grid.innerHTML = '';
+
+  // Market read
+  const mr = data.market_regime;
+  if (mr && mr.wolf_market_read) {
+    document.getElementById('marketRead').textContent = mr.wolf_market_read;
+    document.getElementById('marketReadBanner').style.display = 'block';
+    document.getElementById('marketReadText').textContent = mr.wolf_market_read;
+  }
+
+  const picks = data.picks || [];
+  if (!picks.length) {
+    grid.innerHTML = '<div class="error-box">No picks returned — try again</div>';
+    return;
+  }
+
+  picks.forEach((pick, i) => {
+    const dir = (pick.direction || '').toUpperCase();
+    const dirClass = dir === 'BULLISH' ? 'bull' : dir === 'BEARISH' ? 'bear' : 'neutral';
+    const score = pick.wolf_score || pick.real_score || 0;
+    const conf = pick.confidence || 70;
+    const op = pick.options_play || {};
+    const news = pick.news || [];
+    const signals = pick.real_signals || pick.confluences || [];
+    const warnings = pick.warnings || [];
+    const srLevels = pick.sr_levels || [];
+
+    const card = document.createElement('div');
+    card.className = `pick-card ${dirClass}`;
+    card.innerHTML = `
+      <div class="pick-header">
+        <div class="pick-rank">#${pick.rank || i+1}</div>
+        <div>
+          <div class="pick-ticker">${pick.ticker}</div>
+          <div class="pick-price">$${pick.price} · ${pick.sector || ''}</div>
+        </div>
+        <div class="pick-direction ${dirClass}">${dir === 'BULLISH' ? '▲ BULLISH' : dir === 'BEARISH' ? '▼ BEARISH' : '◆ NEUTRAL'}</div>
+        <div class="pick-score-wrap">
+          <div class="pick-score">${score}</div>
+          <div class="pick-score-label">WOLF SCORE</div>
+        </div>
+      </div>
+
+      <div class="pick-body">
+
+        <!-- THESIS + NEWS -->
+        <div class="pick-section">
+          <div class="section-label">📊 ANALYSIS & NEWS CATALYST</div>
+          <div class="thesis-text">${pick.thesis || ''}</div>
+          ${pick.news_catalyst ? `<div style="font-size:9px;color:var(--yellow);margin-bottom:8px;">⚡ ${pick.news_catalyst}</div>` : ''}
+          ${news.map(n => `<div class="news-item">📰 ${n.title ? n.title.substring(0,80) : ''}<span class="news-source"> — ${n.source || ''}</span></div>`).join('')}
+          <div class="conf-wrap">
+            <div class="conf-label"><span>CONFIDENCE</span><span style="color:var(--green)">${conf}%</span></div>
+            <div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>
+          </div>
+          <div class="indicators-row">
+            ${pick.real_rsi ? `<div class="ind-chip ${pick.real_rsi > 50 ? 'bull' : 'bear'}">RSI ${pick.real_rsi}</div>` : ''}
+            ${pick.real_vol_ratio ? `<div class="ind-chip ${pick.real_vol_ratio >= 1.5 ? 'bull' : 'neutral'}">VOL ${pick.real_vol_ratio}x</div>` : ''}
+            ${pick.real_iv_rank ? `<div class="ind-chip neutral">IV RANK ${pick.real_iv_rank}</div>` : ''}
+          </div>
+        </div>
+
+        <!-- ENTRY/EXIT LEVELS -->
+        <div class="pick-section">
+          <div class="section-label">🎯 ENTRY · EXIT · LEVELS</div>
+          <div class="level-row"><span class="level-label">RESISTANCE</span><span class="level-val res">${pick.key_resistance || '—'}</span></div>
+          <div class="level-row"><span class="level-label">ENTRY ZONE</span><span class="level-val entry">${pick.entry_zone || '—'}</span></div>
+          <div class="level-row"><span class="level-label">SUPPORT</span><span class="level-val sup">${pick.key_support || '—'}</span></div>
+          <div class="level-row"><span class="level-label">STOP LOSS</span><span class="level-val stop">${pick.stop_loss || '—'}</span></div>
+          <div class="level-row"><span class="level-label">TARGET 1</span><span class="level-val tp">${pick.target_1 || '—'}</span></div>
+          <div class="level-row"><span class="level-label">TARGET 2</span><span class="level-val tp">${pick.target_2 || '—'}</span></div>
+          <div class="level-row"><span class="level-label">TARGET 3</span><span class="level-val tp">${pick.target_3 || '—'}</span></div>
+          ${srLevels.slice(0,3).map(l => `
+            <div class="level-row">
+              <span class="level-label">${l.type}</span>
+              <span class="level-val ${l.type === 'RESISTANCE' ? 'res' : 'sup'}">${l.price} <span style="color:var(--text3);font-size:8px;">(${l.distance_pips} pips)</span></span>
+            </div>`).join('')}
+        </div>
+
+        <!-- OPTIONS SETUP -->
+        <div class="pick-section">
+          <div class="section-label">⚡ OPTIONS PLAY</div>
+          <div class="options-box">
+            <div class="opt-strategy">${op.strategy || pick.options_play?.strategy || 'LONG CALL'}</div>
+            <div class="opt-row"><span class="opt-key">STRIKE</span><span class="opt-val">${op.recommended_strike || '—'}</span></div>
+            <div class="opt-row"><span class="opt-key">EXPIRATION</span><span class="opt-val">${op.expiration || '—'}</span></div>
+            <div class="opt-row"><span class="opt-key">ENTRY PRICE</span><span class="opt-val">${op.entry_price || '—'}</span></div>
+            <div class="opt-row"><span class="opt-key">TARGET EXIT</span><span class="opt-val" style="color:var(--green)">${op.target_exit || '—'}</span></div>
+            <div class="opt-row"><span class="opt-key">STOP EXIT</span><span class="opt-val" style="color:var(--red)">${op.stop_exit || '—'}</span></div>
+            <div class="opt-row"><span class="opt-key">MAX RISK</span><span class="opt-val" style="color:var(--orange)">${op.max_risk || '—'}</span></div>
+          </div>
+          ${op.note ? `<div style="font-size:9px;color:var(--text2);margin-top:8px;line-height:1.6;padding:8px;border:1px solid var(--border)">💡 ${op.note}</div>` : ''}
+
+          <div style="margin-top:12px;">
+            <div class="section-label">SIGNALS</div>
+            <div class="signals-list">
+              ${signals.slice(0,4).map(s => `<div class="signal-item bull">✓ ${s}</div>`).join('')}
+              ${warnings.map(w => `<div class="signal-item warn">⚠️ ${w}</div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
