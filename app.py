@@ -1353,47 +1353,38 @@ def score_stock(ticker_sym):
         print(f'[ScoreStock {ticker_sym}] {e}')
         return None
 
-# ── Wolf Stock Scanner page ───────────────────────────────────
-@app.route('/byakugan')
-@login_required
-@elite_required
-def byakugan_page():
-    return render_template('wolf_stocks.html')
+# ── Byakugan job store (in-memory) ───────────────────────────
+import uuid, threading
+_byakugan_jobs = {}  # job_id -> {status, result, error}
 
-# ── Wolf Stock Scanner API ────────────────────────────────────
-@app.route('/api/byakugan-scan', methods=['POST'])
-@login_required
-@elite_required
-def byakugan_scan():
-    """Byakugan — The All Eye: pro stock options scanner with Greeks + 0DTE/1DTE + tomorrow game plan"""
+def run_byakugan_job(job_id, scan_filter, date_str, user_id):
+    """Runs in background thread — stores result in _byakugan_jobs"""
     try:
-        data = request.get_json() or {}
-        scan_filter = data.get('filter', 'ALL')
-        date_str = datetime.now().strftime('%A, %B %d, %Y')
+        _byakugan_jobs[job_id]['status'] = 'scanning'
 
-        # ── Universe by filter ────────────────────────────────
+        # Universe
         if scan_filter == 'TECH':
-            universe = ['AAPL','MSFT','NVDA','AMD','META','GOOGL','AMZN','NFLX','COIN','PLTR','SMCI','ARM','AVGO','MU','INTC','CRM','SNOW']
+            universe = ['AAPL','MSFT','NVDA','AMD','META','GOOGL','AMZN','NFLX','COIN','PLTR','SMCI','AVGO','MU','CRM']
         elif scan_filter == 'MEME':
-            universe = ['TSLA','MARA','RIOT','HOOD','SOFI','RIVN','NIO','BABA','COIN','PLTR','SQ','PYPL']
+            universe = ['TSLA','MARA','HOOD','SOFI','COIN','PLTR','SQ','PYPL','RIOT','NIO']
         elif scan_filter == 'BLUE':
-            universe = ['AAPL','MSFT','GOOGL','AMZN','META','JPM','GS','C','BAC','XOM','CVX','DIS','BA']
+            universe = ['AAPL','MSFT','GOOGL','AMZN','META','JPM','GS','BAC','XOM','CVX','DIS']
         elif scan_filter == 'ETF':
             universe = ['SPY','QQQ','IWM','GLD','TLT','XLK','XLF','XLE','XLV','ARKK']
         elif scan_filter == 'DEFENSE':
-            universe = ['LMT','RTX','NOC','GD','BA','HII','LHX','LDOS','CACI','AXON','KTOS','PLTR']
+            universe = ['LMT','RTX','NOC','GD','HII','LHX','AXON','KTOS','PLTR']
         else:
-            universe = SCAN_UNIVERSE
+            universe = ['AAPL','MSFT','NVDA','TSLA','AMD','META','GOOGL','AMZN',
+                        'NFLX','COIN','PLTR','MARA','HOOD','JPM','GS','XOM','SMCI','AVGO','MU','CRM']
 
-        # ── Market regime ─────────────────────────────────────
         regime = get_market_regime()
         vix = float(regime.get('vix', 20))
 
-        # ── Score all stocks ──────────────────────────────────
+        _byakugan_jobs[job_id]['status'] = 'scoring'
         scored = []
-        with ThreadPoolExecutor(max_workers=8) as ex:
+        with ThreadPoolExecutor(max_workers=6) as ex:
             futures = {ex.submit(score_stock, sym): sym for sym in universe}
-            for f in as_completed(futures, timeout=60):
+            for f in as_completed(futures, timeout=50):
                 sym = futures[f]
                 try:
                     s = f.result()
@@ -1406,88 +1397,58 @@ def byakugan_scan():
         top5 = scored[:5]
 
         if not top5:
-            return jsonify({'error': 'No qualifying stocks found — market may be closed or data unavailable'}), 500
+            _byakugan_jobs[job_id] = {'status':'error','error':'No qualifying stocks found'}
+            return
 
-        # ── News for each pick ────────────────────────────────
+        _byakugan_jobs[job_id]['status'] = 'news'
         for stock in top5:
             try:
                 stock['news'] = get_news(stock['ticker'])[:3]
             except:
                 stock['news'] = []
 
-        # ── Greeks for each pick (real Black-Scholes) ─────────
+        _byakugan_jobs[job_id]['status'] = 'greeks'
         for stock in top5:
             try:
                 S = stock['price']
-                # Use ATM strike, 3DTE for short-term play
-                K = round(S / 5) * 5  # Round to nearest $5 strike
-                T = 3 / 365  # 3 days to expiry
-                r = 0.045
+                K = round(S / 5) * 5
+                T = 3 / 365; r = 0.045
                 iv = 0.35 if not stock.get('iv_rank') else max(0.15, min(0.80, stock['iv_rank'] / 100))
-                direction = stock.get('direction', 'BULLISH')
-                opt_type = 'call' if direction == 'BULLISH' else 'put'
-                greeks = calculate_greeks(S, K, T, r, iv, opt_type)
-                stock['greeks'] = greeks
+                opt_type = 'call' if stock.get('direction') == 'BULLISH' else 'put'
+                stock['greeks'] = calculate_greeks(S, K, T, r, iv, opt_type)
                 stock['atm_strike'] = K
                 stock['iv_estimate'] = round(iv * 100, 1)
-            except Exception as e:
+            except:
                 stock['greeks'] = None
-                print(f'[Greeks {stock["ticker"]}] {e}')
 
-        # ── Build Claude prompt ───────────────────────────────
+        _byakugan_jobs[job_id]['status'] = 'analyzing'
         regime_str = f"SPY: {regime['spy_price']} ({regime['spy_change']:+.2f}%) | VIX: {vix} | Sentiment: {regime['fear_greed']} | Regime: {regime['regime']}"
-
-        # VIX-based strategy guidance
-        if vix > 30:
-            vix_guide = "VIX EXTREME FEAR >30: Sell premium (Iron Condors, Credit Spreads). Avoid buying naked options."
-        elif vix > 20:
-            vix_guide = "VIX ELEVATED 20-30: Favor defined-risk spreads. Short-dated buys OK with tight stops."
-        elif vix < 15:
-            vix_guide = "VIX LOW <15: Buy directional calls/puts. Premium is cheap. 0DTE/1DTE plays viable on SPY/QQQ."
-        else:
-            vix_guide = "VIX NORMAL 15-20: Debit spreads and directional plays with 3-7 DTE are ideal."
+        if vix > 30:   vix_guide = "VIX EXTREME FEAR >30: Sell premium. Avoid buying naked options."
+        elif vix > 20: vix_guide = "VIX ELEVATED 20-30: Favor defined-risk spreads."
+        elif vix < 15: vix_guide = "VIX LOW <15: Buy directional calls/puts. 0DTE/1DTE viable on SPY/QQQ."
+        else:          vix_guide = "VIX NORMAL 15-20: Debit spreads and directional plays 3-7 DTE ideal."
 
         stocks_ctx = ''
         for s in top5:
             g = s.get('greeks') or {}
-            stocks_ctx += f"""
-{'='*55}
-{s['ticker']} | ${s['price']} | Score: {s['score']}/100 | {s['direction']}
-TECHNICALS: EMA20:{s['ema20']} EMA50:{s['ema50']} EMA200:{s['ema200']} RSI:{s['rsi']} MACD:{s['macd_bias']}
-OPTIONS DATA: IV~{s.get('iv_estimate','?')}% | Vol:{s['vol_ratio']}x | UOA:{s['unusual_activity']}x | Calls:{s['call_vol']} Puts:{s['put_vol']}
-GREEKS (ATM ${s.get('atm_strike','?')} 3DTE): Delta:{g.get('delta','?')} Gamma:{g.get('gamma','?')} Theta:{g.get('theta','?')}/day Vega:{g.get('vega','?')}
-S/R: {[(l['type'],l['price']) for l in s['sr_levels'][:3]]}
-NEWS: {' | '.join([n['title'][:70] for n in s['news']]) if s['news'] else 'No catalyst'}
-{'='*55}"""
+            stocks_ctx += f"\n{'='*50}\n{s['ticker']} | ${s['price']} | Score:{s['score']}/100 | {s['direction']}\nEMA20:{s['ema20']} EMA50:{s['ema50']} EMA200:{s['ema200']} RSI:{s['rsi']} MACD:{s['macd_bias']}\nIV~{s.get('iv_estimate','?')}% Vol:{s['vol_ratio']}x UOA:{s['unusual_activity']}x Calls:{s['call_vol']} Puts:{s['put_vol']}\nGreeks ATM${s.get('atm_strike','?')} 3DTE: D:{g.get('delta','?')} G:{g.get('gamma','?')} T:{g.get('theta','?')} V:{g.get('vega','?')}\nS/R:{[(l['type'],l['price']) for l in s['sr_levels'][:2]]}\nNEWS:{' | '.join([n['title'][:60] for n in s['news']]) if s['news'] else 'No catalyst'}\n{'='*50}"
 
-        prompt = f"""You are Byakugan — Wall Street elite options trader. You see ALL. Paul Tudor Jones discipline. Tom Sosnoff premium selling mastery. Jesse Livermore trend following. You analyze tonight so the trader knows EXACTLY what to do when market opens tomorrow.
+        prompt = f"""You are Byakugan — Wall Street elite options trader. Paul Tudor Jones discipline. Tom Sosnoff premium mastery. Jesse Livermore trend following. Analyze so trader knows EXACTLY what to do when market opens tomorrow.
 
-TODAY: {date_str}
-MARKET: {regime_str}
-VIX STRATEGY: {vix_guide}
+TODAY: {date_str} | MARKET: {regime_str} | VIX: {vix_guide}
 
-TOP 5 STOCKS SCANNED WITH REAL DATA:
+TOP 5 STOCKS:
 {stocks_ctx}
 
-CRITICAL RULES — YOU ARE A PRO:
-1. EXPIRATION: Single stocks use THIS FRIDAY weekly (1-5 DTE). SPY/QQQ/SPX can use 0DTE or 1DTE.
-2. GREEKS: Delta 0.35-0.50 = directional play. Delta 0.15-0.25 = high leverage lottery. Always show Greeks.
-3. CONFIDENCE: Be DECISIVE. If setup is clear — 80-92%. If mixed — 65-75%. Never below 60% if you're picking it.
-4. TOMORROW GAME PLAN: Tell trader exactly when to enter (market open? wait for pullback? pre-market?), what price triggers the trade, and when to walk away.
-5. NEWS IS EVERYTHING: If there's a news catalyst — that's your thesis. Trade the news.
-6. VIX > 25 = sell premium or use spreads. VIX < 15 = buy directional cheap premium.
-7. Use REAL S/R levels from data above for exact entries and stops.
-8. Greeks MUST be included — Delta, Gamma, Theta, Vega for the recommended strike.
+RULES: Single stocks use THIS FRIDAY weekly (1-5 DTE). SPY/QQQ use 0DTE/1DTE. Delta 0.35-0.50 directional. Confidence: clear setup=80-92%, mixed=65-75%. Include Greeks. Use real S/R for entries/stops.
 
-Respond ONLY in valid JSON (no markdown, no backticks):
-{{"scan_date":"{date_str}","market_regime":{{"spy":"{regime['spy_price']}","spy_change":"{regime['spy_change']:+.2f}%","vix":"{vix}","sentiment":"{regime['fear_greed']}","regime":"{regime['regime']}","wolf_market_read":"2 confident sentences on what market is doing and what that means for options tomorrow"}},"tomorrow_game_plan":"3 sentence overall game plan for when market opens tomorrow — what is the macro setup, what sectors to focus, what to avoid","picks":[{{"rank":1,"ticker":"NVDA","price":"875.00","wolf_score":88,"confidence":85,"direction":"BULLISH","sector":"Technology","thesis":"3-4 sentence thesis. Be specific. Reference real EMA/RSI/news data. Tell me WHY this moves tomorrow.","news_catalyst":"Exact news item driving this — be specific","technical_setup":"Price above EMA200 at 820, RSI 58 building momentum, volume 2.3x — breakout continuation","entry_zone":"870-875","key_support":"858","key_resistance":"890","stop_loss":"852","target_1":"895","target_2":"915","target_3":"940","tomorrow_entry":"Wait for first 15 min candle to close above 878 — enter on confirmation, not before open","options_play":{{"strategy":"LONG CALL","recommended_strike":"880C","expiration":"This Friday (3 DTE)","entry_price":"8.50-10.00","max_risk":"$1000 per contract","target_exit":"$20.00+","stop_exit":"$4.00","greeks":{{"delta":0.42,"gamma":0.008,"theta":-0.85,"vega":0.45}},"iv_environment":"IV at 38% — moderate, debit spread or long call both work","note":"High gamma near ATM — if NVDA breaks 880 this explodes fast"}},"confluences":["Above EMA200","RSI building","Volume surge 2.3x","Earnings beat catalyst","Unusual call activity 1.8x"],"warnings":["Resistance at 890 — take partial profits","Broad market selloff would invalidate"],"invalidation":"Close below 852 stop — exit immediately"}}]}}"""
+Respond ONLY valid JSON no markdown:
+{{"scan_date":"{date_str}","market_regime":{{"spy":"{regime['spy_price']}","spy_change":"{regime['spy_change']:+.2f}%","vix":"{vix}","sentiment":"{regime['fear_greed']}","regime":"{regime['regime']}","wolf_market_read":"2 sentences on market and what it means for options tomorrow"}},"tomorrow_game_plan":"3 sentences — macro setup, sectors to focus, what to avoid","picks":[{{"rank":1,"ticker":"NVDA","price":"875.00","wolf_score":88,"confidence":85,"direction":"BULLISH","sector":"Technology","thesis":"3-4 sentence thesis with real data","news_catalyst":"specific news","technical_setup":"EMA+RSI+SR setup","entry_zone":"870-875","key_support":"858","key_resistance":"890","stop_loss":"852","target_1":"895","target_2":"915","target_3":"940","tomorrow_entry":"exact entry instructions for tomorrow open","options_play":{{"strategy":"LONG CALL","recommended_strike":"880C","expiration":"This Friday (3 DTE)","entry_price":"8.50-10.00","max_risk":"$1000 per contract","target_exit":"$20.00+","stop_exit":"$4.00","greeks":{{"delta":0.42,"gamma":0.008,"theta":-0.85,"vega":0.45}},"iv_environment":"IV context","note":"key note"}},"confluences":["signal1","signal2"],"warnings":["warning1"],"invalidation":"exact stop condition"}}]}}"""
 
-        result = parse_json_response(call_claude(prompt, 7000))
+        result = parse_json_response(call_claude(prompt, 5000))
 
-        # ── Inject real data back ─────────────────────────────
         for pick in result.get('picks', []):
-            ticker = pick.get('ticker', '')
-            match = next((s for s in top5 if s['ticker'] == ticker), None)
+            match = next((s for s in top5 if s['ticker'] == pick.get('ticker','')), None)
             if match:
                 pick['real_score']     = match['score']
                 pick['real_rsi']       = match['rsi']
@@ -1499,13 +1460,54 @@ Respond ONLY in valid JSON (no markdown, no backticks):
                 pick['real_greeks']    = match.get('greeks')
 
         result['market_regime'] = regime
-        return jsonify(result)
+        _byakugan_jobs[job_id] = {'status': 'done', 'result': result}
 
-    except json.JSONDecodeError as e:
-        return jsonify({'error': f'AI analysis error — try again ({str(e)[:50]})'}), 500
     except Exception as e:
         import traceback; print(traceback.format_exc())
+        _byakugan_jobs[job_id] = {'status': 'error', 'error': str(e)}
+
+# ── Byakugan page ─────────────────────────────────────────────
+@app.route('/byakugan')
+@login_required
+@elite_required
+def byakugan_page():
+    return render_template('wolf_stocks.html')
+
+# ── Phase 1: Start scan job, return job_id immediately ────────
+@app.route('/api/byakugan-scan', methods=['POST'])
+@login_required
+@elite_required
+def byakugan_scan():
+    """Phase 1 — kick off background job, return job_id instantly"""
+    try:
+        data = request.get_json() or {}
+        scan_filter = data.get('filter', 'ALL')
+        date_str = datetime.now().strftime('%A, %B %d, %Y')
+        job_id = str(uuid.uuid4())[:8]
+        _byakugan_jobs[job_id] = {'status': 'starting'}
+        t = threading.Thread(target=run_byakugan_job, args=(job_id, scan_filter, date_str, current_user.id), daemon=True)
+        t.start()
+        return jsonify({'job_id': job_id, 'status': 'starting'})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ── Phase 2: Poll for job result ──────────────────────────────
+@app.route('/api/byakugan-poll/<job_id>', methods=['GET'])
+@login_required
+@elite_required
+def byakugan_poll(job_id):
+    job = _byakugan_jobs.get(job_id)
+    if not job:
+        return jsonify({'status': 'error', 'error': 'Job not found'}), 404
+    if job['status'] == 'done':
+        result = job.get('result', {})
+        result['status'] = 'done'
+        # Clean up after delivery
+        del _byakugan_jobs[job_id]
+        return jsonify(result)
+    if job['status'] == 'error':
+        return jsonify({'status': 'error', 'error': job.get('error', 'Unknown error')}), 500
+    return jsonify({'status': job['status']})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

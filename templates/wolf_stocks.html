@@ -216,20 +216,63 @@ async function runScan(){
   document.getElementById('errorBox').style.display='none';
   document.getElementById('tomorrowBanner').classList.remove('show');
   animateSteps();
+
   try{
-    const res=await fetch('/api/byakugan-scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filter:currentFilter})});
-    const data=await res.json();
+    // Phase 1 — start job, get job_id immediately
+    const startRes = await fetch('/api/byakugan-scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filter:currentFilter})});
+    const startData = await startRes.json();
+    if(startData.error){throw new Error(startData.error);}
+    const jobId = startData.job_id;
+
+    // Phase 2 — poll every 3 seconds until done
+    let attempts = 0;
+    const maxAttempts = 60; // 3 min max
+    const statusLabels = {
+      'starting':'→ Byakugan activating...',
+      'scanning':'→ Reading market regime + scoring stocks...',
+      'scoring':'→ Calculating EMA, RSI, volume signals...',
+      'news':'→ Fetching news catalysts...',
+      'greeks':'→ Calculating Black-Scholes Greeks...',
+      'analyzing':'→ Byakugan AI running top-down analysis...'
+    };
+
+    const pollResult = await new Promise((resolve, reject) => {
+      const poll = setInterval(async () => {
+        attempts++;
+        if(attempts > maxAttempts){clearInterval(poll);reject(new Error('Scan timed out — try again'));return;}
+        try{
+          const pollRes = await fetch(`/api/byakugan-poll/${jobId}`);
+          const pollData = await pollRes.json();
+          if(pollData.status==='done'){clearInterval(poll);resolve(pollData);return;}
+          if(pollData.status==='error'){clearInterval(poll);reject(new Error(pollData.error||'Scan failed'));return;}
+          // Update loading step label
+          const label = statusLabels[pollData.status];
+          if(label){
+            document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+            const activeStep = document.getElementById(
+              pollData.status==='scanning'?'step2':
+              pollData.status==='scoring'?'step3':
+              pollData.status==='news'?'step4':
+              pollData.status==='greeks'?'step5':
+              pollData.status==='analyzing'?'step6':'step1'
+            );
+            if(activeStep)activeStep.classList.add('active');
+          }
+        }catch(e){/* keep polling */}
+      }, 3000);
+    });
+
     document.getElementById('loading').classList.remove('show');
     document.getElementById('results').classList.add('show');
-    if(data.error){document.getElementById('errorBox').style.display='block';document.getElementById('errorBox').textContent='⚠️ '+data.error;return;}
-    renderRegime(data.market_regime);
-    if(data.tomorrow_game_plan){document.getElementById('tomorrowText').textContent=data.tomorrow_game_plan;document.getElementById('tomorrowBanner').classList.add('show');}
-    renderPicks(data);
+    renderRegime(pollResult.market_regime);
+    if(pollResult.tomorrow_game_plan){document.getElementById('tomorrowText').textContent=pollResult.tomorrow_game_plan;document.getElementById('tomorrowBanner').classList.add('show');}
+    renderPicks(pollResult);
+
   }catch(e){
     document.getElementById('loading').classList.remove('show');
     document.getElementById('results').classList.add('show');
     document.getElementById('errorBox').style.display='block';
-    document.getElementById('errorBox').textContent='⚠️ Scan failed — '+e.message;
+    document.getElementById('errorBox').textContent='⚠️ '+e.message;
   }finally{btn.disabled=false;btn.textContent='👁 ACTIVATE BYAKUGAN';}
 }
 
