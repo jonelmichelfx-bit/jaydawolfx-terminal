@@ -83,4 +83,4 @@ def signup():
 def logout():
     logout_user()
     session.clear()
-    return redirect('/auth/login')
+    return redirect('/login')

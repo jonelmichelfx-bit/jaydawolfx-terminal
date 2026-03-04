@@ -49,7 +49,7 @@ def load_user(user_id):
 def unauthorized():
     if request.path.startswith('/api/') or request.path.startswith('/scanner/'):
         return jsonify({'error': 'Please log in to access this feature.', 'action': 'login'}), 401
-    return redirect(url_for('login_page'))
+    return redirect(url_for('auth.login_page'))
 
 @app.route('/api/server-time')
 def server_time():
