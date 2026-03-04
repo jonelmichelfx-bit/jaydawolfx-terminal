@@ -1101,10 +1101,9 @@ def make_me_admin(secret):
 
 # ── Stock Scanner watchlist (high volume, optionable stocks) ──
 SCAN_UNIVERSE = [
-    'AAPL','MSFT','NVDA','TSLA','AMD','META','GOOGL','AMZN','NFLX','SPY',
-    'QQQ','BABA','COIN','PLTR','SOFI','MARA','RIOT','HOOD','UBER','LYFT',
-    'DIS','BA','GS','JPM','C','BAC','XOM','CVX','RIVN','NIO',
-    'SMCI','ARM','AVGO','MU','INTC','CRM','SNOW','SHOP','SQ','PYPL'
+    'AAPL','MSFT','NVDA','TSLA','AMD','META','GOOGL','AMZN',
+    'NFLX','COIN','PLTR','MARA','HOOD','UBER','DIS','JPM',
+    'GS','XOM','SMCI','AVGO','MU','CRM','SQ','PYPL'
 ]
 
 # ── Market regime from SPY + VIX ─────────────────────────────
@@ -1394,7 +1393,7 @@ def byakugan_scan():
         scored = []
         with ThreadPoolExecutor(max_workers=8) as ex:
             futures = {ex.submit(score_stock, sym): sym for sym in universe}
-            for f in as_completed(futures, timeout=45):
+            for f in as_completed(futures, timeout=60):
                 sym = futures[f]
                 try:
                     s = f.result()
