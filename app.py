@@ -1547,6 +1547,6 @@ def byakugan_poll(job_id):
     if job['status']=='error':
         return jsonify({'status':'error','error':job.get('error','Unknown error')}),500
     return jsonify({'status':job['status']})
--e 
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
