@@ -452,6 +452,64 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       </div>
     </div>
 
+    <!-- POSITION SIZING CALCULATOR -->
+    <div class="sec">// Position Sizing Calculator</div>
+    <div class="form-sec">
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">Account Size ($)</label>
+          <input class="fi" id="psAccount" type="number" value="10000" step="100" oninput="calcPositionSize()">
+        </div>
+        <div class="fg">
+          <label class="fl">Risk % Per Trade</label>
+          <input class="fi" id="psRisk" type="number" value="1" step="0.5" min="0.1" oninput="calcPositionSize()">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg">
+          <label class="fl">Option Price ($)</label>
+          <input class="fi" id="psEntry" type="number" value="3.00" step="0.01" oninput="calcPositionSize()">
+        </div>
+        <div class="fg">
+          <label class="fl">Stop Price ($)</label>
+          <input class="fi" id="psStop" type="number" value="1.50" step="0.01" oninput="calcPositionSize()">
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Target Price ($)</label>
+        <input class="fi" id="psTarget" type="number" value="6.00" step="0.01" oninput="calcPositionSize()">
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:12px;margin-top:4px;">
+        <div class="c-row"><div class="c-lbl"><div class="c-lbl-main">Contracts to Buy</div><div class="c-lbl-hint">Based on your risk rules</div></div><div class="c-val v-green" id="psContracts">—</div></div>
+        <div class="c-row"><div class="c-lbl"><div class="c-lbl-main">Max Loss</div><div class="c-lbl-hint">If stop is hit</div></div><div class="c-val v-red" id="psMaxLoss">—</div></div>
+        <div class="c-row"><div class="c-lbl"><div class="c-lbl-main">Max Gain</div><div class="c-lbl-hint">If target is hit</div></div><div class="c-val v-green" id="psMaxGain">—</div></div>
+        <div class="c-row"><div class="c-lbl"><div class="c-lbl-main">Risk:Reward</div><div class="c-lbl-hint">Ratio of gain to loss</div></div><div class="c-val v-cyan" id="psRR">—</div></div>
+        <div class="c-row"><div class="c-lbl"><div class="c-lbl-main">Win Rate Needed</div><div class="c-lbl-hint">To break even long-term</div></div><div class="c-val v-yellow" id="psWinRate">—</div></div>
+      </div>
+    </div>
+
+    <!-- EARNINGS DANGER FILTER -->
+    <div class="sec">// Earnings Danger Filter</div>
+    <div class="form-sec">
+      <div class="fg">
+        <label class="fl">Tickers <span class="fl-hint">comma separated</span></label>
+        <input class="fi" id="efTickers" type="text" placeholder="AAPL, MSFT, NVDA, TSLA">
+      </div>
+      <div class="fg">
+        <label class="fl">Safe Window <span class="fl-hint">days before earnings</span></label>
+        <input class="fi" id="efDays" type="number" value="3" min="1" max="14">
+      </div>
+      <button class="btn btn-c" style="width:100%;margin-bottom:10px;" onclick="checkEarnings()">CHECK EARNINGS</button>
+      <div id="efResults"></div>
+    </div>
+
+    <!-- SECTOR HEAT MAP -->
+    <div class="sec">// Sector Heat Map</div>
+    <div class="form-sec">
+      <button class="btn btn-g" style="width:100%;margin-bottom:10px;" onclick="loadSectors()">LOAD SECTORS</button>
+      <div id="sectorResults"></div>
+    </div>
+
     <div class="disc">⚠ For educational purposes only. Not financial advice. Options trading involves significant risk of loss. Past performance does not predict future results.</div>
   </aside>
 
@@ -901,6 +959,87 @@ function calcHold(){
   if(net>0){vt.textContent='✓ TRADE LOOKS GOOD';vt.style.color='var(--green)';}
   else if(net>-20){vt.textContent='⚠ BORDERLINE — BE CAREFUL';vt.style.color='var(--yellow)';}
   else{vt.textContent='✕ THETA KILLS THIS TRADE';vt.style.color='var(--red)';}
+}
+
+// ── POSITION SIZING CALCULATOR ──────────────────────────────
+function calcPositionSize(){
+  const account = parseFloat(document.getElementById('psAccount').value)||10000;
+  const riskPct = parseFloat(document.getElementById('psRisk').value)||1;
+  const entry   = parseFloat(document.getElementById('psEntry').value)||3;
+  const stop    = parseFloat(document.getElementById('psStop').value)||1.5;
+  const target  = parseFloat(document.getElementById('psTarget').value)||6;
+  const riskPerTrade    = account * (riskPct / 100);
+  const riskPerContract = (entry - stop) * 100;
+  if(riskPerContract <= 0){ document.getElementById('psContracts').textContent='—'; return; }
+  const contracts   = Math.max(1, Math.min(50, Math.floor(riskPerTrade / riskPerContract)));
+  const maxLoss     = contracts * riskPerContract;
+  const maxGain     = contracts * (target - entry) * 100;
+  const rr          = ((target - entry) / (entry - stop)).toFixed(2);
+  const winNeeded   = (1 / (1 + parseFloat(rr)) * 100).toFixed(1);
+  document.getElementById('psContracts').textContent = contracts + ' contracts';
+  document.getElementById('psMaxLoss').textContent   = '-$' + maxLoss.toFixed(2);
+  document.getElementById('psMaxGain').textContent   = '+$' + maxGain.toFixed(2);
+  document.getElementById('psRR').textContent        = '1:' + rr;
+  document.getElementById('psWinRate').textContent   = winNeeded + '% needed';
+}
+calcPositionSize();
+
+// ── EARNINGS DANGER FILTER ───────────────────────────────────
+async function checkEarnings(){
+  const raw   = document.getElementById('efTickers').value;
+  const days  = parseInt(document.getElementById('efDays').value)||3;
+  const tickers = raw.split(',').map(t=>t.trim().toUpperCase()).filter(Boolean);
+  if(!tickers.length){ alert('Enter at least one ticker'); return; }
+  const box = document.getElementById('efResults');
+  box.innerHTML = '<div style="color:var(--text3);font-family:Share Tech Mono,monospace;font-size:11px;padding:8px 0;">Checking...</div>';
+  try{
+    const r = await fetch('/api/earnings-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tickers,days_out:days})});
+    const d = await r.json();
+    if(d.error){ box.innerHTML='<div style="color:var(--red);font-size:12px;">'+d.error+'</div>'; return; }
+    box.innerHTML = d.results.map(s=>{
+      const safe  = s.safe !== false;
+      const color = safe ? 'var(--green)' : 'var(--red)';
+      const badge = safe ? '✅ SAFE' : '⚠️ DANGER';
+      const info  = s.days_away !== null ? (s.days_away >= 0 ? 'Earnings in '+s.days_away+'d' : 'Earnings passed') : 'No date found';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text);">${s.ticker}</div>
+          <div style="font-size:11px;color:var(--text3);">${info}</div>
+        </div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:bold;color:${color};">${badge}</div>
+      </div>`;
+    }).join('');
+  }catch(e){ box.innerHTML='<div style="color:var(--red);font-size:12px;">Connection error</div>'; }
+}
+
+// ── SECTOR HEAT MAP ──────────────────────────────────────────
+async function loadSectors(){
+  const box = document.getElementById('sectorResults');
+  box.innerHTML = '<div style="color:var(--text3);font-family:Share Tech Mono,monospace;font-size:11px;padding:8px 0;">Loading sectors...</div>';
+  try{
+    const r = await fetch('/api/sector-heatmap');
+    const d = await r.json();
+    if(d.error){ box.innerHTML='<div style="color:var(--red);font-size:12px;">'+d.error+'</div>'; return; }
+    box.innerHTML = '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--text3);letter-spacing:2px;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px;">UPDATED: '+d.updated+'</div>'
+    + d.sectors.map(s=>{
+      const hot   = s.signal === 'HOT';
+      const cold  = s.signal === 'COLD';
+      const color = hot ? 'var(--green)' : cold ? 'var(--red)' : 'var(--yellow)';
+      const icon  = hot ? '🔥' : cold ? '❄️' : '➖';
+      const dayColor = s.day_chg >= 0 ? 'var(--green)' : 'var(--red)';
+      const wkColor  = s.week_chg >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:12px;color:var(--text);font-weight:600;">${icon} ${s.sector}</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);">${s.etf} · $${s.price}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:12px;color:${dayColor};">${s.day_chg>=0?'+':''}${s.day_chg}%</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:${wkColor};">wk: ${s.week_chg>=0?'+':''}${s.week_chg}%</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){ box.innerHTML='<div style="color:var(--red);font-size:12px;">Connection error</div>'; }
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.activeElement.tagName==='INPUT')analyze();});
