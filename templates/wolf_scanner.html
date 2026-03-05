@@ -642,7 +642,16 @@ function renderResults(data){
         <div class="tc-right">
           <div class="tc-price">${livePrice}</div>
           <div class="tc-chg ${livePct>=0?'tick-up':'tick-dn'}">${livePct>=0?'▲':'▼'} ${Math.abs(livePct).toFixed(2)}%</div>
-          <div class="tc-conf">WOLF SCORE: ${t.wolf_score||t.confidence||'--'}/10</div>
+          <div class="tc-conf">WOLF SCORE: ${t.wolf_score ? parseFloat(t.wolf_score).toFixed(1)+'/10' : '--'}</div>
+          <div style="margin-top:5px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <span style="font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--text-dim);">CONFIDENCE</span>
+              <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:${(t.confidence||0)>=80?'var(--green)':(t.confidence||0)>=60?'var(--gold)":'var(--red)'};">${t.confidence||'--'}%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${t.confidence||0}%;background:${(t.confidence||0)>=80?'var(--green)':(t.confidence||0)>=60?'var(--gold)":'var(--red)'};border-radius:2px;transition:width 0.5s;"></div>
+            </div>
+          </div>
         </div>
       </div>
 

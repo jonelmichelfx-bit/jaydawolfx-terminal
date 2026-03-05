@@ -461,6 +461,59 @@ input::placeholder{color:var(--text-dim);}
       <button class="analyze-btn" id="ana-btn" onclick="runAnalysis()">🐺 DEEP ANALYSIS</button>
       <div style="font-size:9px;color:var(--text-dim);text-align:center;letter-spacing:1px;">Top-down · Scenario · Live data · Claude AI</div>
     </div>
+
+    <!-- FOREX POSITION SIZING -->
+    <div class="sb-sec">
+      <div class="sb-lbl">POSITION SIZING</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div>
+            <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">ACCOUNT ($)</div>
+            <input id="fx-account" type="number" value="10000" step="500"
+              style="width:100%;background:var(--surface2,#1a1a26);border:1px solid var(--border);color:var(--text);padding:7px 8px;font-size:12px;font-family:'Courier New',monospace;outline:none;"
+              oninput="calcFxSize()">
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">RISK %</div>
+            <input id="fx-risk" type="number" value="1" step="0.5" min="0.1" max="5"
+              style="width:100%;background:var(--surface2,#1a1a26);border:1px solid var(--border);color:var(--text);padding:7px 8px;font-size:12px;font-family:'Courier New',monospace;outline:none;"
+              oninput="calcFxSize()">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div>
+            <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">STOP (pips)</div>
+            <input id="fx-stop" type="number" value="20" step="1" min="1"
+              style="width:100%;background:var(--surface2,#1a1a26);border:1px solid var(--border);color:var(--text);padding:7px 8px;font-size:12px;font-family:'Courier New',monospace;outline:none;"
+              oninput="calcFxSize()">
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">TARGET (pips)</div>
+            <input id="fx-target" type="number" value="40" step="1" min="1"
+              style="width:100%;background:var(--surface2,#1a1a26);border:1px solid var(--border);color:var(--text);padding:7px 8px;font-size:12px;font-family:'Courier New',monospace;outline:none;"
+              oninput="calcFxSize()">
+          </div>
+        </div>
+        <div style="background:rgba(0,0,0,0.3);border:1px solid var(--border);padding:10px;">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:10px;color:var(--text-dim);">Lot Size</span>
+            <span style="font-family:'Courier New',monospace;font-size:13px;font-weight:bold;color:#00ff88;" id="fx-lots">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:10px;color:var(--text-dim);">Max Loss</span>
+            <span style="font-family:'Courier New',monospace;font-size:13px;color:#ff4757;" id="fx-maxloss">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:10px;color:var(--text-dim);">Max Gain</span>
+            <span style="font-family:'Courier New',monospace;font-size:13px;color:#00ff88;" id="fx-maxgain">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;">
+            <span style="font-size:10px;color:var(--text-dim);">Risk:Reward</span>
+            <span style="font-family:'Courier New',monospace;font-size:13px;color:#ffd700;" id="fx-rr">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </aside>
 
   <!-- MAIN -->
@@ -1925,6 +1978,38 @@ renderTracker();
 // Fetch live prices immediately then every 30 seconds
 fetchAllPrices();
 setInterval(fetchAllPrices,30000);
+
+// ── FOREX POSITION SIZING ────────────────────────────────────
+function calcFxSize(){
+  const account  = parseFloat(document.getElementById('fx-account').value)||10000;
+  const riskPct  = parseFloat(document.getElementById('fx-risk').value)||1;
+  const stopPips = parseFloat(document.getElementById('fx-stop').value)||20;
+  const tpPips   = parseFloat(document.getElementById('fx-target').value)||40;
+
+  const riskAmount    = account * (riskPct / 100);
+  // Standard lot = 100,000 units; 1 pip on standard lot ≈ $10 (USD pairs)
+  const pipValueStd   = 10; // per standard lot per pip
+  const lots          = riskAmount / (stopPips * pipValueStd * 100); // in micro lots
+  const stdLots       = riskAmount / (stopPips * pipValueStd);
+  const maxLoss       = stdLots * stopPips * pipValueStd;
+  const maxGain       = stdLots * tpPips   * pipValueStd;
+  const rr            = (tpPips / stopPips).toFixed(2);
+
+  // Display as standard lots if >= 0.01, otherwise micro
+  let lotDisplay;
+  if(stdLots >= 0.01){
+    lotDisplay = stdLots.toFixed(2) + ' lots';
+  } else {
+    lotDisplay = (stdLots * 100).toFixed(2) + ' micro';
+  }
+
+  document.getElementById('fx-lots').textContent    = lotDisplay;
+  document.getElementById('fx-maxloss').textContent = '-$' + maxLoss.toFixed(2);
+  document.getElementById('fx-maxgain').textContent = '+$' + maxGain.toFixed(2);
+  document.getElementById('fx-rr').textContent      = '1:' + rr;
+}
+calcFxSize();
+
 </script>
 </body>
 </html>
