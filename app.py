@@ -1016,6 +1016,98 @@ def forex_picks():
 
 # ── Wolf Scan Job Store (in-memory) ──────────────────────────
 import threading, uuid
+def calculate_real_confidence(pair, direction, chart_data):
+    """
+    Calculate confidence score 0-100 from REAL chart data.
+    Replaces AI-guessed confidence with data-driven score.
+    direction: 'BUY' or 'SELL'
+    """
+    score = 0
+    ca = chart_data.get(pair, {})
+    if not ca:
+        return 50  # no data — neutral
+
+    d  = ca.get('daily', {})
+    w  = ca.get('weekly', {})
+    h  = ca.get('hourly', {})
+    ts = ca.get('trend_summary', {})
+    sr = ca.get('sr_levels', [])
+
+    is_bull = direction.upper() in ('BUY', 'BULLISH')
+
+    # ── 1. TIMEFRAME ALIGNMENT (30 pts) ──────────────────────
+    w_trend = w.get('trend', 'NEUTRAL')
+    d_trend = d.get('trend', 'NEUTRAL')
+    h_trend = h.get('trend', 'NEUTRAL')
+
+    tf_match = 0
+    for t in [w_trend, d_trend, h_trend]:
+        if is_bull and t == 'BULLISH':   tf_match += 1
+        elif not is_bull and t == 'BEARISH': tf_match += 1
+
+    score += tf_match * 10  # 0, 10, 20, or 30
+
+    # ── 2. RSI ZONE (20 pts) ──────────────────────────────────
+    d_rsi = d.get('rsi')
+    h_rsi = h.get('rsi')
+
+    for rsi in [d_rsi, h_rsi]:
+        if rsi is None:
+            continue
+        if is_bull:
+            if 40 <= rsi <= 60:   score += 8   # ideal momentum building
+            elif 30 <= rsi < 40:  score += 10  # oversold bounce potential
+            elif rsi < 30:        score += 6   # deep oversold — risky
+            elif rsi > 70:        score -= 5   # overbought — bad for buy
+        else:
+            if 40 <= rsi <= 60:   score += 8
+            elif 60 < rsi <= 70:  score += 10  # overbought rejection potential
+            elif rsi > 70:        score += 6   # deep overbought — risky
+            elif rsi < 30:        score -= 5   # oversold — bad for sell
+
+    # ── 3. EMA STACK (20 pts) ─────────────────────────────────
+    cp = ca.get('current_price', 0)
+    ema20  = d.get('ema20')
+    ema50  = d.get('ema50')
+    ema200 = d.get('ema200')
+
+    if cp and ema200:
+        if is_bull and cp > ema200:   score += 8
+        elif not is_bull and cp < ema200: score += 8
+
+    if cp and ema50:
+        if is_bull and cp > ema50:    score += 7
+        elif not is_bull and cp < ema50:  score += 7
+
+    if cp and ema20:
+        if is_bull and cp > ema20:    score += 5
+        elif not is_bull and cp < ema20:  score += 5
+
+    # ── 4. MACD CONFIRMS (15 pts) ─────────────────────────────
+    d_macd = d.get('macd_bias')
+    h_macd = h.get('macd_bias')
+
+    if d_macd:
+        if is_bull and d_macd == 'BULLISH':   score += 8
+        elif not is_bull and d_macd == 'BEARISH': score += 8
+
+    if h_macd:
+        if is_bull and h_macd == 'BULLISH':   score += 7
+        elif not is_bull and h_macd == 'BEARISH': score += 7
+
+    # ── 5. CLEAN S/R NEARBY (15 pts) ─────────────────────────
+    if sr:
+        close_levels = [lv for lv in sr if lv.get('distance_pips', 999) < 50]
+        if close_levels:
+            score += 8
+        strong_levels = [lv for lv in sr if lv.get('strength', 0) >= 3 and lv.get('distance_pips', 999) < 80]
+        if strong_levels:
+            score += 7
+
+    # ── CLAMP to 0-100 ────────────────────────────────────────
+    return max(0, min(100, score))
+
+
 _wolf_scan_jobs = {}
 
 def _run_wolf_scan_job(job_id, scan_filter):
@@ -1100,6 +1192,13 @@ Respond ONLY in valid JSON (no markdown, no backticks):
                 trade['current_price'] = f"{float(q['price']):.{dp}f}"
             if pair in chart_data and chart_data[pair].get('sr_levels'):
                 trade['real_sr_levels'] = chart_data[pair]['sr_levels'][:6]
+
+            # ── OVERWRITE AI confidence with real data-driven score ──
+            direction = trade.get('primary_direction', 'BUY')
+            real_conf = calculate_real_confidence(pair, direction, chart_data)
+            trade['confidence'] = real_conf
+            # wolf_score out of 10 — derived from same real data
+            trade['wolf_score'] = round(real_conf / 10, 1)
 
         _wolf_scan_jobs[job_id] = {'status': 'done', 'result': result}
     except Exception as e:
