@@ -1073,7 +1073,24 @@ STEP 7 — Economic calendar warnings
 Respond ONLY in valid JSON (no markdown, no backticks):
 {{"scan_date":"{date_str}","session":"{session_name}","market_theme":"string","dxy_bias":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","wolf_commentary":"2-3 sentences","trades":[{{"rank":1,"pair":"EUR/USD","current_price":"1.0380","trend":"DOWNTREND","primary_direction":"SELL","wolf_score":8.5,"confidence":85,"aligned_count":5,"thesis":"3-4 sentence thesis citing real EMA/RSI/S/R data","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"confluences":["Price below EMA200 1.0520","RSI 38 bearish momentum","Real resistance at 1.0412 (swing high)","DXY bullish divergence"],"key_levels":[{{"type":"RESISTANCE","price":"1.0412","note":"Real swing high from chart data","distance_pips":32}},{{"type":"CURRENT","price":"1.0380","note":"Current price","distance_pips":0}},{{"type":"SUPPORT","price":"1.0340","note":"Real swing low from chart data","distance_pips":40}}],"buy_scenario":{{"trigger":"Break above real resistance 1.0412 on H4","entry":"1.0418","stop_loss":"1.0390","tp1":"1.0460","tp2":"1.0510","tp3":"1.0560","rr":"1:2.5","probability":25}},"sell_scenario":{{"trigger":"Reject real resistance 1.0400 break below 1.0360","entry":"1.0355","stop_loss":"1.0390","tp1":"1.0310","tp2":"1.0270","tp3":"1.0220","rr":"1:2.8","probability":75}},"warnings":[{{"level":"HIGH","text":"US CPI Thursday 8:30AM EST — wait for release"}}],"relevant_news":["string"]}}]}}"""
 
-        result = parse_json_response(call_claude(prompt, 6000))
+        # Auto-retry up to 3 times if AI returns empty or bad JSON
+        result = None
+        last_error = None
+        for attempt in range(3):
+            try:
+                raw = call_claude(prompt, 6000)
+                if not raw or not raw.strip():
+                    raise ValueError('Empty response from AI')
+                result = parse_json_response(raw)
+                break  # success — stop retrying
+            except Exception as retry_err:
+                last_error = retry_err
+                print(f'[WolfScan] Attempt {attempt+1} failed: {retry_err}')
+                if attempt < 2:
+                    time.sleep(2)
+        if result is None:
+            raise Exception(f'AI failed after 3 attempts: {last_error}')
+
 
         for trade in result.get('trades', []):
             pair = trade.get('pair', '')
