@@ -646,10 +646,10 @@ function renderResults(data){
           <div style="margin-top:5px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
               <span style="font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--text-dim);">CONFIDENCE</span>
-              <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:${(t.confidence||0)>=80?'var(--green)':(t.confidence||0)>=60?'var(--gold)":'var(--red)'};">${t.confidence||'--'}%</span>
+              <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:${(t.confidence||0)>=80?'#00ff99':(t.confidence||0)>=60?'#ffd700':'#ff4466'};">${t.confidence||'--'}%</span>
             </div>
             <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">
-              <div style="height:100%;width:${t.confidence||0}%;background:${(t.confidence||0)>=80?'var(--green)':(t.confidence||0)>=60?'var(--gold)":'var(--red)'};border-radius:2px;transition:width 0.5s;"></div>
+              <div style="height:100%;width:${t.confidence||0}%;background:${(t.confidence||0)>=80?'#00ff99':(t.confidence||0)>=60?'#ffd700':'#ff4466'};border-radius:2px;transition:width 0.5s;"></div>
             </div>
           </div>
         </div>
