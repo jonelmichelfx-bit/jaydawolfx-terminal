@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JAYDAWOLFX — LEGENDS LAB</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#080c0f;--surface:#0d1318;--surface2:#121920;--border:#2a3f52;
+  --green:#00ff99;--cyan:#33ddff;--gold:#ffd700;--red:#ff3355;
+  --purple:#cc55ff;--orange:#ff8800;--pink:#ff44aa;
+  --text:#ffffff;--text-mid:#ccdde8;--text-dim:#5a7a8a;
+  --mono:'Share Tech Mono',monospace;--head:'Orbitron',monospace;
+}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);display:flex;flex-direction:column;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,153,0.006) 3px,rgba(0,255,153,0.006) 4px);}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,255,153,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,153,0.02) 1px,transparent 1px);
+  background-size:50px 50px;}
+
+/* NAV */
+.nav{position:relative;z-index:100;height:52px;min-height:52px;background:rgba(8,12,15,0.98);
+  border-bottom:2px solid var(--gold);display:flex;align-items:center;padding:0 20px;gap:16px;}
+.logo{font-family:var(--head);font-size:14px;font-weight:900;color:var(--gold);letter-spacing:3px;
+  text-shadow:0 0 20px rgba(255,215,0,0.6);white-space:nowrap;}
+.logo span{color:var(--orange);}
+.nav-tabs{display:flex;gap:2px;flex:1;}
+.ntab{padding:6px 12px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);
+  background:transparent;border:1px solid transparent;border-radius:3px;cursor:pointer;transition:all 0.2s;text-decoration:none;}
+.ntab:hover{color:var(--text-mid);border-color:var(--border);}
+.ntab.active{color:var(--gold);border-color:var(--gold);background:rgba(255,215,0,0.05);}
+.nav-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.logout-a{font-size:10px;color:var(--text-dim);text-decoration:none;padding:4px 10px;
+  border:1px solid var(--border);border-radius:3px;transition:all 0.2s;}
+.logout-a:hover{color:var(--red);border-color:var(--red);}
+
+/* WORKSPACE */
+.workspace{flex:1;overflow:hidden;display:flex;position:relative;z-index:1;}
+
+/* LEFT PANEL */
+.left-panel{width:320px;min-width:320px;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;}
+.left-panel::-webkit-scrollbar{width:3px;}
+.left-panel::-webkit-scrollbar-thumb{background:var(--border);}
+
+/* RIGHT PANEL */
+.right-panel{flex:1;overflow-y:auto;padding:20px;background:var(--bg);}
+.right-panel::-webkit-scrollbar{width:4px;}
+.right-panel::-webkit-scrollbar-thumb{background:var(--border);}
+
+/* SECTION HEADERS */
+.sec-hdr{padding:12px 14px;border-bottom:1px solid var(--border);}
+.sec-lbl{font-size:8px;letter-spacing:3px;color:var(--orange);display:flex;align-items:center;gap:6px;}
+.sec-lbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
+
+/* MARKET TOGGLE */
+.mkt-toggle{display:flex;gap:4px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.mkt-btn{flex:1;padding:8px;font-family:var(--head);font-size:9px;letter-spacing:2px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:3px;
+  color:var(--text-dim);cursor:pointer;transition:all 0.2s;text-align:center;}
+.mkt-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.mkt-btn.active{background:rgba(51,221,255,0.08);border-color:var(--cyan);color:var(--cyan);
+  text-shadow:0 0 10px rgba(51,221,255,0.5);}
+
+/* LEGEND CARDS */
+.legend-grid{padding:12px 14px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--border);}
+.legend-card{padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+  cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+.legend-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--legend-color,var(--gold)),transparent);opacity:0;transition:opacity 0.2s;}
+.legend-card:hover{border-color:var(--gold);}
+.legend-card:hover::before{opacity:1;}
+.legend-card.selected{border-color:var(--legend-color,var(--gold));background:rgba(255,215,0,0.04);}
+.legend-card.selected::before{opacity:1;}
+.lc-top{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.lc-icon{font-size:22px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:50%;}
+.lc-name{font-family:var(--head);font-size:11px;font-weight:700;color:var(--text);}
+.lc-era{font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+.lc-tag{font-size:9px;color:var(--legend-color,var(--gold));letter-spacing:1px;margin-top:2px;}
+.lc-method{font-size:9px;color:var(--text-dim);line-height:1.6;margin-top:4px;}
+
+/* ASSET INPUT */
+.asset-sec{padding:12px 14px;border-bottom:1px solid var(--border);}
+.asset-lbl{font-size:8px;letter-spacing:3px;color:var(--text-dim);margin-bottom:8px;}
+.asset-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:3px;
+  color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 12px;outline:none;
+  transition:border-color 0.2s;letter-spacing:2px;text-transform:uppercase;}
+.asset-input:focus{border-color:var(--orange);}
+.quick-assets{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.qa-btn{padding:4px 8px;font-family:var(--mono);font-size:9px;letter-spacing:1px;
+  background:var(--surface);border:1px solid var(--border);border-radius:2px;
+  color:var(--text-dim);cursor:pointer;transition:all 0.15s;}
+.qa-btn:hover{border-color:var(--orange);color:var(--orange);}
+
+/* ANALYZE BUTTON */
+.analyze-sec{padding:14px;}
+.analyze-btn{width:100%;padding:14px;font-family:var(--head);font-size:11px;letter-spacing:3px;
+  background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,136,0,0.1));
+  border:1px solid var(--gold);border-radius:4px;color:var(--gold);cursor:pointer;
+  transition:all 0.3s;text-align:center;}
+.analyze-btn:hover:not(:disabled){background:linear-gradient(135deg,rgba(255,215,0,0.2),rgba(255,136,0,0.2));
+  box-shadow:0 0 20px rgba(255,215,0,0.2);}
+.analyze-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* RIGHT PANEL CONTENT */
+.welcome-box{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;text-align:center;padding:40px;}
+.welcome-title{font-family:var(--head);font-size:28px;font-weight:900;color:var(--gold);
+  text-shadow:0 0 30px rgba(255,215,0,0.4);margin-bottom:12px;letter-spacing:4px;}
+.welcome-sub{font-size:11px;color:var(--text-dim);line-height:2;max-width:500px;}
+.legend-icons-row{display:flex;gap:16px;margin:24px 0;font-size:32px;}
+
+/* LEGEND BIO CARD */
+.bio-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:20px;margin-bottom:20px;position:relative;overflow:hidden;}
+.bio-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--bio-color,var(--gold));}
+.bio-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;}
+.bio-icon{font-size:40px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;
+  background:var(--surface2);border:1px solid var(--border);border-radius:50%;flex-shrink:0;}
+.bio-info{flex:1;}
+.bio-name{font-family:var(--head);font-size:18px;font-weight:900;color:var(--bio-color,var(--gold));
+  text-shadow:0 0 15px rgba(255,215,0,0.3);}
+.bio-title{font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-top:4px;}
+.bio-stat{font-size:11px;color:var(--text-mid);margin-top:6px;line-height:1.6;}
+.bio-rules{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.bio-rule{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:8px 10px;
+  font-size:10px;color:var(--text-mid);line-height:1.5;}
+.bio-rule strong{color:var(--bio-color,var(--gold));display:block;font-size:9px;letter-spacing:1px;margin-bottom:3px;}
+
+/* ANALYSIS RESULT */
+.analysis-wrap{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.analysis-header{padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;}
+.ah-legend{font-family:var(--head);font-size:11px;color:var(--gold);}
+.ah-asset{font-family:var(--head);font-size:14px;font-weight:900;color:var(--text);}
+.ah-ts{font-size:9px;color:var(--text-dim);margin-left:auto;letter-spacing:1px;}
+.analysis-body{padding:18px;}
+.al-section{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(42,63,82,0.5);}
+.al-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.al-sec-title{font-size:9px;letter-spacing:3px;color:var(--orange);margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;}
+.al-sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
+.al-content{font-size:12px;color:var(--text-mid);line-height:1.9;white-space:pre-wrap;}
+.verdict-box{background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.3);border-radius:4px;
+  padding:14px;margin-bottom:16px;}
+.verdict-label{font-size:9px;letter-spacing:3px;color:var(--gold);margin-bottom:6px;}
+.verdict-text{font-family:var(--head);font-size:16px;font-weight:700;color:var(--text);}
+.signal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.sig-box{background:var(--surface2);border:1px solid var(--border);border-radius:3px;
+  padding:10px;text-align:center;}
+.sig-label{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;}
+.sig-val{font-size:13px;font-weight:bold;color:var(--text);}
+.sig-val.bull{color:var(--green);}
+.sig-val.bear{color:var(--red);}
+.sig-val.neut{color:var(--gold);}
+.quote-box{background:rgba(51,221,255,0.04);border-left:3px solid var(--cyan);
+  padding:12px 14px;margin:12px 0;border-radius:0 4px 4px 0;}
+.quote-text{font-size:11px;color:var(--cyan);font-style:italic;line-height:1.7;}
+.quote-attr{font-size:9px;color:var(--text-dim);margin-top:6px;letter-spacing:1px;}
+
+/* SPINNER */
+.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--gold);
+  border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.load-box{text-align:center;padding:60px 20px;}
+.load-msg{font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-top:8px;}
+.load-legend{font-family:var(--head);font-size:13px;color:var(--gold);margin-top:4px;}
+
+/* BADGE */
+.badge{display:inline-block;padding:2px 8px;border-radius:2px;font-size:8px;letter-spacing:2px;margin-left:8px;}
+.badge-forex{background:rgba(51,221,255,0.1);border:1px solid rgba(51,221,255,0.3);color:var(--cyan);}
+.badge-stocks{background:rgba(0,255,153,0.1);border:1px solid rgba(0,255,153,0.3);color:var(--green);}
+.badge-options{background:rgba(204,85,255,0.1);border:1px solid rgba(204,85,255,0.3);color:var(--purple);}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="logo">JAYDAWOLF<span>FX</span></div>
+  <div class="nav-tabs">
+    <a href="/terminal" class="ntab">📊 TERMINAL</a>
+    <a href="/forex" class="ntab">💱 FOREX</a>
+    <a href="/wolf-stocks" class="ntab">🐺 STOCKS</a>
+    <a href="/ai-infra" class="ntab">🚀 AI FUTURE</a>
+    <a href="/legends" class="ntab active">⚡ LEGENDS</a>
+    <a href="/education" class="ntab">🎓 ACADEMY</a>
+  </div>
+  <div class="nav-right">
+    <a href="/logout" class="logout-a">LOGOUT</a>
+  </div>
+</nav>
+
+<div class="workspace">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- MARKET TOGGLE -->
+    <div class="sec-hdr">
+      <div class="sec-lbl">⚡ LEGENDS LAB — CHOOSE YOUR MASTER</div>
+    </div>
+    <div class="mkt-toggle">
+      <button class="mkt-btn active" id="btn-forex" onclick="switchMarket('forex')">💱 FOREX</button>
+      <button class="mkt-btn" id="btn-stocks" onclick="switchMarket('stocks')">📈 STOCKS + OPTIONS</button>
+    </div>
+
+    <!-- FOREX LEGENDS -->
+    <div id="forex-legends" class="legend-grid">
+      <div class="legend-card" id="lc-soros" style="--legend-color:#ffd700" onclick="selectLegend('soros')">
+        <div class="lc-top">
+          <div class="lc-icon">🦅</div>
+          <div>
+            <div class="lc-name">GEORGE SOROS</div>
+            <div class="lc-era">1930 — PRESENT</div>
+            <div class="lc-tag" style="color:#ffd700;">REFLEXIVITY THEORY</div>
+          </div>
+        </div>
+        <div class="lc-method">Find where market PERCEPTION has divorced from REALITY. When the feedback loop breaks — that's the trade. Broke the Bank of England. $1B in one day.</div>
+      </div>
+      <div class="legend-card" id="lc-druck" style="--legend-color:#33ddff" onclick="selectLegend('druck')">
+        <div class="lc-top">
+          <div class="lc-icon">🎯</div>
+          <div>
+            <div class="lc-name">DRUCKENMILLER</div>
+            <div class="lc-era">1953 — PRESENT</div>
+            <div class="lc-tag" style="color:#33ddff;">MONETARY DIVERGENCE</div>
+          </div>
+        </div>
+        <div class="lc-method">Monetary policy divergence drives everything. Follow capital flows. When you have conviction — concentrate the position. 30 years zero losing years.</div>
+      </div>
+      <div class="legend-card" id="lc-lipschutz" style="--legend-color:#00ff99" onclick="selectLegend('lipschutz')">
+        <div class="lc-top">
+          <div class="lc-icon">👑</div>
+          <div>
+            <div class="lc-name">BILL LIPSCHUTZ</div>
+            <div class="lc-era">1956 — PRESENT</div>
+            <div class="lc-tag" style="color:#00ff99;">ORDER FLOW MASTER</div>
+          </div>
+        </div>
+        <div class="lc-method">$12K → $250M trading forex. Read order flow. Never average a loser. Position sizing is everything. Sultan of Currencies at Salomon Brothers.</div>
+      </div>
+      <div class="legend-card" id="lc-kovner" style="--legend-color:#cc55ff" onclick="selectLegend('kovner')">
+        <div class="lc-top">
+          <div class="lc-icon">🌍</div>
+          <div>
+            <div class="lc-name">BRUCE KOVNER</div>
+            <div class="lc-era">1945 — PRESENT</div>
+            <div class="lc-tag" style="color:#cc55ff;">MACRO + TECHNICAL</div>
+          </div>
+        </div>
+        <div class="lc-method">Macro thesis confirmed by technicals. Commodity-currency correlations. $3,000 to billions. Always know your exit before entry. Global macro god.</div>
+      </div>
+    </div>
+
+    <!-- STOCKS LEGENDS (hidden by default) -->
+    <div id="stocks-legends" class="legend-grid" style="display:none;">
+      <div class="legend-card" id="lc-livermore" style="--legend-color:#ffd700" onclick="selectLegend('livermore')">
+        <div class="lc-top">
+          <div class="lc-icon">⚡</div>
+          <div>
+            <div class="lc-name">JESSE LIVERMORE</div>
+            <div class="lc-era">1877 — 1940</div>
+            <div class="lc-tag" style="color:#ffd700;">PIVOTAL POINTS</div>
+          </div>
+        </div>
+        <div class="lc-method">Wait for the pivotal point after long consolidation. Volume confirms the breakout. Buy right — SIT TIGHT. Never average down. $100M shorting 1929 crash.</div>
+      </div>
+      <div class="legend-card" id="lc-ptj" style="--legend-color:#ff8800" onclick="selectLegend('ptj')">
+        <div class="lc-top">
+          <div class="lc-icon">🛡️</div>
+          <div>
+            <div class="lc-name">PAUL TUDOR JONES</div>
+            <div class="lc-era">1954 — PRESENT</div>
+            <div class="lc-tag" style="color:#ff8800;">200 EMA + 5:1 R:R</div>
+          </div>
+        </div>
+        <div class="lc-method">200 EMA is the only rule. 5:1 R:R minimum. Play defense not offense. Historical pattern matching. Put options for asymmetric downside bets. $100M on Black Monday.</div>
+      </div>
+      <div class="legend-card" id="lc-yass" style="--legend-color:#cc55ff" onclick="selectLegend('yass')">
+        <div class="lc-top">
+          <div class="lc-icon">🎲</div>
+          <div>
+            <div class="lc-name">JEFF YASS</div>
+            <div class="lc-era">1956 — PRESENT</div>
+            <div class="lc-tag" style="color:#cc55ff;">OPTIONS MATH</div>
+          </div>
+        </div>
+        <div class="lc-method">Pure probability. Find where the market misprices volatility. IV rank. Expected move vs actual. Billionaire from options edge alone. Susquehanna founder.</div>
+      </div>
+      <div class="legend-card" id="lc-brooks" style="--legend-color:#33ddff" onclick="selectLegend('brooks')">
+        <div class="lc-top">
+          <div class="lc-icon">📊</div>
+          <div>
+            <div class="lc-name">AL BROOKS</div>
+            <div class="lc-era">1952 — PRESENT</div>
+            <div class="lc-tag" style="color:#33ddff;">PRICE ACTION PURE</div>
+          </div>
+        </div>
+        <div class="lc-method">No indicators. Price action only. Bull/bear bars. Strong closes. Tight trading ranges. Always in trade concept. Second entries. Wrote the bible on price action.</div>
+      </div>
+    </div>
+
+    <!-- ASSET INPUT -->
+    <div class="asset-sec">
+      <div class="asset-lbl">ENTER ASSET TO ANALYZE</div>
+      <input class="asset-input" type="text" id="asset-input" placeholder="EUR/USD, AAPL, SPY..." maxlength="20"/>
+      <div class="quick-assets" id="quick-assets">
+        <button class="qa-btn" onclick="setAsset('EUR/USD')">EUR/USD</button>
+        <button class="qa-btn" onclick="setAsset('GBP/USD')">GBP/USD</button>
+        <button class="qa-btn" onclick="setAsset('USD/JPY')">USD/JPY</button>
+        <button class="qa-btn" onclick="setAsset('XAU/USD')">XAU/USD</button>
+        <button class="qa-btn" onclick="setAsset('EUR/JPY')">EUR/JPY</button>
+        <button class="qa-btn" onclick="setAsset('GBP/JPY')">GBP/JPY</button>
+      </div>
+    </div>
+
+    <!-- ANALYZE BUTTON -->
+    <div class="analyze-sec">
+      <button class="analyze-btn" id="analyze-btn" onclick="runLegendAnalysis()">
+        ⚡ ANALYZE WITH LEGEND
+      </button>
+    </div>
+
+  </div><!-- /left-panel -->
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel" id="right-panel">
+
+    <!-- WELCOME STATE -->
+    <div class="welcome-box" id="welcome-box">
+      <div class="legend-icons-row">🦅🎯👑🌍⚡🛡️🎲📊</div>
+      <div class="welcome-title">LEGENDS LAB</div>
+      <div class="welcome-sub">
+        Select a trading legend from the left panel.<br>
+        Enter any forex pair or stock.<br>
+        Wolf AI will analyze the asset using that legend's<br>
+        <span style="color:var(--gold)">exact methodology from their real books and trades.</span><br><br>
+        <span style="color:var(--text-dim)">Soros Reflexivity · Druckenmiller Divergence · Livermore Pivotal Points<br>
+        Paul Tudor Jones 200 EMA · Jeff Yass Options Edge · Al Brooks Price Action</span>
+      </div>
+    </div>
+
+    <!-- BIO + RESULT (hidden until legend selected) -->
+    <div id="analysis-container" style="display:none;">
+
+      <!-- Legend Bio -->
+      <div class="bio-card" id="bio-card">
+        <!-- filled by JS -->
+      </div>
+
+      <!-- Analysis Result -->
+      <div id="result-area">
+        <!-- filled by JS after analyze -->
+        <div style="text-align:center;padding:40px;color:var(--text-dim);font-size:11px;letter-spacing:2px;">
+          SELECT AN ASSET AND CLICK ANALYZE
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /right-panel -->
+
+</div><!-- /workspace -->
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentMarket = 'forex';
+let currentLegend = null;
+let isAnalyzing = false;
+
+// ── LEGEND DATA (real methodologies from real books) ──────────────────────────
+const LEGENDS = {
+  soros: {
+    name: 'George Soros',
+    icon: '🦅',
+    color: '#ffd700',
+    title: 'The Man Who Broke the Bank of England',
+    market: 'forex',
+    badge: 'FOREX',
+    badgeClass: 'badge-forex',
+    bigTrade: 'Shorted GBP in 1992 Black Wednesday. Made $1 BILLION in one day.',
+    books: 'The Alchemy of Finance (1987) · The New Paradigm for Financial Markets',
+    philosophy: 'Markets are NOT efficient. Traders\' perceptions shape reality through reflexive feedback loops. Find where the narrative is self-reinforcing toward a breaking point — then bet the break.',
+    rules: [
+      {key:'REFLEXIVITY', val:'Market prices shape fundamentals which shape prices. Find the feedback loop.'},
+      {key:'PERCEPTION GAP', val:'When market narrative diverges from economic reality — that\'s the trade.'},
+      {key:'CENTRAL BANK', val:'When a central bank is defending an unsustainable peg — they will lose. Always.'},
+      {key:'BOOM/BUST', val:'Every self-reinforcing trend ends. Spot the turning point before the crowd.'},
+      {key:'SIZING', val:'When you have maximum conviction, bet BIG. Half-measures make no money.'},
+      {key:'CUT LOSSES', val:'When the thesis is wrong, exit immediately. Ego is your worst enemy.'}
+    ],
+    prompt: function(asset) {
+      return `You are Wolf AI channeling GEORGE SOROS — the man who broke the Bank of England in 1992 by applying his Theory of Reflexivity.
+
+Asset to analyze: ${asset}
+Current Date: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+
+SOROS REFLEXIVITY FRAMEWORK (from The Alchemy of Finance, 1987):
+Reflexivity: Market participants' BIASES influence prices → prices influence FUNDAMENTALS → which reinforces the original bias. This creates self-reinforcing boom/bust cycles.
+The trade: Find where the prevailing NARRATIVE is creating an unsustainable feedback loop. When that loop BREAKS → explosive move.
+
+Analyze ${asset} through Soros' exact lens:
+
+SECTION: REFLEXIVITY CHECK
+What is the current dominant market narrative about ${asset}? Is it self-reinforcing (bulls getting more bullish, or bears getting more bearish)? Or is there tension between narrative and reality? Is this an EARLY BOOM, LATE BOOM, BREAKING POINT, or BUST?
+
+SECTION: PERCEPTION vs REALITY
+Where is market perception DIVERGING from underlying economic reality for ${asset}? What are participants ignoring or mispricing? What would Soros call the "prevailing bias" right now?
+
+SECTION: CENTRAL BANK / INSTITUTIONAL IMBALANCE
+Is there a central bank, government policy, or institutional force trying to sustain something unsustainable for ${asset}? (A rate, a peg, a policy that markets will eventually overwhelm?)
+
+SECTION: FEEDBACK LOOP STAGE
+Rate the current reflexive stage: EARLY BOOM / ACCELERATING / CLIMAX / BREAKING / BUST / RECOVERY. Explain why based on price action, sentiment, and fundamentals.
+
+SECTION: SOROS TRADE SETUP
+Based on reflexivity, what is the trade? When does the feedback loop break? Entry trigger. Size — how much conviction? (Low/Medium/High/Maximum). Stop loss. Target.
+
+SECTION: SOROS VERDICT
+One clear sentence. What would Soros actually DO with ${asset} right now. Direct and decisive.`;
+    }
+  },
+
+  druck: {
+    name: 'Stanley Druckenmiller',
+    icon: '🎯',
+    color: '#33ddff',
+    title: 'Zero Losing Years in 30 Years of Trading',
+    market: 'forex',
+    badge: 'FOREX',
+    badgeClass: 'badge-forex',
+    bigTrade: 'Executed Soros\' GBP short in 1992. Averaged 30% annually for 30 consecutive years with ZERO losing years.',
+    books: 'The New Market Wizards (interview chapter) · Alchemy of Finance (collaborated with Soros)',
+    philosophy: 'Monetary policy divergence is the ultimate edge in currencies. Follow capital flows. When you have conviction — CONCENTRATE. The trend is your friend until it isn\'t. Cut losers instantly.',
+    rules: [
+      {key:'MONETARY POLICY', val:'Central bank divergence drives FX. Hiking vs cutting = currency direction.'},
+      {key:'CAPITAL FLOWS', val:'Where is institutional money going? Follow the flow, not the noise.'},
+      {key:'CONVICTION SIZE', val:'When thesis is right, concentrate the position. Don\'t diversify your conviction away.'},
+      {key:'TREND FRIEND', val:'Identify the dominant trend first. Don\'t fight the macro.'},
+      {key:'CUT FAST', val:'Wrong trade = exit instantly. Never argue with the market.'},
+      {key:'ASYMMETRY', val:'Look for trades where the downside is defined but upside is enormous.'}
+    ],
+    prompt: function(asset) {
+      return `You are Wolf AI channeling STANLEY DRUCKENMILLER — the greatest macro trader ever, 30 consecutive years with zero losing years, Soros's right hand on the 1992 GBP trade.
+
+Asset to analyze: ${asset}
+Current Date: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+
+DRUCKENMILLER FRAMEWORK:
+1. Monetary policy divergence between the two central banks = primary driver
+2. Capital flow direction — where is institutional money actually moving?
+3. Trend on the higher timeframes — is it your friend?
+4. Conviction level — if high, concentrate the position
+5. Cut losers instantly, let winners run
+
+Analyze ${asset} through Druckenmiller's exact lens:
+
+SECTION: MONETARY POLICY DIVERGENCE
+For ${asset}, what are the two central banks doing right now? (Rate levels, hiking/cutting/holding, forward guidance). Which CB is more hawkish? Which is more dovish? What is the RATE DIFFERENTIAL doing to capital flows? This is the PRIMARY driver.
+
+SECTION: CAPITAL FLOW ANALYSIS
+Where is institutional/smart money actually flowing for ${asset}? What do COT (Commitment of Traders) positioning, fund flows, and recent institutional activity suggest? Is the big money aligned with or against the rate differential?
+
+SECTION: MACRO TREND
+Monthly → Weekly → Daily trend for ${asset}. Is the macro trend your friend right now? How strong is it? Is there a threat to the trend (policy reversal, data shift)?
+
+SECTION: CONVICTION SCORE
+On a scale of 1-10, how much conviction does Druckenmiller-style analysis give for a trade here? What drives the score up or down? What would INCREASE conviction to maximum?
+
+SECTION: THE TRADE
+Direction. Entry. Position size recommendation (small/medium/large/maximum based on conviction). Stop loss. Target. What SINGLE catalyst would confirm or kill this thesis?
+
+SECTION: DRUCKENMILLER VERDICT
+One sentence. What would Stan Druckenmiller actually do with ${asset} today.`;
+    }
+  },
+
+  lipschutz: {
+    name: 'Bill Lipschutz',
+    icon: '👑',
+    color: '#00ff99',
+    title: 'Sultan of Currencies — $12K to $250 Million',
+    market: 'forex',
+    badge: 'FOREX',
+    badgeClass: 'badge-forex',
+    bigTrade: 'Turned $12,000 inheritance into $250 million at Salomon Brothers trading forex. Generated $300M profit per year for Salomon at his peak.',
+    books: 'The New Market Wizards (interview chapter) — "Trading in the Zone" influences',
+    philosophy: 'Position sizing IS the trade. Read order flow — understand WHY big money moves. Never average a loser. Know the risk before every entry. Most traders lose because they don\'t respect size.',
+    rules: [
+      {key:'POSITION SIZE', val:'The most important decision is HOW MUCH, not which direction.'},
+      {key:'ORDER FLOW', val:'Understand WHY the big players are moving. Follow the flow not the news.'},
+      {key:'NEVER AVERAGE', val:'If the trade is wrong, exit. NEVER add to a losing position.'},
+      {key:'RISK FIRST', val:'Define maximum risk before entry. If you can\'t define risk, don\'t trade.'},
+      {key:'LIQUIDITY', val:'Only trade liquid pairs. Know the spread. Know the time of day.'},
+      {key:'PATIENCE', val:'Wait for the ideal setup. Most days the best trade is no trade.'}
+    ],
+    prompt: function(asset) {
+      return `You are Wolf AI channeling BILL LIPSCHUTZ — the Sultan of Currencies who turned $12,000 into $250 million at Salomon Brothers, generating $300 million per year at his peak.
+
+Asset to analyze: ${asset}
+Current Date: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+
+LIPSCHUTZ FRAMEWORK:
+Position sizing IS the trade. Read order flow. Never average losers. Define risk first. The question isn't just direction — it's how much size is justified.
+
+Analyze ${asset} through Lipschutz's exact lens:
+
+SECTION: ORDER FLOW READING
+For ${asset} right now — what does the institutional order flow look like? Who is buying/selling and WHY? Is this flow sustainable or one-time? What is the real reason (not the surface reason) big money is positioned where it is?
+
+SECTION: POSITION SIZE ANALYSIS
+Given current volatility, spread, liquidity, and setup quality — what position size is justified? Lipschutz says this is the most important decision. Small (0.5-1%), Medium (1-2%), Large (2-3%), or Maximum (3-5%). What factors push the size up or down?
+
+SECTION: RISK DEFINITION
+Before entering ${asset}, what is the EXACT risk? Where is the stop? How many pips? What is the maximum acceptable loss? If this cannot be precisely defined, the trade should not be taken.
+
+SECTION: ENTRY TIMING
+Lipschutz waited for the IDEAL moment. Is the current timing good for ${asset}? Which session is best? Are spreads tight? Is liquidity adequate? What would the perfect entry look like?
+
+SECTION: AVERAGING DOWN CHECK
+Is there any temptation to average down in ${asset}? Lipschutz says this is how traders blow up. If the trade moves against you X pips — what is the exit rule? No exceptions.
+
+SECTION: LIPSCHUTZ VERDICT
+One clear sentence. What would Bill Lipschutz actually do with ${asset} right now — and at what size.`;
+    }
+  },
+
+  kovner: {
+    name: 'Bruce Kovner',
+    icon: '🌍',
+    color: '#cc55ff',
+    title: 'Global Macro God — $3,000 to Billions',
+    market: 'forex',
+    badge: 'FOREX',
+    badgeClass: 'badge-forex',
+    bigTrade: 'Turned $3,000 into billions through pure global macro trading. One of the most successful traders in history.',
+    books: 'Market Wizards (Jack Schwager interview) — Kovner shares full methodology',
+    philosophy: 'Know your exit before your entry — ALWAYS. Macro thesis must be confirmed by technicals. Intermarket relationships: commodities drive currencies. If you can\'t explain the trade in one sentence, you don\'t understand it.',
+    rules: [
+      {key:'EXIT FIRST', val:'Know EXACTLY where you\'re getting out before you get in. Always.'},
+      {key:'MACRO + TECH', val:'Fundamental macro thesis confirmed by technical price action = the trade.'},
+      {key:'INTERMARKET', val:'Oil → CAD. Gold → AUD. Commodities drive their currency correlations.'},
+      {key:'ONE SENTENCE', val:'If you can\'t explain the trade in one sentence, you don\'t understand it.'},
+      {key:'DIVERSIFY RISK', val:'Never put more than 1% of capital at risk on any single trade.'},
+      {key:'PATIENCE', val:'The best trades are obvious. If you\'re forcing it, it\'s wrong.'}
+    ],
+    prompt: function(asset) {
+      return `You are Wolf AI channeling BRUCE KOVNER — who turned $3,000 into billions through global macro trading, one of the greatest macro traders in history.
+
+Asset to analyze: ${asset}
+Current Date: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+
+KOVNER FRAMEWORK:
+Know the exit before the entry. Macro thesis + technical confirmation = the trade. Intermarket relationships matter. If you can't explain it in one sentence, you don't understand it.
+
+Analyze ${asset} through Kovner's exact lens:
+
+SECTION: ONE SENTENCE THESIS
+What is the single-sentence macro thesis for ${asset} right now? Kovner says if you can't say it in one sentence, you don't understand the trade. State it clearly.
+
+SECTION: MACRO FUNDAMENTAL CASE
+What macroeconomic forces are driving ${asset}? Interest rates, economic growth differential, trade flows, commodity correlations? Is the macro case strong or weak? What could reverse it?
+
+SECTION: INTERMARKET RELATIONSHIPS
+What are the key intermarket correlations for ${asset}? (Oil/CAD, Gold/AUD, DXY/everything, bonds/FX, equities/risk pairs). Are those correlations confirming or contradicting the macro thesis?
+
+SECTION: TECHNICAL CONFIRMATION
+Does the price action CONFIRM the macro thesis? What do the higher timeframe charts show? Is price aligned with or fighting the fundamental case? Kovner only trades when macro AND technical align.
+
+SECTION: EXIT PLAN (BEFORE ENTRY)
+Kovner always knows the exit BEFORE entry. For ${asset}: where is the exact stop loss (with structural reason)? At what level is the macro thesis proven wrong? What is the target based on the macro move?
+
+SECTION: KOVNER VERDICT
+One sentence. What would Bruce Kovner actually do with ${asset} today. Include the entry, the stop, and why.`;
+    }
+  },
+
+  livermore: {
+    name: 'Jesse Livermore',
+    icon: '⚡',
+    color: '#ffd700',
+    title: 'The Boy Plunger — Made $100M Shorting 1929',
+    market: 'stocks',
+    badge: 'STOCKS',
+    badgeClass: 'badge-stocks',
+    bigTrade: 'Shorted the entire US stock market in 1929 crash. Made $100 million ($1.4 billion today) in one of history\'s greatest trades.',
+    books: 'Reminiscences of a Stock Operator (1923) · How to Trade in Stocks (1940)',
+    philosophy: 'Markets move in cycles. Find the PIVOTAL POINT — where price has to show its hand. Buy right, sit tight. Never average down. Volume confirms the move. The trend on multiple timeframes is your friend.',
+    rules: [
+      {key:'PIVOTAL POINT', val:'Wait for the moment where price MUST show its hand. No guessing tops/bottoms.'},
+      {key:'VOLUME CONFIRM', val:'Breakout must be confirmed by volume. No volume = false breakout.'},
+      {key:'SIT TIGHT', val:'After a right entry, SIT. Big money is made by sitting, not trading.'},
+      {key:'NEVER AVERAGE', val:'If wrong — exit. Never, ever add to a losing position.'},
+      {key:'NORMAL REACTION', val:'After a breakout, a pullback is normal. Wait for the reaction to end.'},
+      {key:'MARKET LEADERS', val:'Trade the strongest stocks in the strongest sectors. Follow the leaders.'}
+    ],
+    prompt: function(asset) {
+      return `You are Wolf AI channeling JESSE LIVERMORE — the Boy Plunger who made $100 million shorting the 1929 market crash, author of Reminiscences of a Stock Operator.
+
+Asset to analyze: ${asset}
+Current Date: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+
+LIVERMORE FRAMEWORK (from Reminiscences of a Stock Operator + How to Trade in Stocks):
+Pivotal points after consolidation. Volume confirmation. Buy right, sit tight. Never average down. The trend on multiple timeframes. Market leaders in leading sectors.
+
+Analyze ${asset} through Livermore's exact lens:
+
+SECTION: PIVOTAL POINT ANALYSIS
+Is ${asset} at or near a PIVOTAL POINT right now? A pivotal point is where price has been in consolidation and must now show its hand — either breaking out or failing. What is the key pivot level? How long has it consolidated? The longer the consolidation, the more significant the breakout.
+
+SECTION: VOLUME CONFIRMATION
+What does volume say about ${asset}? Is there accumulation (rising volume on up days, falling volume on down days)? If there's a recent breakout, was it confirmed with volume? No volume = Livermore would not touch it.
+
+SECTION: MULTI-TIMEFRAME TREND
+Monthly trend → Weekly trend → Daily trend for ${asset}. Do multiple timeframes align? Livermore said the more timeframes in agreement, the less resistance in the trade's path.
+
+SECTION: NORMAL REACTION CHECK
+Has ${asset} had a normal reaction (pullback) after any recent breakout? Is the reaction done or still ongoing? Livermore's strategy was to wait for the reaction to complete before adding size.
+
+SECTION: BUY RIGHT, SIT TIGHT SETUP
+Is this a "buy right, sit tight" setup? Is this the kind of move that needs TIME to develop? Where is the stop (below the pivotal point)? Where does the move target based on the prior consolidation range?
+
+SECTION: LIVERMORE VERDICT
+One sentence in Livermore's voice — blunt and decisive. What would Jesse Livermore do with ${asset} right now. "The market tells me..." style.`;
+    }
+  },
+
+  ptj: {
+    name: 'Paul Tudor Jones',
+    icon: '🛡️',
+    color: '#ff8800',
+    title: 'Made $100M on Black Monday 1987',
+    market: 'stocks',
+    badge: 'STOCKS + OPTIONS',
+    badgeClass: 'badge-options',
+    bigTrade: 'Predicted 1987 Black Monday crash by comparing it to 1929. Bought puts. Fund returned 62% while market crashed 22% in one day.',
+    books: 'Trader Documentary (1987) · The New Market Wizards (interview)',
+    philosophy: '200 EMA is the only rule. 5:1 risk-reward minimum. Play defense not offense. Historical pattern matching — find the 1929 equivalent. Options give asymmetric bets. Every day assume every position is wrong.',
+    rules: [
+      {key:'200 EMA RULE', val:'Price above 200 EMA = bull market. Below = bear. This is the only rule.'},
+      {key:'5:1 R:R', val:'Minimum 5:1 reward-to-risk. You can be wrong 80% and still make money.'},
+      {key:'PLAY DEFENSE', val:'"The most important rule is to play great defense, not offense."'},
+      {key:'HISTORY MATCH', val:'Find the historical pattern this resembles. Markets repeat.'},
+      {key:'OPTIONS EDGE', val:'Buy puts/calls for asymmetric bets. Limited downside, explosive upside.'},
+      {key:'ASSUME WRONG', val:'"Every day I assume every position I have is wrong." Forces humility.'}
+    ],
+    prompt: function(asset) {
+      return `You are Wolf AI channeling PAUL TUDOR JONES — who made $100 million on Black Monday 1987 by buying put options, achieving 62% returns while the market crashed 22%.
+
+Asset to analyze: ${asset}
+Current Date: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+
+PTJ FRAMEWORK (from Trader Documentary 1987 + New Market Wizards):
+200 EMA is the primary filter. 5:1 R:R minimum. Play defense. Historical pattern matching. Options for asymmetric bets. Macro first, technicals for timing.
+
+Analyze ${asset} through Paul Tudor Jones' exact lens:
+
+SECTION: 200 EMA CHECK
+"My metric for everything I look at is the 200-day moving average." — PTJ
+Is ${asset} currently ABOVE or BELOW the 200 EMA? By how much? Is price approaching the 200 EMA from above (support test) or below (resistance test)? What does this tell you about the macro trend?
+
+SECTION: HISTORICAL PATTERN MATCH
+PTJ made his fortune by comparing 1987 to 1929. What historical market pattern does ${asset} most resemble RIGHT NOW? Which previous setup in this asset's history looks similar? What happened next in that historical comparison? This is how PTJ predicted Black Monday.
+
+SECTION: 5:1 RISK-REWARD CALCULATION
+"I'm looking for 5 to 1. Five to one means I'm risking one dollar to make five." — PTJ
+What is the current risk level (stop below key support/resistance)? What is the realistic target for 5:1? Does such a setup exist right now? If not, Jones would wait.
+
+SECTION: OPTIONS PLAY (ASYMMETRIC BET)
+PTJ bought put options before Black Monday — limited downside, explosive upside. For ${asset} right now: should you buy calls or puts? Which strike? Which expiration (0DTE/weekly/monthly)? What makes this an asymmetric bet where you risk $1 to potentially make $5-10?
+
+SECTION: MACRO CONTEXT + DEFENSE
+"Don't focus on making money; focus on protecting what you have." — PTJ
+What is the current macro environment for ${asset}? Is this a high-risk or low-risk environment? What could go wrong? How does PTJ's defense-first philosophy apply here?
+
+SECTION: PTJ VERDICT
+One sentence in PTJ's voice. What would Paul Tudor Jones actually do with ${asset} today. Include whether it's a stock trade, options trade, or "stay in cash" call.`;
+    }
+  },
+
+  yass: {
+    name: 'Jeff Yass',
+    icon: '🎲',
+    color: '#cc55ff',
+    title: 'Billioniare From Pure Options Math',
+    market: 'stocks',
+    badge: 'OPTIONS',
+    badgeClass: 'badge-options',
+    bigTrade: 'Built Susquehanna International Group into one of the most profitable trading firms in history using pure options pricing inefficiencies. Billionaire from options edge alone.',
+    books: 'Market Wizards (referenced) · Probability theory applied to options markets',
+    philosophy: 'Options pricing is about probability and edge. Find where the market misprices volatility. IV rank tells you if options are cheap or expensive. Expected move vs actual move = your edge. Every trade is a probability calculation.',
+    rules: [
+      {key:'IV RANK', val:'IV rank <25 = buy options (cheap). IV rank >75 = sell options (expensive).'},
+      {key:'EXPECTED MOVE', val:'What move is the market pricing in? Is the actual likely move bigger or smaller?'},
+      {key:'PROBABILITY EDGE', val:'Only take trades with mathematical edge. No edge = no trade.'},
+      {key:'VOLATILITY MISPRICING', val:'Find where market systematically misprices volatility.'},
+      {key:'POSITION SIZING', val:'Size based on probability of profit, not gut feeling.'},
+      {key:'GAME THEORY', val:'Think like a poker player. What does the other side of the trade know?'}
+    ],
+    prompt: function(asset) {
+      return `You are Wolf AI channeling JEFF YASS — the billionaire founder of Susquehanna International Group who built his fortune through pure options pricing math and probability edge.
+
+Asset to analyze: ${asset}
+Current Date: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+
+YASS FRAMEWORK:
+Every trade is a probability calculation. IV rank determines if options are cheap or expensive. Find where the market misprices volatility. Expected move vs actual likely move = your edge. Game theory — what does the other side know?
+
+Analyze ${asset} through Jeff Yass' exact lens:
+
+SECTION: VOLATILITY ASSESSMENT
+What is the current implied volatility (IV) environment for ${asset}? Is IV elevated (options expensive — favor selling) or depressed (options cheap — favor buying)? What is driving the current IV level? Is this historically high or low IV for this asset?
+
+SECTION: EXPECTED MOVE ANALYSIS
+Based on current option prices and implied volatility, what is the market's EXPECTED MOVE for ${asset} over the next week/month? Now — what do YOU think the ACTUAL likely move will be? If actual > expected, buy options. If actual < expected, sell options. Where is the pricing edge?
+
+SECTION: VOLATILITY MISPRICING
+This is Yass's core edge — finding where the market systematically misprices volatility. For ${asset}: is there a catalyst coming that the market is over or underpricing? Is the current IV reflecting fear/greed rather than actual expected volatility? Where is the systematic mispricing?
+
+SECTION: PROBABILITY CALCULATION
+What is the mathematical probability that ${asset} hits the strike price you're considering? Yass thinks like a poker player. For the proposed trade: what is the probability of profit? What is the expected value calculation? Is there genuine mathematical edge?
+
+SECTION: OPTIMAL OPTIONS STRATEGY
+Based on the volatility and probability analysis:
+- Buy calls or puts (if IV cheap, directional bias strong)?
+- Sell covered calls or cash secured puts (if IV elevated)?
+- Spread strategy to reduce premium cost?
+- Which strike and expiration gives the best probability/reward tradeoff?
+
+SECTION: YASS VERDICT
+One sentence. What is the options trade Jeff Yass would put on for ${asset} today, with the probability of profit and the specific mathematical edge.`;
+    }
+  },
+
+  brooks: {
+    name: 'Al Brooks',
+    icon: '📊',
+    color: '#33ddff',
+    title: 'Author of the Price Action Bible',
+    market: 'stocks',
+    badge: 'PRICE ACTION',
+    badgeClass: 'badge-forex',
+    bigTrade: 'Wrote the definitive 3-volume series on price action trading. Professional trader and educator who uses ONLY price action — no indicators whatsoever.',
+    books: 'Trading Price Action Trends · Trading Price Action Ranges · Trading Price Action Reversals',
+    philosophy: 'Price action tells you EVERYTHING. No indicators needed. Strong bull/bear bars. Tight trading ranges vs trending. Second entries are safer. Always-in concept — market is always in a direction. Read every bar.',
+    rules: [
+      {key:'BAR READING', val:'Every bar has a story. Strong close = bulls won. Weak close = bears won.'},
+      {key:'ALWAYS IN', val:'Market is always either in a bull trend, bear trend, or trading range.'},
+      {key:'SECOND ENTRY', val:'First breakout often fails. Second entry = higher probability.'},
+      {key:'TIGHT RANGE', val:'Tight trading range = breakout coming. Wide range = chaos, avoid.'},
+      {key:'BULL BARS', val:'Strong bull bars with closes near high = continuation likely.'},
+      {key:'NO INDICATORS', val:'Price action only. Indicators are just derivatives of price — unnecessary.'}
+    ],
+    prompt: function(asset) {
+      return `You are Wolf AI channeling AL BROOKS — the author of the definitive 3-volume price action trading bible, who reads every bar with zero indicators.
+
+Asset to analyze: ${asset}
+Current Date: ${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+
+AL BROOKS FRAMEWORK (from Trading Price Action series, 3 volumes):
+No indicators. Read price action only. Bull/bear bars. Always-in direction. Tight ranges signal breakouts. Second entries are safer. Every bar tells a story.
+
+Analyze ${asset} through Al Brooks' pure price action lens:
+
+SECTION: ALWAYS-IN ASSESSMENT
+The market is ALWAYS IN either a bull trend, bear trend, or trading range. For ${asset} right now — which is it? On the daily timeframe, what is the "always-in" direction? Where would you ALWAYS BE if forced to hold a position right now?
+
+SECTION: BAR STRUCTURE READING
+Reading recent price action bars for ${asset}: Are the bull bars strong (large bodied, closing near high)? Are the bear bars strong or weak (small bodies, lots of wicks)? Who is winning — bulls or bears — based purely on bar structure? Strong closes = strength. Weak closes = weakness.
+
+SECTION: TRADING RANGE vs TREND
+Is ${asset} in a trending phase or a trading range? A TIGHT trading range (small bars, sideways) signals an imminent breakout. A WIDE range with mixed bars signals chaos — Al Brooks often says avoid trading ranges. Which is it now?
+
+SECTION: SECOND ENTRY SETUP
+Brooks says: the first breakout often fails and traps traders. The SECOND ENTRY (after the failed first breakout) is the high-probability trade. Has there been a recent breakout attempt in ${asset} that failed? Is there a second entry setup forming now?
+
+SECTION: KEY PRICE ACTION LEVELS
+With ZERO indicators — using only the actual price bars and their highs/lows — what are the key levels for ${asset}? Where are the obvious support levels (prior lows, breakout points)? Where are the obvious resistance levels (prior highs)? What is the "magnet" — the level price is most likely to reach next?
+
+SECTION: BROOKS VERDICT
+One sentence. What would Al Brooks see in ${asset} price action right now. Pure price action — no indicators. What is the bar structure telling him to do?`;
+    }
+  }
+};
+
+// Quick assets per market
+const QUICK_FOREX = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','EUR/JPY','GBP/JPY','USD/CHF','AUD/USD'];
+const QUICK_STOCKS = ['SPY','QQQ','AAPL','NVDA','TSLA','MSFT','AMZN','AMD'];
+
+// ── FUNCTIONS ─────────────────────────────────────────────────────────────────
+function switchMarket(mkt) {
+  currentMarket = mkt;
+  currentLegend = null;
+
+  document.getElementById('btn-forex').classList.toggle('active', mkt === 'forex');
+  document.getElementById('btn-stocks').classList.toggle('active', mkt === 'stocks');
+  document.getElementById('forex-legends').style.display = mkt === 'forex' ? 'flex' : 'none';
+  document.getElementById('stocks-legends').style.display = mkt === 'stocks' ? 'flex' : 'none';
+
+  // Update quick assets
+  const qa = document.getElementById('quick-assets');
+  const list = mkt === 'forex' ? QUICK_FOREX : QUICK_STOCKS;
+  qa.innerHTML = list.map(a => '<button class="qa-btn" onclick="setAsset(\'' + a + '\')">' + a + '</button>').join('');
+
+  // Reset right panel
+  document.getElementById('welcome-box').style.display = 'flex';
+  document.getElementById('analysis-container').style.display = 'none';
+
+  // Deselect all
+  document.querySelectorAll('.legend-card').forEach(c => c.classList.remove('selected'));
+}
+
+function selectLegend(key) {
+  currentLegend = key;
+  const legend = LEGENDS[key];
+
+  // Highlight selected card
+  document.querySelectorAll('.legend-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('lc-' + key).classList.add('selected');
+
+  // Show analysis container
+  document.getElementById('welcome-box').style.display = 'none';
+  document.getElementById('analysis-container').style.display = 'block';
+
+  // Build bio card
+  buildBioCard(legend);
+
+  // Reset result area
+  document.getElementById('result-area').innerHTML =
+    '<div style="text-align:center;padding:40px;color:var(--text-dim);font-size:11px;letter-spacing:2px;">ENTER AN ASSET ABOVE AND CLICK ANALYZE ⚡</div>';
+}
+
+function buildBioCard(legend) {
+  const card = document.getElementById('bio-card');
+  card.style.setProperty('--bio-color', legend.color);
+
+  let rulesHtml = '';
+  legend.rules.forEach(function(r) {
+    rulesHtml += '<div class="bio-rule"><strong>' + r.key + '</strong>' + r.val + '</div>';
+  });
+
+  card.innerHTML =
+    '<div class="bio-header">' +
+      '<div class="bio-icon">' + legend.icon + '</div>' +
+      '<div class="bio-info">' +
+        '<div class="bio-name">' + legend.name.toUpperCase() + ' <span class="badge ' + legend.badgeClass + '">' + legend.badge + '</span></div>' +
+        '<div class="bio-title">' + legend.title + '</div>' +
+        '<div class="bio-stat" style="color:' + legend.color + ';margin-top:6px;font-size:11px;">💰 ' + legend.bigTrade + '</div>' +
+        '<div class="bio-stat" style="margin-top:6px;">📚 ' + legend.books + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--text-mid);line-height:1.8;margin-bottom:12px;padding:10px;background:rgba(42,63,82,0.3);border-radius:3px;border-left:3px solid ' + legend.color + ';">' + legend.philosophy + '</div>' +
+    '<div class="bio-rules">' + rulesHtml + '</div>';
+}
+
+function setAsset(asset) {
+  document.getElementById('asset-input').value = asset;
+}
+
+async function runLegendAnalysis() {
+  if(isAnalyzing) return;
+  if(!currentLegend) { alert('Select a legend first!'); return; }
+
+  const asset = document.getElementById('asset-input').value.trim().toUpperCase();
+  if(!asset) { alert('Enter an asset to analyze!'); return; }
+
+  const legend = LEGENDS[currentLegend];
+  isAnalyzing = true;
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ ANALYZING...';
+
+  // Show loading
+  document.getElementById('result-area').innerHTML =
+    '<div class="load-box">' +
+      '<div class="spinner"></div>' +
+      '<div class="load-legend">' + legend.icon + ' ' + legend.name.toUpperCase() + '</div>' +
+      '<div class="load-msg">ANALYZING ' + asset + ' THROUGH ' + legend.name.toUpperCase() + '\'S FRAMEWORK...</div>' +
+      '<div style="font-size:9px;color:var(--text-dim);margin-top:8px;letter-spacing:1px;">Reading books · Applying methodology · Building analysis</div>' +
+    '</div>';
+
+  try {
+    const prompt = legend.prompt(asset);
+
+    // Start async job
+    const startRes = await fetch('/api/async-ai-start', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({prompt: prompt, max_tokens: 3000, pair: asset})
+    });
+    const startData = await startRes.json();
+    const jobId = startData.job_id;
+
+    // Poll
+    let result = null;
+    for(let i = 0; i < 90; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const pollRes = await fetch('/api/async-ai-poll/' + jobId);
+      const pollData = await pollRes.json();
+      if(pollData.status === 'done') { result = pollData.result; break; }
+      if(pollData.status === 'error') throw new Error(pollData.error || 'Analysis failed');
+    }
+
+    if(!result) throw new Error('Analysis timed out');
+
+    renderResult(legend, asset, result);
+
+  } catch(e) {
+    document.getElementById('result-area').innerHTML =
+      '<div style="color:var(--red);font-size:11px;padding:20px;text-align:center;">Error: ' + e.message + '</div>';
+  }
+
+  isAnalyzing = false;
+  btn.disabled = false;
+  btn.textContent = '⚡ ANALYZE WITH LEGEND';
+}
+
+function renderResult(legend, asset, text) {
+  const now = new Date().toLocaleTimeString('en-US', {timeZone:'America/New_York', hour:'2-digit', minute:'2-digit'});
+
+  // Parse sections
+  const sections = [];
+  const sectionRegex = /SECTION:\s*([^\n]+)\n([\s\S]*?)(?=SECTION:|$)/g;
+  let match;
+  while((match = sectionRegex.exec(text)) !== null) {
+    sections.push({title: match[1].trim(), content: match[2].trim()});
+  }
+
+  // Build verdict box from last section
+  const verdictSection = sections.find(s => s.title.includes('VERDICT'));
+  const otherSections = sections.filter(s => !s.title.includes('VERDICT'));
+
+  let html = '';
+
+  // Header
+  html += '<div class="analysis-wrap">';
+  html += '<div class="analysis-header">';
+  html += '<span style="font-size:20px;">' + legend.icon + '</span>';
+  html += '<div><div class="ah-legend">' + legend.name.toUpperCase() + ' ANALYSIS</div>';
+  html += '<div class="ah-asset">' + asset + '</div></div>';
+  html += '<div class="ah-ts">EST ' + now + '</div>';
+  html += '</div>';
+  html += '<div class="analysis-body">';
+
+  // Quote from the legend
+  const quotes = {
+    soros: {q: 'Markets are constantly in a state of uncertainty. It is this uncertainty that makes money for those who think clearly.', a: 'George Soros'},
+    druck: {q: 'The way to build superior long-term returns is through preservation of capital and home runs.', a: 'Stanley Druckenmiller'},
+    lipschutz: {q: 'How you define and manage risk is everything. Position sizing is the trade.', a: 'Bill Lipschutz'},
+    kovner: {q: 'Whenever I enter a position, I have a predetermined stop. That is the only way I can sleep.', a: 'Bruce Kovner'},
+    livermore: {q: 'It never was my thinking that made the big money for me. It was always my sitting. Sitting tight.', a: 'Jesse Livermore'},
+    ptj: {q: 'The most important rule of trading is to play great defense, not great offense. Every day I assume every position I have is wrong.', a: 'Paul Tudor Jones'},
+    yass: {q: 'Every trade is a probability. Find the edge. Size the bet according to your advantage.', a: 'Jeff Yass'},
+    brooks: {q: 'Every bar tells a story. Read the bar, understand who won — bulls or bears — then trade accordingly.', a: 'Al Brooks'}
+  };
+  const q = quotes[currentLegend];
+  if(q) {
+    html += '<div class="quote-box">';
+    html += '<div class="quote-text">"' + q.q + '"</div>';
+    html += '<div class="quote-attr">— ' + q.a + '</div>';
+    html += '</div>';
+  }
+
+  // Verdict first (highlighted)
+  if(verdictSection) {
+    html += '<div class="verdict-box">';
+    html += '<div class="verdict-label">⚡ ' + legend.name.toUpperCase() + ' VERDICT</div>';
+    html += '<div class="verdict-text">' + verdictSection.content + '</div>';
+    html += '</div>';
+  }
+
+  // All other sections
+  otherSections.forEach(function(sec) {
+    html += '<div class="al-section">';
+    html += '<div class="al-sec-title">' + sec.title + '</div>';
+    html += '<div class="al-content">' + sec.content + '</div>';
+    html += '</div>';
+  });
+
+  // If no sections parsed, show raw text
+  if(sections.length === 0) {
+    html += '<div class="al-content">' + text + '</div>';
+  }
+
+  html += '</div></div>'; // analysis-body + analysis-wrap
+
+  document.getElementById('result-area').innerHTML = html;
+}
+</script>
+</body>
+</html>

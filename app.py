@@ -2072,6 +2072,12 @@ Respond ONLY in valid JSON (no markdown):
 def education_page():
     return render_template('education.html')
 
+@app.route('/legends')
+@login_required
+@elite_required
+def legends_page():
+    return render_template('legends.html')
+
 @app.route('/ai-infra')
 @login_required
 @elite_required
