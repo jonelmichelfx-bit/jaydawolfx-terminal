@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>⚡ AI Infrastructure Scanner — JAYDAWOLFX</title>
+<title>⚡ AI The Future Scanner — JAYDAWOLFX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -201,7 +201,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:1
 <nav class="nav">
   <div class="nav-logo">🐺 JAYDAWOLFX</div>
   <a href="/" class="nav-back">← TERMINAL</a>
-  <div class="nav-tag">⚡ AI INFRASTRUCTURE</div>
+  <div class="nav-tag">🚀 AI THE FUTURE</div>
   <div class="nav-clock" id="nav-clock">--:--:-- EST</div>
 </nav>
 
@@ -214,7 +214,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:1
       <div class="sector-grid" id="sector-grid"></div>
     </div>
     <div class="panel-section">
-      <button class="scan-btn" id="scan-btn" onclick="runScan()">⚡ SCAN AI INFRA</button>
+      <button class="scan-btn" id="scan-btn" onclick="runScan()">🚀 SCAN AI THE FUTURE</button>
     </div>
     <div class="panel-section" id="stats-section" style="display:none;">
       <div class="ps-title">SCAN SUMMARY</div>
@@ -251,19 +251,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:1
   <div class="right">
     <div class="scan-header">
       <div>
-        <div class="sh-title">⚡ AI INFRASTRUCTURE SCANNER</div>
+        <div class="sh-title">🚀 AI THE FUTURE SCANNER</div>
         <div class="sh-sub">CHIPS · SERVERS · DATA CENTERS · POWER · COOLING · ROBOTICS · PICKS &amp; SHOVELS</div>
       </div>
       <div class="sh-meta">
         <div id="scan-date" style="font-size:10px;color:var(--text3);"></div>
-        <div style="font-size:9px;color:var(--dim);margin-top:2px;">22 AI INFRASTRUCTURE STOCKS · REAL PRICE DATA</div>
+        <div style="font-size:9px;color:var(--dim);margin-top:2px;">21 AI FUTURE STOCKS · DAILY ROTATION · REAL DATA</div>
       </div>
     </div>
     <div id="results-panel">
       <div class="placeholder">
         <div class="ph-icon">⚡</div>
         <div class="ph-text">
-          SELECT A SECTOR FILTER<br>THEN CLICK SCAN AI INFRA<br><br>
+          SELECT A SECTOR FILTER<br>THEN CLICK SCAN AI THE FUTURE<br><br>
           <span style="color:var(--cyan)">CHIPS · DATA CENTERS · POWER</span><br>
           <span>COOLING · ROBOTICS · AI SOFTWARE</span>
         </div>
@@ -378,12 +378,12 @@ async function runScan(){
     clearInterval(stepTimer);
     panel.innerHTML=`<div class="error-box">❌ ${e.message}<br><br><span style="font-size:10px;color:var(--text3)">Try again — check your connection</span></div>`;
   }
-  btn.disabled=false; btn.textContent='⚡ SCAN AI INFRA';
+  btn.disabled=false; btn.textContent='🚀 SCAN AI THE FUTURE';
 }
 
 function renderResults(data){
   const panel = document.getElementById('results-panel');
-  let stocks = (data.picks||data.stocks||[]).filter(s=>activeFilter==='ALL'||s.category===activeFilter||activeFilter==='ALL');
+  let stocks = (data.stocks||[]).filter(s=>activeFilter==='ALL'||s.sector===activeFilter);
   stocks = sortStocks(stocks, sortMode);
 
   const buys=stocks.filter(s=>s.signal==='BUY').length;
@@ -397,9 +397,9 @@ function renderResults(data){
 
   let html = '';
 
-  if(data.sector_read||data.market_read){
+  if(data.market_read){
     html+=`<div class="ctx-bar">
-      <div class="ctx-item"><div class="ctx-label">📊 MARKET READ</div><div class="ctx-val">${data.sector_read||data.market_read||'—'}</div></div>
+      <div class="ctx-item"><div class="ctx-label">📊 MARKET READ</div><div class="ctx-val">${data.market_read||'—'}</div></div>
       <div class="ctx-item"><div class="ctx-label">🔥 BEST SECTOR</div><div class="ctx-val" style="color:var(--gold)">${data.best_sector||'—'}</div></div>
       <div class="ctx-item"><div class="ctx-label">SIGNALS</div><div class="ctx-val"><span style="color:var(--green)">${buys} BUY</span> &nbsp;<span style="color:var(--gold)">${watches} WATCH</span> &nbsp;<span style="color:var(--red)">${avoids} AVOID</span></div></div>
     </div>`;
@@ -443,64 +443,160 @@ function buildRow(s,i){
 }
 
 function buildDetail(s){
-  const off=s.off_high_pct||0;
+  const off=s.vs_52w_high||s.off_high_pct||0;
   const fill=Math.max(2,Math.min(98,100+off));
-  const conv=s.conviction||0;
+  const conv=s.confidence||s.conviction||0;
   const cc=conv>=75?'high':conv>=55?'mid':'low';
+  const rsiVal=s.real_rsi||s.rsi||50;
+  const rsiColor=rsiVal>=65?'var(--red)':rsiVal<=35?'var(--green)':'var(--gold)';
+  const rsiLabel=rsiVal>=70?'OVERBOUGHT':rsiVal>=60?'BULLISH MO':rsiVal<=30?'OVERSOLD':rsiVal<=40?'BEARISH MO':'NEUTRAL';
+  const ema20=s.ema20||s.real_ema20||'—';
+  const ema50=s.ema50||s.real_ema50||'—';
+  const ema200=s.ema200||s.real_ema200||'—';
+  const price=parseFloat(s.current_price||s.price||0);
+  const trendColor= price>parseFloat(ema200)?'var(--green)':'var(--red)';
+  const trendLabel= price>parseFloat(ema200)?'UPTREND':'DOWNTREND';
+  const volRatio=s.real_vol_ratio||s.vol_ratio||1;
+  const confluences=s.confluences||s.real_signals||[];
+  const aiEdge=s.ai_edge||[];
+  const warnings=s.warnings||[];
+  const news=s.news||[];
+
   return `<div class="stock-detail">
+
+  <!-- ROW 1: THESIS + CHART ANALYSIS -->
   <div class="detail-grid">
-    <div class="detail-section">
-      <div class="ds-title">🧠 WOLF THESIS</div>
-      <div class="thesis-box">${s.thesis||'—'}</div>
-      ${s.catalyst?`<div class="catalyst-box"><div class="catalyst-lbl">⚡ CATALYST</div><div class="catalyst-txt">${s.catalyst}</div></div>`:''}
-      ${s.risk?`<div class="risk-box"><div class="risk-lbl">⚠ RISK</div><div class="risk-txt">${s.risk}</div></div>`:''}
-      <div class="conv-wrap">
-        <div class="conv-top"><span>CONVICTION</span><span class="conv-pct ${cc}">${conv}%</span></div>
-        <div class="conv-track"><div class="conv-fill cf-${cc}" style="width:${conv}%"></div></div>
+
+    <!-- WOLF THESIS -->
+    <div class="detail-section" style="grid-column:span 2;">
+      <div class="ds-title">🧠 WOLF THESIS — WHY THIS STOCK NOW</div>
+      <div class="thesis-box" style="font-size:12px;line-height:1.8;">${s.thesis||'—'}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        ${s.why_now?`<div style="background:rgba(51,221,255,0.05);border-left:3px solid var(--cyan);padding:10px;border-radius:0 4px 4px 0;"><div style="font-size:8px;letter-spacing:1px;color:var(--cyan);margin-bottom:4px;">⚡ WHY NOW</div><div style="font-size:11px;color:var(--text2);line-height:1.6;">${s.why_now}</div></div>`:''}
+        ${s.infrastructure_role?`<div style="background:rgba(255,51,85,0.05);border-left:3px solid var(--red);padding:10px;border-radius:0 4px 4px 0;"><div style="font-size:8px;letter-spacing:1px;color:var(--red);margin-bottom:4px;">💀 WHAT BREAKS IF THIS FAILS</div><div style="font-size:11px;color:var(--text2);line-height:1.6;">${s.infrastructure_role}</div></div>`:''}
       </div>
     </div>
+
+    <!-- CHART ANALYSIS -->
     <div class="detail-section">
-      <div class="ds-title">🎯 PRICE LEVELS</div>
-      <div class="lv-row"><span class="lv-key">RESISTANCE</span><span class="lv-val lv-res">${s.key_level_resistance?'$'+s.key_level_resistance:'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">ENTRY ZONE</span><span class="lv-val lv-entry">${s.entry_zone?'$'+s.entry_zone:'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">SUPPORT</span><span class="lv-val lv-sup">${s.key_level_support?'$'+s.key_level_support:'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">STOP LOSS</span><span class="lv-val lv-sl">${s.stop_loss?'$'+s.stop_loss:'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">TARGET 1</span><span class="lv-val lv-tp">${s.target_1?'$'+s.target_1:'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">TARGET 2</span><span class="lv-val lv-tp">${s.target_2?'$'+s.target_2:'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">TARGET 3</span><span class="lv-val lv-tp">${s.target_3?'$'+s.target_3:'—'}</span></div>
-      ${s.technical_setup?`<div style="margin-top:10px;font-size:10px;color:var(--text3);line-height:1.6;">${s.technical_setup}</div>`:''}
-    </div>
-    <div class="detail-section">
-      <div class="ds-title">📊 TECHNICALS</div>
-      <div class="range-viz">
-        <div class="rv-label">52-WEEK RANGE</div>
-        <div class="rv-bar">
-          <div class="rv-fill" style="width:${fill}%"></div>
-          <div class="rv-cursor" style="left:${fill}%"></div>
+      <div class="ds-title">📈 CHART ANALYSIS</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-family:var(--mono);font-size:13px;font-weight:bold;color:${trendColor};">${trendLabel}</span>
+        <span style="font-size:9px;color:var(--text3);">vs EMA200</span>
+      </div>
+      <div class="range-viz" style="margin-bottom:12px;">
+        <div class="rv-label">52-WEEK RANGE — WHERE PRICE IS NOW</div>
+        <div class="rv-bar" style="margin:6px 0;">
+          <div class="rv-fill" style="width:${fill}%;background:${off<-25?'var(--green)':off<-10?'var(--gold)':'var(--red)'};"></div>
+          <div class="rv-cursor" style="left:${fill}%;"></div>
         </div>
-        <div class="rv-labels"><span>$${s.low52||'—'}</span><span style="color:var(--cyan)">${off}% off high</span><span>$${s.high52||'—'}</span></div>
+        <div class="rv-labels"><span>$${s.week52_low||'—'}</span><span style="color:${off<-20?'var(--green)':'var(--gold)'};font-weight:bold;">${off}% off high</span><span>$${s.week52_high||'—'}</span></div>
+        <div style="font-size:9px;color:var(--text3);margin-top:4px;">${off<-30?'🟢 Deep discount — potential value zone':off<-15?'🟡 Moderate pullback from highs':'🔴 Near 52W high — extended'}</div>
       </div>
-      <div class="lv-row"><span class="lv-key">PRICE</span><span class="lv-val" style="font-size:13px;">$${s.price||'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">EMA 20</span><span style="font-size:12px;color:var(--text2)">${s.ema20||'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">EMA 50</span><span style="font-size:12px;color:var(--text2)">${s.ema50||'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">EMA 200</span><span style="font-size:12px;color:var(--text2)">${s.ema200||'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">RSI</span><span class="lv-val" style="font-size:13px;color:${(s.rsi||50)>=55?'var(--green)':(s.rsi||50)<=45?'var(--red)':'var(--gold)'}">${s.rsi||'—'}</span></div>
-      <div class="tech-chips">
-        <div class="t-chip ${s.above_ema200?'tc-bull':'tc-bear'}">${s.above_ema200?'ABOVE':'BELOW'} EMA200</div>
-        <div class="t-chip ${s.above_ema50?'tc-bull':'tc-bear'}">${s.above_ema50?'ABOVE':'BELOW'} EMA50</div>
-        <div class="t-chip ${(s.vol_ratio||0)>=1.5?'tc-bull':'tc-neut'}">VOL ${s.vol_ratio||'—'}x</div>
+      <div class="lv-row"><span class="lv-key">PRICE</span><span class="lv-val" style="font-size:14px;font-weight:bold;">$${price||'—'}</span></div>
+      <div class="lv-row"><span class="lv-key">EMA 20</span><span style="font-size:12px;color:${price>parseFloat(ema20)?'var(--green)':'var(--red)'}">${ema20} ${price>parseFloat(ema20)?'▲ price above':'▼ price below'}</span></div>
+      <div class="lv-row"><span class="lv-key">EMA 50</span><span style="font-size:12px;color:${price>parseFloat(ema50)?'var(--green)':'var(--red)'}">${ema50} ${price>parseFloat(ema50)?'▲ above':'▼ below'}</span></div>
+      <div class="lv-row"><span class="lv-key">EMA 200</span><span style="font-size:12px;color:${trendColor}">${ema200} ${price>parseFloat(ema200)?'▲ BULLISH':'▼ BEARISH'}</span></div>
+      <div class="lv-row"><span class="lv-key">RSI (14)</span>
+        <span style="font-size:13px;font-weight:bold;color:${rsiColor};">${rsiVal} — ${rsiLabel}</span>
+      </div>
+      <div class="lv-row"><span class="lv-key">VOLUME</span><span style="color:${volRatio>=1.5?'var(--green)':'var(--text3)'};">${volRatio}x avg ${volRatio>=2?'🔥 UNUSUAL VOLUME':volRatio>=1.5?'⬆ ELEVATED':''}</span></div>
+      <div class="tech-chips" style="margin-top:10px;">
+        <div class="t-chip ${price>parseFloat(ema200)?'tc-bull':'tc-bear'}">${price>parseFloat(ema200)?'ABOVE':'BELOW'} EMA200</div>
+        <div class="t-chip ${price>parseFloat(ema50)?'tc-bull':'tc-bear'}">${price>parseFloat(ema50)?'ABOVE':'BELOW'} EMA50</div>
+        <div class="t-chip ${volRatio>=1.5?'tc-bull':'tc-neut'}">VOL ${volRatio}x</div>
+        <div class="t-chip ${rsiVal<=45?'tc-bull':rsiVal>=65?'tc-bear':'tc-neut'}">${rsiLabel}</div>
       </div>
     </div>
+
+    <!-- ENTRY / EXIT LEVELS -->
     <div class="detail-section">
-      <div class="ds-title">⚙ AI INFRA ROLE</div>
-      <div style="font-size:11px;color:var(--text2);line-height:1.8;padding:10px 12px;background:rgba(51,221,255,.04);border-left:3px solid var(--cyan);margin-bottom:12px;">${s.ai_role||'—'}</div>
-      <div class="lv-row"><span class="lv-key">SECTOR</span><span style="font-size:13px;font-weight:900;color:${SECTOR_COLORS[s.sector]||'var(--cyan)'}">${s.sector}</span></div>
+      <div class="ds-title">🎯 ENTRY & EXIT PLAN</div>
+      <div class="lv-row"><span class="lv-key">ENTRY STRATEGY</span></div>
+      <div style="font-size:11px;color:var(--text2);padding:6px 0;line-height:1.6;">${s.entry_strategy||s.entry_zone||'—'}</div>
       <div class="lv-row"><span class="lv-key">ANALYST TARGET</span><span class="lv-val lv-tp">${s.analyst_target?'$'+s.analyst_target:'—'}</span></div>
       <div class="lv-row"><span class="lv-key">UPSIDE TO TARGET</span><span class="lv-val ${(s.upside_pct||0)>0?'lv-tp':'lv-sl'}">${s.upside_pct!=null?(s.upside_pct>0?'+':'')+s.upside_pct+'%':'—'}</span></div>
-      <div class="lv-row"><span class="lv-key">OFF 52W HIGH</span><span class="lv-val" style="color:${off<-20?'var(--green)':'var(--gold)'}">${off}%</span></div>
-      <div class="lv-row"><span class="lv-key">VOLUME RATIO</span><span class="lv-val" style="font-size:12px;color:${(s.vol_ratio||0)>=1.5?'var(--green)':'var(--text3)'}">${s.vol_ratio||'—'}x</span></div>
+      <div class="lv-row"><span class="lv-key">ANALYST RATING</span><span style="font-size:11px;color:var(--gold);">${s.analyst_rating||'—'} (${s.num_analysts||'—'} analysts)</span></div>
+      <div class="lv-row"><span class="lv-key">TIME HORIZON</span><span style="font-size:11px;color:var(--cyan);">${s.time_horizon||'—'}</span></div>
+      <div class="lv-row"><span class="lv-key">MARKET CAP</span><span style="font-size:12px;color:var(--text2);">${s.market_cap||'—'}</span></div>
+      <div class="lv-row"><span class="lv-key">P/E RATIO</span><span style="font-size:12px;color:var(--text2);">${s.pe_ratio||'—'}</span></div>
+      <div class="lv-row"><span class="lv-key">REVENUE GROWTH</span><span style="font-size:12px;color:var(--green);">${s.revenue_growth||'—'}</span></div>
+      ${s.exit_strategy?`<div style="margin-top:8px;background:rgba(255,51,85,0.05);border-left:3px solid var(--red);padding:8px;border-radius:0 4px 4px 0;"><div style="font-size:8px;letter-spacing:1px;color:var(--red);margin-bottom:3px;">EXIT STRATEGY</div><div style="font-size:11px;color:var(--text2);">${s.exit_strategy}</div></div>`:''}
     </div>
-  </div></div>`;
+  </div>
+
+  <!-- ROW 2: AI DEMAND THESIS + LONG TERM + SECTOR DEMAND -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin-top:1px;">
+
+    <!-- AI DEMAND — WHY NOW -->
+    <div class="detail-section" style="background:var(--bg);">
+      <div class="ds-title">🔥 AI DEMAND — WHY IT'S HOT</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;padding:8px;background:rgba(255,107,53,0.04);border-radius:4px;margin-bottom:10px;">${s.ai_role||'—'}</div>
+      ${confluences.length?`<div style="font-size:8px;letter-spacing:1px;color:var(--orange);margin-bottom:6px;">CONFLUENCES</div>${confluences.map(c=>`<div style="font-size:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text2);">✓ ${c}</div>`).join('')}`:''}
+      ${aiEdge.length?`<div style="font-size:8px;letter-spacing:1px;color:var(--cyan);margin:8px 0 6px;">AI EDGE</div>${aiEdge.map(e=>`<div style="font-size:10px;padding:4px 0;color:var(--cyan);">⚡ ${e}</div>`).join('')}`:''}
+    </div>
+
+    <!-- LONG TERM THESIS -->
+    <div class="detail-section" style="background:var(--bg);">
+      <div class="ds-title">🌐 LONG TERM THESIS (5-10 YR)</div>
+      <div style="font-size:8px;letter-spacing:1px;color:var(--purple);margin-bottom:8px;">WHY THIS SECTOR IS THE FUTURE</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:10px;">
+        ${s.category==='CHIPS'||s.category==='NETWORKING'?'The AI chip war is a decade-long arms race. Every hyperscaler — Google, Microsoft, Meta, Amazon — is spending hundreds of billions on custom silicon and networking. The world cannot run AI without chips. This is the oil of the 21st century.':
+          s.category==='SERVERS'||s.category==='MANUFACTURING'?'AI needs physical infrastructure — racks, cooling, power delivery. Every dollar spent on AI software requires $5-10 in physical server infrastructure. This wave is just beginning as enterprises upgrade from CPU to GPU-accelerated compute.':
+          s.category==='DATA CENTER'?'Data centers are the factories of the AI economy. Hyperscalers are signing 10-20 year power purchase agreements and leasing capacity years in advance. Demand is structurally outpacing supply through 2030.':
+          s.category==='POWER'?'AI data centers consume 10-100x more power than traditional servers. Nuclear, natural gas, and renewable energy companies with data center contracts are the hidden picks-and-shovels play of the AI boom. Power is the ultimate bottleneck.':
+          s.category==='AI SOFTWARE'?'AI software platforms that sit on top of the infrastructure layer — turning raw compute into enterprise value. The companies that own the AI workflow become the next Oracle or Salesforce. Winner-take-most dynamics apply.':
+          s.category==='ROBOTICS'?'Physical AI — robots, automation, surgical systems — is the next frontier after digital AI matures. Every factory, warehouse and hospital will be transformed. The TAM is measured in the tens of trillions of dollars.':
+          'AI infrastructure is the backbone of the fourth industrial revolution. Every sector of the global economy will be rebuilt on AI — healthcare, defense, finance, manufacturing. The companies that build and power this transformation will define the next decade.'}
+      </div>
+      <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:4px;padding:10px;">
+        <div style="font-size:8px;letter-spacing:1px;color:var(--purple);margin-bottom:6px;">CATEGORY</div>
+        <div style="font-family:var(--mono);font-size:13px;font-weight:bold;color:var(--purple);">${s.category||'AI'}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:4px;">${s.ai_revenue_pct?'AI Revenue: '+s.ai_revenue_pct:''}</div>
+      </div>
+    </div>
+
+    <!-- CATALYST, RISK & NEWS -->
+    <div class="detail-section" style="background:var(--bg);">
+      <div class="ds-title">📰 CATALYST · RISK · NEWS</div>
+      ${s.catalyst?`<div class="catalyst-box" style="margin-bottom:8px;"><div class="catalyst-lbl">⚡ NEAR-TERM CATALYST</div><div class="catalyst-txt">${s.catalyst}</div></div>`:''}
+      ${s.risk?`<div class="risk-box" style="margin-bottom:8px;"><div class="risk-lbl">⚠ KEY RISK</div><div class="risk-txt">${s.risk}</div></div>`:''}
+      ${s.invalidation?`<div style="background:rgba(255,51,85,0.06);border:1px solid rgba(255,51,85,0.15);border-radius:4px;padding:8px;margin-bottom:8px;"><div style="font-size:8px;letter-spacing:1px;color:var(--red);margin-bottom:3px;">🚫 INVALIDATION</div><div style="font-size:11px;color:var(--text2);">${s.invalidation}</div></div>`:''}
+      ${warnings.length?`<div style="font-size:8px;letter-spacing:1px;color:var(--red);margin-bottom:6px;">WARNINGS</div>${warnings.map(w=>`<div style="font-size:10px;padding:4px 0;color:var(--red);border-bottom:1px solid rgba(255,51,85,0.1);">⚠ ${w}</div>`).join('')}`:''}
+      ${news.length?`<div style="font-size:8px;letter-spacing:1px;color:var(--text3);margin:8px 0 6px;">LATEST NEWS</div>${news.slice(0,3).map(n=>`<div style="font-size:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text2);line-height:1.5;">${n.title||n}</div>`).join('')}`:''}
+      <div class="conv-wrap" style="margin-top:10px;">
+        <div class="conv-top"><span>WOLF CONFIDENCE</span><span class="conv-pct ${cc}">${conv}%</span></div>
+        <div class="conv-track"><div class="conv-fill cf-${cc}" style="width:${conv}%"></div></div>
+        <div style="font-size:9px;color:var(--text3);margin-top:4px;">${conv>=80?'🔥 WOLF HIGH CONVICTION':conv>=65?'✅ SOLID SETUP':conv>=50?'⚡ WATCHLIST CANDIDATE':'⚠ WEAK — AVOID'}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTOR DEMAND BREAKDOWN -->
+  <div style="background:rgba(51,221,255,0.03);border-top:1px solid var(--border);padding:14px 16px;">
+    <div style="font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--cyan);margin-bottom:10px;">🌍 AI SECTOR DEMAND BREAKDOWN — WHO'S BUYING & WHY</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+      <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:4px;padding:10px;">
+        <div style="font-size:8px;letter-spacing:1px;color:var(--red);margin-bottom:5px;">⚔️ DEFENSE & GOV</div>
+        <div style="font-size:10px;color:var(--text2);line-height:1.6;">Pentagon AI budget exceeds $2.5B/yr. DARPA, NSA, DHS deploying AI for surveillance, cyber defense, autonomous weapons. Ukraine war accelerated military AI by a decade.</div>
+      </div>
+      <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:4px;padding:10px;">
+        <div style="font-size:8px;letter-spacing:1px;color:var(--orange);margin-bottom:5px;">🏢 HYPERSCALERS</div>
+        <div style="font-size:10px;color:var(--text2);line-height:1.6;">Microsoft, Google, Amazon, Meta spending $300B+ in 2025 on AI capex. Every $1 of AI cloud revenue needs $3-5 of infrastructure. This demand is locked in for years.</div>
+      </div>
+      <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:4px;padding:10px;">
+        <div style="font-size:8px;letter-spacing:1px;color:var(--gold);margin-bottom:5px;">🏭 ENTERPRISE</div>
+        <div style="font-size:10px;color:var(--text2);line-height:1.6;">Fortune 500 companies deploying AI to cut costs and automate. Healthcare, finance, manufacturing all buying AI tools. Enterprise AI software market growing 35%+ annually.</div>
+      </div>
+      <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:4px;padding:10px;">
+        <div style="font-size:8px;letter-spacing:1px;color:var(--purple);margin-bottom:5px;">🌏 GLOBAL RACE</div>
+        <div style="font-size:10px;color:var(--text2);line-height:1.6;">US-China AI arms race is existential. Both countries treating AI supremacy like nuclear dominance. $500B Stargate project. China's DeepSeek disruption. This race accelerates all AI spending.</div>
+      </div>
+    </div>
+    ${s.verdict?`<div style="margin-top:10px;background:linear-gradient(135deg,rgba(51,221,255,0.08),rgba(10,20,32,0));border:1px solid rgba(51,221,255,0.2);border-radius:4px;padding:12px;font-size:12px;color:var(--cyan);font-weight:bold;line-height:1.6;">🐺 WOLF VERDICT: ${s.verdict}</div>`:''}
+  </div>
+
+  </div>`;
 }
 
 function sortStocks(stocks, mode){
