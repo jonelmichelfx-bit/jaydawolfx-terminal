@@ -383,7 +383,7 @@ async function runScan(){
 
 function renderResults(data){
   const panel = document.getElementById('results-panel');
-  let stocks = (data.stocks||[]).filter(s=>activeFilter==='ALL'||s.sector===activeFilter);
+  let stocks = (data.picks||data.stocks||[]).filter(s=>activeFilter==='ALL'||s.category===activeFilter||activeFilter==='ALL');
   stocks = sortStocks(stocks, sortMode);
 
   const buys=stocks.filter(s=>s.signal==='BUY').length;
@@ -397,9 +397,9 @@ function renderResults(data){
 
   let html = '';
 
-  if(data.market_read){
+  if(data.sector_read||data.market_read){
     html+=`<div class="ctx-bar">
-      <div class="ctx-item"><div class="ctx-label">📊 MARKET READ</div><div class="ctx-val">${data.market_read||'—'}</div></div>
+      <div class="ctx-item"><div class="ctx-label">📊 MARKET READ</div><div class="ctx-val">${data.sector_read||data.market_read||'—'}</div></div>
       <div class="ctx-item"><div class="ctx-label">🔥 BEST SECTOR</div><div class="ctx-val" style="color:var(--gold)">${data.best_sector||'—'}</div></div>
       <div class="ctx-item"><div class="ctx-label">SIGNALS</div><div class="ctx-val"><span style="color:var(--green)">${buys} BUY</span> &nbsp;<span style="color:var(--gold)">${watches} WATCH</span> &nbsp;<span style="color:var(--red)">${avoids} AVOID</span></div></div>
     </div>`;
