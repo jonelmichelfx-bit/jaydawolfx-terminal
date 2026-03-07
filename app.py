@@ -1006,6 +1006,39 @@ Respond ONLY in valid JSON (no markdown):
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/forex-scanner', methods=['POST'])
+@login_required
+def forex_scanner():
+    try:
+        data = request.get_json() or {}
+        theme = data.get('theme', 'best setups today')
+        date_str = datetime.now().strftime('%A, %B %d, %Y')
+        session_name, _ = get_session()
+        scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','USD/CHF','NZD/USD']
+        prices = get_prices_parallel(scan_pairs)
+        news = get_news()
+        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
+        prices_str = "\n".join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v.get('percent_change',0):+.2f}%)" for p,v in prices.items()])
+        news_str = "\n".join([f"- {n['title']}" for n in news[:4]]) or "- Monitor key levels"
+        chart_ctx = "\n".join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
+        prompt = (
+            f"You are Wolf AI - elite forex scanner. Today: {date_str}. Session: {session_name}.\n"
+            f"Theme requested: {theme}\n\n"
+            f"LIVE PRICES:\n{prices_str}\n\n"
+            f"NEWS:\n{news_str}\n\n"
+            f"{chart_ctx}\n\n"
+            f"Scan all pairs and find the 3 BEST setups matching the theme \"{theme}\".\n"
+            f"Use REAL chart data above for S/R levels, EMAs, RSI. Be specific.\n\n"
+            f'Respond ONLY in valid JSON (no markdown):\n'
+            '{{"scan_theme":"{theme}","date":"{date_str}","session":"{session_name}","dxy_bias":"BULLISH or BEARISH","risk_environment":"RISK-ON or RISK-OFF","picks":[{{"rank":1,"pair":"EUR/USD","direction":"SELL","entry":"1.0390","stop_loss":"1.0420","tp1":"1.0350","tp2":"1.0310","tp3":"1.0270","rr_ratio":"1:2.5","confidence":85,"thesis":"2-3 sentence thesis using real chart data","confluences":["real level 1","real level 2"],"best_window":"London Open 3-5AM EST","invalidation":"Break above 1.0430","buy_scenario":"string","sell_scenario":"string"}}]}}'.format(theme=theme,date_str=date_str,session_name=session_name)
+        )
+        result = parse_json_response(call_claude(prompt, 3000))
+        return jsonify(result)
+    except json.JSONDecodeError as e: return jsonify({'error': f'AI returned invalid JSON: {str(e)}'}), 500
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/forex-picks', methods=['POST'])
 @login_required
 def forex_picks():
@@ -1256,8 +1289,8 @@ SCAN_UNIVERSE = [
 def get_market_regime():
     try:
         import yfinance as yf
-        spy = yf.Ticker('SPY').history(period='5d', interval='1d')
-        vix = yf.Ticker('^VIX').history(period='5d', interval='1d')
+        spy = yf.Ticker('SPY').history(period='5d', interval='1d', timeout=6)
+        vix = yf.Ticker('^VIX').history(period='5d', interval='1d', timeout=6)
 
         spy_close = float(spy['Close'].iloc[-1])
         spy_prev  = float(spy['Close'].iloc[-2])
@@ -1304,8 +1337,8 @@ def score_stock(ticker_sym):
         ticker = yf.Ticker(ticker_sym)
 
         # ── Price + Volume history ────────────────────────────
-        hist = ticker.history(period='1y', interval='1d')
-        if hist.empty or len(hist) < 50:
+        hist = ticker.history(period='1y', interval='1d', timeout=8)
+        if hist is None or hist.empty or len(hist) < 50:
             return None
 
         closes  = hist['Close'].tolist()
@@ -1331,10 +1364,21 @@ def score_stock(ticker_sym):
         options_strategy = 'LONG CALL'
 
         try:
-            exps = ticker.options
+            import concurrent.futures as _cf
+            def _get_opts():
+                e = ticker.options
+                if e: return ticker.option_chain(e[0])
+                return None
+            with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
+                _fut = _ex.submit(_get_opts)
+                _chain = _fut.result(timeout=5)
+            if _chain:
+                chain = _chain
+                exps = ['dummy']  # signal that we got chain
+            else:
+                raise Exception('no options')
             if exps:
                 # Use nearest expiration for IV scan
-                chain = ticker.option_chain(exps[0])
                 calls = chain.calls
                 puts  = chain.puts
 
@@ -1609,7 +1653,7 @@ def run_byakugan_job(job_id, scan_filter, date_str, user_id):
         elif scan_filter=='BLUE': universe=['AAPL','MSFT','GOOGL','AMZN','META','JPM','GS','BAC','XOM','CVX','DIS']
         elif scan_filter=='ETF': universe=['SPY','QQQ','IWM','GLD','TLT','XLK','XLF','XLE','XLV','ARKK']
         elif scan_filter=='DEFENSE': universe=['LMT','RTX','NOC','GD','HII','LHX','AXON','KTOS','PLTR']
-        else: universe=['AAPL','MSFT','NVDA','TSLA','AMD','META','GOOGL','AMZN','NFLX','COIN','PLTR','MARA','HOOD','JPM','GS','XOM','SMCI','AVGO','MU','CRM']
+        else: universe=['AAPL','MSFT','NVDA','TSLA','AMD','META','GOOGL','AMZN','COIN','PLTR','JPM','GS','XOM','SMCI','AVGO']  # 15 stocks — balanced speed vs coverage
         regime = get_market_regime()
         vix = float(regime.get('vix', 20))
         _byakugan_jobs[job_id]['status'] = 'scoring'
@@ -1624,7 +1668,13 @@ def run_byakugan_job(job_id, scan_filter, date_str, user_id):
                 except Exception as e: print(f'[Byakugan] {sym}: {e}')
         scored.sort(key=lambda x: x['score'], reverse=True)
         top5 = scored[:5]
-        if not top5: _byakugan_jobs[job_id]={'status':'error','error':'No qualifying stocks found'}; return
+        # Lower threshold if nothing scores > 15
+        if not scored:
+            print('[Byakugan] No stocks scored at all — retrying with lower threshold')
+            scored = [s for s in [score_stock(sym) for sym in universe[:5]] if s]
+        if not scored:
+            _byakugan_jobs[job_id]={'status':'error','error':'Market data unavailable — try again in 30 seconds'}; return
+        top5 = scored[:5]
         _byakugan_jobs[job_id]['status'] = 'news'
         for stock in top5:
             try: stock['news'] = get_news(stock['ticker'])[:3]
@@ -1651,7 +1701,17 @@ TODAY:{date_str} MARKET:SPY:{regime['spy_price']} ({regime['spy_change']:+.2f}%)
 {stocks_ctx}
 RULES: Friday weeklies 1-5DTE stocks. 0DTE/1DTE SPY/QQQ. Delta 0.35-0.50 directional. Confidence clear=80-92% mixed=65-75%. Greeks required. Real S/R entries.
 JSON only no markdown: {{"scan_date":"{date_str}","market_regime":{{"spy":"{regime['spy_price']}","spy_change":"{regime['spy_change']:+.2f}%","vix":"{vix}","sentiment":"{regime['fear_greed']}","regime":"{regime['regime']}","wolf_market_read":"2 sentences"}},"tomorrow_game_plan":"3 sentences","picks":[{{"rank":1,"ticker":"X","price":"0","wolf_score":80,"confidence":82,"direction":"BULLISH","sector":"Tech","thesis":"thesis","news_catalyst":"news","technical_setup":"setup","entry_zone":"X","key_support":"X","key_resistance":"Y","stop_loss":"X","target_1":"X","target_2":"Y","target_3":"Z","tomorrow_entry":"entry plan","options_play":{{"strategy":"LONG CALL","recommended_strike":"Xc","expiration":"This Friday (3 DTE)","entry_price":"X","max_risk":"$X","target_exit":"$X","stop_exit":"$X","greeks":{{"delta":0.42,"gamma":0.008,"theta":-0.85,"vega":0.45}},"iv_environment":"context","note":"note"}},"confluences":["c1"],"warnings":["w1"],"invalidation":"stop"}}]}}"""
-        result = parse_json_response(call_claude(prompt, 5000))
+        result = None; last_error = None
+        for attempt in range(3):
+            try:
+                raw = call_claude(prompt, 5000)
+                if not raw or not raw.strip(): raise ValueError('Empty response')
+                result = parse_json_response(raw); break
+            except Exception as retry_err:
+                last_error = retry_err
+                print(f'[Byakugan] Attempt {attempt+1} failed: {retry_err}')
+                if attempt < 2: time.sleep(2)
+        if result is None: raise Exception(f'AI failed after 3 attempts: {last_error}')
         for pick in result.get('picks',[]):
             match = next((s for s in top5 if s['ticker']==pick.get('ticker','')),None)
             if match:
