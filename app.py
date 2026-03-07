@@ -1693,6 +1693,264 @@ def byakugan_poll(job_id):
     if job['status']=='error':
         return jsonify({'status':'error','error':job.get('error','Unknown error')}),500
     return jsonify({'status':job['status']})
+# ═══════════════════════════════════════════════════════════════
+# AI INFRASTRUCTURE SCANNER — paste at bottom of app.py
+# (before the "if __name__ == '__main__':" line)
+# ═══════════════════════════════════════════════════════════════
+
+AI_INFRA_UNIVERSE = {
+    'ALL': [
+        'MRVL','INTC','SMCI','CRDO',
+        'APLD','IREN','NBIS',
+        'OKLO','CEG','VST',
+        'MOD','STRL','CLS',
+        'PATH','TER',
+        'PLTR','AI',
+    ],
+    'CHIPS':      ['MRVL','INTC','AMD','AVGO','CRDO','MU'],
+    'SERVERS':    ['SMCI','CLS','JBL','DELL'],
+    'DATACENTER': ['APLD','IREN','NBIS','DLR'],
+    'POWER':      ['OKLO','CEG','VST','ETN'],
+    'ROBOTICS':   ['PATH','TER','ISRG'],
+    'DEEP_VALUE': ['SMCI','INTC','MRVL','APLD','IREN','AI','PATH'],
+}
+
+TICKER_CATEGORY = {
+    'MRVL':'CHIPS',    'INTC':'CHIPS',    'AMD':'CHIPS',
+    'AVGO':'CHIPS',    'CRDO':'NETWORKING','MU':'CHIPS',
+    'SMCI':'SERVERS',  'CLS':'MANUFACTURING','JBL':'MANUFACTURING','DELL':'SERVERS',
+    'APLD':'DATA CENTER','IREN':'DATA CENTER','NBIS':'DATA CENTER','DLR':'DATA CENTER',
+    'OKLO':'POWER',    'CEG':'POWER',     'VST':'POWER',    'ETN':'POWER',
+    'MOD':'COOLING',   'STRL':'CONSTRUCTION',
+    'PATH':'ROBOTICS', 'TER':'ROBOTICS',  'ISRG':'ROBOTICS',
+    'PLTR':'AI SOFTWARE','AI':'AI SOFTWARE',
+}
+
+AI_ROLE_MAP = {
+    'MRVL': 'Custom AI ASICs for hyperscalers — direct NVIDIA ASIC competitor',
+    'INTC': '18A foundry + $350M SambaNova — US chip manufacturing turnaround',
+    'AMD':  'MI300X GPU competing with NVIDIA H100/H200 for AI training',
+    'AVGO': 'Custom AI XPU chips (Google TPU, Meta) + AI networking',
+    'CRDO': 'High-speed Active Electrical Cables for AI data center interconnects',
+    'MU':   'HBM3E memory stacked on NVIDIA GPUs for AI training',
+    'SMCI': 'AI server racks with direct liquid cooling — deeply discounted',
+    'CLS':  'Contract mfg: AI servers and networking gear for hyperscalers',
+    'JBL':  'AI server racks, liquid-cooling, networking switches',
+    'DELL': 'AI server infrastructure + PowerEdge AI, Microsoft/NVIDIA partner',
+    'APLD': 'HPC & AI data center operator — 150MW CoreWeave deal',
+    'IREN': 'Ex-BTC miner converting to AI GPU cloud — NVIDIA Blackwell ordered',
+    'NBIS': 'AI cloud infra — Meta + Microsoft contracts, scaling fast',
+    'DLR':  'Largest data center REIT — AI colocation demand surge',
+    'OKLO': 'Small modular nuclear reactors for AI data center power',
+    'CEG':  'Nuclear operator with Microsoft AI data center energy deals',
+    'VST':  'Power generation play on AI electricity demand surge',
+    'ETN':  'Electrical components for AI data center buildout',
+    'MOD':  'Data center chillers — revenue +119% YoY, $2B target by 2028',
+    'STRL': 'Builds AI data center facilities — $2.6B backlog +64% YoY',
+    'PATH': 'Agentic AI automation — software robots for enterprise workflows',
+    'TER':  'Semiconductor test equipment + Universal Robots',
+    'ISRG': 'AI-guided da Vinci surgical robots — market leader',
+    'PLTR': 'AI Platform (AIP) — US gov + enterprise AI analytics',
+    'AI':   'Enterprise AI apps — pure-play beaten down, direct AI exposure',
+}
+
+def score_ai_infra_stock(ticker_sym):
+    base = score_stock(ticker_sym)
+    if not base:
+        return None
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(ticker_sym)
+        hist   = ticker.history(period='1y', interval='1d')
+        price  = base['price']
+        week52_high = round(float(hist['High'].tail(252).max()), 2) if not hist.empty else None
+        week52_low  = round(float(hist['Low'].tail(252).min()),  2) if not hist.empty else None
+        vs_52w_high = round(((price - week52_high) / week52_high) * 100, 1) if week52_high else None
+        analyst_target = None; analyst_rating = None; num_analysts = None
+        pe_ratio = None; revenue_growth = None; market_cap = None
+        try:
+            info = ticker.info
+            analyst_target  = info.get('targetMeanPrice')
+            analyst_rating  = (info.get('recommendationKey','') or '').replace('_',' ').title() or None
+            num_analysts    = info.get('numberOfAnalystOpinions')
+            pe_ratio        = info.get('trailingPE')
+            revenue_growth  = info.get('revenueGrowth')
+            mc = info.get('marketCap', 0)
+            if mc > 1e12:   market_cap = f"{round(mc/1e12,1)}T"
+            elif mc > 1e9:  market_cap = f"{round(mc/1e9,1)}B"
+            elif mc > 1e6:  market_cap = f"{round(mc/1e6,1)}M"
+        except Exception as e:
+            print(f'[AIInfra info {ticker_sym}] {e}')
+        upside_pct = round(((analyst_target - price) / price) * 100, 1) if analyst_target and price else None
+        score = base['score']
+        if vs_52w_high:
+            if vs_52w_high < -40:   score += 20
+            elif vs_52w_high < -25: score += 12
+            elif vs_52w_high < -15: score += 6
+        if upside_pct:
+            if upside_pct > 50:   score += 15
+            elif upside_pct > 30: score += 10
+            elif upside_pct > 15: score += 5
+            elif upside_pct < 0:  score -= 10
+        if upside_pct and upside_pct >= 20 and vs_52w_high and vs_52w_high <= -15:
+            signal = 'BUY'
+        elif upside_pct and upside_pct > 0:
+            signal = 'WATCH'
+        else:
+            signal = 'AVOID'
+        base.update({
+            'week52_high':    week52_high,
+            'week52_low':     week52_low,
+            'vs_52w_high':    vs_52w_high,
+            'analyst_target': round(analyst_target, 2) if analyst_target else None,
+            'analyst_rating': analyst_rating,
+            'num_analysts':   num_analysts,
+            'upside_pct':     upside_pct,
+            'market_cap':     market_cap,
+            'pe_ratio':       round(pe_ratio, 1) if pe_ratio else None,
+            'revenue_growth': (f"+{round(revenue_growth*100,1)}%" if revenue_growth and revenue_growth > 0
+                               else f"{round(revenue_growth*100,1)}%" if revenue_growth else None),
+            'ai_role':        AI_ROLE_MAP.get(ticker_sym, ''),
+            'category':       TICKER_CATEGORY.get(ticker_sym, 'AI'),
+            'signal':         signal,
+            'score':          max(0, min(100, score)),
+        })
+        return base
+    except Exception as e:
+        print(f'[ScoreAIInfra {ticker_sym}] {e}')
+        return base
+
+_ai_infra_jobs = {}
+
+def _run_ai_infra_job(job_id, scan_filter, date_str):
+    try:
+        _ai_infra_jobs[job_id] = {'status': 'scanning'}
+        universe = AI_INFRA_UNIVERSE.get(scan_filter, AI_INFRA_UNIVERSE['ALL'])
+        regime   = get_market_regime()
+        _ai_infra_jobs[job_id] = {'status': 'scoring'}
+        scored = []
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            futures = {ex.submit(score_ai_infra_stock, sym): sym for sym in universe}
+            for f in as_completed(futures, timeout=90):
+                sym = futures[f]
+                try:
+                    s = f.result()
+                    if s: scored.append(s)
+                except Exception as e:
+                    print(f'[AIInfra score] {sym}: {e}')
+        scored.sort(key=lambda x: (
+            0 if x.get('signal')=='BUY' else 1 if x.get('signal')=='WATCH' else 2,
+            -(x.get('upside_pct') or 0)
+        ))
+        top5 = scored[:5]
+        if not top5:
+            _ai_infra_jobs[job_id] = {'status':'error','error':'No stocks scored'}; return
+        _ai_infra_jobs[job_id] = {'status': 'news'}
+        for stock in top5:
+            try: stock['news'] = get_news(stock['ticker'])[:3]
+            except: stock['news'] = []
+        _ai_infra_jobs[job_id] = {'status': 'analyzing'}
+        vix = float(regime.get('vix', 20))
+        stocks_ctx = ''
+        for s in top5:
+            stocks_ctx += f"""
+---
+{s['ticker']} | ${s['price']} | Signal:{s.get('signal','WATCH')} | Score:{s['score']}/100
+Category:{s.get('category','')} | AI Role:{s.get('ai_role','')}
+EMA20:{s.get('ema20','?')} EMA50:{s.get('ema50','?')} EMA200:{s.get('ema200','?')}
+RSI:{s.get('rsi','?')} MACD:{s.get('macd_bias','?')} Volume:{s.get('vol_ratio','?')}x
+52W HIGH:${s.get('week52_high','?')} CURRENT:${s['price']} 52W LOW:${s.get('week52_low','?')}
+Discount from high:{s.get('vs_52w_high','?')}% | Analyst target:${s.get('analyst_target','?')} Upside:{s.get('upside_pct','?')}% Rating:{s.get('analyst_rating','?')} ({s.get('num_analysts','?')} analysts)
+Market cap:{s.get('market_cap','?')} P/E:{s.get('pe_ratio','?')} Rev growth:{s.get('revenue_growth','?')}
+News:{' | '.join([n['title'][:60] for n in s.get('news',[])]) or 'None'}
+---"""
+        prompt = f"""You are Wolf AI — elite AI infrastructure investor.
+Peter Lynch + Druckenmiller + Cathie Wood methodology applied to AI picks & shovels.
+TODAY:{date_str} | SPY:${regime['spy_price']} ({regime.get('spy_change',0):+.2f}%) VIX:{vix} {regime['fear_greed']} REGIME:{regime['regime']} | FILTER:{scan_filter}
+
+REAL STOCK DATA FROM YFINANCE:
+{stocks_ctx}
+
+For each stock give the EXACT reason to buy or avoid NOW based on AI infrastructure role, value vs fair value, specific catalyst, and time horizon.
+
+Respond ONLY in valid JSON (no markdown):
+{{"scan_date":"{date_str}","filter":"{scan_filter}","sector_read":"2-sentence AI infrastructure sector read","picks":[{{"rank":1,"ticker":"X","current_price":"0.00","signal":"BUY","confidence":82,"wolf_score":75,"category":"CHIPS","ai_role":"specific role","thesis":"3-sentence thesis using real data","infrastructure_role":"what breaks in AI if this fails","catalyst":"near-term catalyst max 12 words","risk":"key risk max 10 words","verdict":"one decisive sentence","why_now":"what specifically changed","time_horizon":"3-6 months","entry_strategy":"entry plan","exit_strategy":"exit plan","week52_high":"0","week52_low":"0","vs_52w_high":-20,"analyst_target":"0","upside_pct":25,"analyst_rating":"Strong Buy","num_analysts":20,"market_cap":"10B","pe_ratio":25,"revenue_growth":"+25%","ai_revenue_pct":"~50%","confluences":["reason1","reason2","reason3"],"ai_edge":["edge1","edge2"],"warnings":["risk1"],"invalidation":"what makes this wrong"}}]}}"""
+        result = None; last_error = None
+        for attempt in range(3):
+            try:
+                raw = call_claude(prompt, 6000)
+                if not raw or not raw.strip(): raise ValueError('Empty response')
+                result = parse_json_response(raw); break
+            except Exception as retry_err:
+                last_error = retry_err
+                print(f'[AIInfra] Attempt {attempt+1} failed: {retry_err}')
+                if attempt < 2: time.sleep(2)
+        if result is None: raise Exception(f'Claude failed after 3 attempts: {last_error}')
+        for pick in result.get('picks', []):
+            match = next((s for s in top5 if s['ticker']==pick.get('ticker','')), None)
+            if match:
+                pick['real_score']     = match['score']
+                pick['real_rsi']       = match['rsi']
+                pick['real_vol_ratio'] = match['vol_ratio']
+                pick['real_signals']   = match['signals']
+                pick['sr_levels']      = match['sr_levels']
+                pick['news']           = match['news']
+                pick['ema20']          = match.get('ema20')
+                pick['ema50']          = match.get('ema50')
+                pick['ema200']         = match.get('ema200')
+                pick['macd_bias']      = match.get('macd_bias')
+                pick['near_earnings']  = match.get('near_earnings', False)
+                if match.get('week52_high'):              pick['week52_high']   = str(match['week52_high'])
+                if match.get('week52_low'):               pick['week52_low']    = str(match['week52_low'])
+                if match.get('vs_52w_high') is not None:  pick['vs_52w_high']   = match['vs_52w_high']
+                if match.get('analyst_target'):           pick['analyst_target']= str(match['analyst_target'])
+                if match.get('upside_pct') is not None:  pick['upside_pct']    = match['upside_pct']
+                if match.get('analyst_rating'):           pick['analyst_rating']= match['analyst_rating']
+                if match.get('num_analysts'):             pick['num_analysts']  = match['num_analysts']
+                if match.get('market_cap'):               pick['market_cap']    = match['market_cap']
+        result['market_regime'] = regime
+        _ai_infra_jobs[job_id] = {'status': 'done', 'result': result}
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        _ai_infra_jobs[job_id] = {'status': 'error', 'error': str(e)}
+
+
+@app.route('/ai-infra')
+@login_required
+@elite_required
+def ai_infra_page():
+    return render_template('ai_infra.html')
+
+
+@app.route('/api/ai-infra-scan', methods=['POST'])
+@login_required
+@elite_required
+def ai_infra_scan():
+    try:
+        data        = request.get_json() or {}
+        scan_filter = data.get('filter', 'ALL')
+        date_str    = datetime.now().strftime('%A, %B %d, %Y')
+        job_id      = str(uuid.uuid4())[:8]
+        _ai_infra_jobs[job_id] = {'status': 'starting'}
+        t = threading.Thread(target=_run_ai_infra_job, args=(job_id, scan_filter, date_str), daemon=True)
+        t.start()
+        return jsonify({'job_id': job_id, 'status': 'starting'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ai-infra-poll/<job_id>', methods=['GET'])
+@login_required
+@elite_required
+def ai_infra_poll(job_id):
+    job = _ai_infra_jobs.get(job_id)
+    if not job: return jsonify({'status':'error','error':'Job not found'}), 404
+    if job['status'] == 'done':
+        result = job.get('result', {}); result['status'] = 'done'
+        _ai_infra_jobs.pop(job_id, None); return jsonify(result)
+    if job['status'] == 'error':
+        return jsonify({'status':'error','error':job.get('error','Unknown')}), 500
+    return jsonify({'status': job['status']})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
