@@ -862,29 +862,25 @@ async function fetchAllPrices(){
         const cls=s==='LONDON'?'s-london':s==='NEW YORK'?'s-ny':s==='OVERLAP'?'s-overlap':s==='TOKYO'?'s-tokyo':'s-closed';
         pill.textContent=s;pill.className='sess-pill '+cls;
       }
+      // DXY — extract directly from the prices response (already fetched)
+      const dxyQ = data.prices['DXY'];
+      if(dxyQ){
+        const dxyEl=document.getElementById('dxy-price');
+        if(dxyEl){
+          const dxyVal=parseFloat(dxyQ.price).toFixed(2);
+          dxyEl.textContent=dxyVal;
+          const dxyUp=parseFloat(dxyQ.change||0)>=0;
+          dxyEl.className='lv-v '+(dxyUp?'dxy-up':'dxy-dn');
+        }
+      }
       const cacheEl = document.getElementById('cache-badge');
       if(cacheEl){
         cacheEl.textContent = data.live ? '● LIVE' : '● REF';
         cacheEl.style.color = data.live ? 'var(--green)' : 'var(--orange)';
       }
-      console.log('✅ Prices updated - live:', data.live);
+      console.log('✅ Prices updated - live:', data.live, '| DXY:', dxyQ?.price||'n/a');
     }
   }catch(e){console.log('Price fetch error:',e);}
-
-  // Also fetch DXY price separately
-  try{
-    const dxyRes=await fetch('/api/forex-price',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({symbol:'DXY'})
-    });
-    if(dxyRes.ok){
-      const dxyData=await dxyRes.json();
-      if(dxyData.price){
-        const dxyEl=document.getElementById('dxy-price');
-        if(dxyEl) dxyEl.textContent=parseFloat(dxyData.price).toFixed(2);
-      }
-    }
-  }catch(e){console.log('DXY fetch error:',e);}
 }
 
 async function callAI(prompt,maxTokens=2000){
@@ -921,6 +917,26 @@ async function safeFetch(url, body){
   return data;
 }
 
+
+// ── ASYNC AI HELPER — prevents 502 Bad Gateway ────────────────────────────
+async function callAIAsync(prompt, maxTokens=3000, pair=''){
+  // Start job
+  const startRes = await fetch('/api/async-ai-start',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({prompt, max_tokens: maxTokens, pair})
+  });
+  if(!startRes.ok) throw new Error('Failed to start AI job');
+  const {job_id} = await startRes.json();
+  // Poll until done (max 90 attempts = 3 mins)
+  for(let i=0; i<90; i++){
+    await new Promise(r=>setTimeout(r,2000));
+    const poll = await fetch(`/api/async-ai-poll/${job_id}`);
+    const data = await poll.json();
+    if(data.status==='done') return data.content;
+    if(data.status==='error') throw new Error(data.error||'AI error');
+  }
+  throw new Error('Analysis timed out — please try again');
+}
 // News panel
 async function loadPairNews(pair){
   try{
@@ -1138,7 +1154,7 @@ What Invalidates: [what cancels this scenario]
 [3 sentences. Most important thing about this pair right now. Would a veteran Wall Street trader take this today? What to watch most carefully.]`;
 
   try{
-    const text=await callAI(prompt,2500);
+    const text=await callAIAsync(prompt,4000,currentPair);
     parseDisplay(text);
   }catch(e){
     document.getElementById('ai-full').innerHTML=`<span style="color:var(--red);font-size:12px;">Error: ${e.message}</span>`;
@@ -1608,7 +1624,7 @@ Pairs To Avoid: [too volatile or unclear]
 Wolf Final Word: [2-3 sentences — your overall read on the market this week given everything above]`;
 
   try{
-    const text=await callAI(prompt,3500);
+    const text=await callAIAsync(prompt,6000,currentPair);
     renderWarRoom(text,box);
   }catch(e){
     box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
@@ -1663,21 +1679,21 @@ function renderWarRoom(text,box){
       const title=s.split('\n')[0].trim().replace(/^SECTION 2.*$/i,'').trim();
       if(!title||title.length<3)return;
       const statusM=s.match(/Status:\s*([^\n]+)/i);
-      const latestM=s.match(/What Is Happening:\s*([\s\S]*?)(?=Why Markets|Oil Impact:|$)/i)||s.match(/Latest:\s*([\s\S]*?)(?=Why Markets|Oil Impact:|$)/i);
-      const whyM=s.match(/Why Markets Care:\s*([\s\S]*?)(?=Oil Impact:|$)/i);
-      const oilM=s.match(/Oil Impact:\s*([\s\S]*?)(?=Safe Haven:|$)/i);
-      const safeM=s.match(/Safe Haven Impact:\s*([\s\S]*?)(?=Risk Sentiment:|$)/i);
-      const sentM=s.match(/Risk Sentiment:\s*([^\n]+)/i);
-      const alertM=s.match(/Wolf Alert:\s*([\s\S]*?)(?=CONFLICT:|SECTION|===|$)/i);
+      const latestM=s.match(/What Is Happening:\s*([\s\S]*?)(?=Why Markets Care:|Oil Impact:|Safe Haven|$)/i);
+      const whyM=s.match(/Why Markets Care:\s*([\s\S]*?)(?=Oil Impact:|Safe Haven|Risk Level:|$)/i);
+      const oilM=s.match(/Oil Impact:\s*([\s\S]*?)(?=Safe Haven|Risk Level:|Wolf Trade|$)/i);
+      const safeM=s.match(/Safe Havens?(?:\s*Impact)?:\s*([\s\S]*?)(?=Risk(?:\s*Sentiment)?\s*Level:|Wolf Trade|Oil Impact:|$)/i);
+      const sentM=s.match(/Risk(?:\s*Sentiment|\s*Level)?:\s*([^\n]+)/i);
+      const alertM=s.match(/Wolf Trade Alert:\s*([\s\S]*?)(?=CONFLICT:|SECTION|===|$)/i);
       const pairsM=s.match(/FX Pairs:([\s\S]*?)(?=Wolf Alert:|CONFLICT:|SECTION|===|$)/i);
       const status=statusM?.[1]?.trim()||'ONGOING';
       const statusCls=status.includes('ESCAL')&&!status.includes('DE')?'var(--red)':status.includes('DE')?'var(--green)':'var(--gold)';
       let pairsHtml='';
-      if(pairsM){
-        // Parse UP pairs
-        const upM=s.match(/Pairs That Go UP[\s\S]*?(?=Pairs That Go DOWN|Wolf Trade|CONFLICT:|SECTION|===|$)/i);
-        const downM=s.match(/Pairs That Go DOWN[\s\S]*?(?=Pairs To Avoid|Wolf Trade|CONFLICT:|SECTION|===|$)/i);
-        const avoidM2=s.match(/Pairs To Avoid[\s\S]*?(?=Wolf Trade|CONFLICT:|SECTION|===|$)/i);
+      {
+        // Always parse UP/DOWN/Avoid pairs - not gated behind pairsM
+        const upM=s.match(/Pairs That Go UP[\s\S]*?(?=Pairs That Go DOWN|Wolf Trade Alert|Wolf Trade|CONFLICT:|SECTION|===|$)/i);
+        const downM=s.match(/Pairs That Go DOWN[\s\S]*?(?=Pairs To Avoid|Wolf Trade Alert|Wolf Trade|CONFLICT:|SECTION|===|$)/i);
+        const avoidM2=s.match(/Pairs To Avoid[\s\S]*?(?=Wolf Trade Alert|Wolf Trade|CONFLICT:|SECTION|===|$)/i);
         if(upM){
           const upPairs=upM[0].match(/[-•]\s*([A-Z\/]+)[^\n]+/gi)||[];
           upPairs.forEach(p=>{
@@ -1697,15 +1713,6 @@ function renderWarRoom(text,box){
           avPairs.forEach(p=>{
             const pm=p.match(/([A-Z\/]+)\s*[—\-]?\s*(.+)/i);
             if(pm&&pm[1].includes('/')) pairsHtml+=`<div class="cc-pair cc-neut" style="max-width:none;padding:6px 10px;font-size:10px;line-height:1.4;display:block;margin:4px 0;"><span style="font-weight:bold;font-size:12px;">⚠ ${pm[1].trim()}</span> — ${pm[2]?.trim()||''}</div>`;
-          });
-        }
-        // Fallback to old format
-        if(!pairsHtml&&pairsM){
-          const pairs=pairsM[1].match(/[-•]\s*([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*([^\n]+)/gi)||[];
-          pairs.forEach(p=>{
-            const pm=p.match(/([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*(.+)/i);
-            if(pm){const cls=pm[2]==='BUY'?'cc-bull':pm[2]==='AVOID'?'cc-neut':'cc-bear';
-              pairsHtml+=`<div class="cc-pair ${cls}">${pm[1]} ${pm[2]}</div>`;}
           });
         }
       }

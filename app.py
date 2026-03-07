@@ -1543,6 +1543,68 @@ def score_stock(ticker_sym):
         print(f'[ScoreStock {ticker_sym}] {e}')
         return None
 
+# ── ASYNC JOB STORE ─────────────────────────────────────────────────────────
+_async_jobs = {}
+
+def _run_async_ai_job(job_id, prompt, max_tokens, pair=''):
+    """Generic async AI job - prevents 502 Bad Gateway from Render 30s timeout"""
+    try:
+        _async_jobs[job_id] = {'status': 'running'}
+        # Add live context if pair provided
+        live_ctx = ''
+        if pair:
+            try:
+                q = get_price(pair)
+                session_name, _ = get_session()
+                if q:
+                    current_price = float(q['price'])
+                    live_ctx = f"\nLIVE PRICE: {pair} = {current_price} | H:{q['high']} L:{q['low']} | Change: {q.get('percent_change',0):+.2f}% | Session: {session_name}\n"
+                    chart = get_chart_analysis(pair, current_price)
+                    live_ctx += format_chart_analysis_for_prompt(chart)
+                news = get_news(pair)
+                if news:
+                    live_ctx += "LATEST NEWS:\n" + '\n'.join([f"- {n['title']} ({n['source']})" for n in news[:3]]) + '\n\n'
+            except Exception as ctx_err:
+                print(f'[AsyncAI] context error: {ctx_err}')
+        full_prompt = live_ctx + prompt if live_ctx else prompt
+        text = call_claude(full_prompt, max_tokens)
+        _async_jobs[job_id] = {'status': 'done', 'content': text}
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        _async_jobs[job_id] = {'status': 'error', 'error': str(e)}
+
+@app.route('/api/async-ai-start', methods=['POST'])
+@login_required
+def async_ai_start():
+    """Start any AI prompt as background job - returns job_id immediately"""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '')
+        max_tokens = data.get('max_tokens', 3000)
+        pair = data.get('pair', '')
+        job_id = str(uuid.uuid4())[:8]
+        _async_jobs[job_id] = {'status': 'starting'}
+        t = threading.Thread(target=_run_async_ai_job, args=(job_id, prompt, max_tokens, pair), daemon=True)
+        t.start()
+        return jsonify({'job_id': job_id, 'status': 'starting'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/async-ai-poll/<job_id>', methods=['GET'])
+@login_required
+def async_ai_poll(job_id):
+    """Poll async AI job"""
+    job = _async_jobs.get(job_id)
+    if not job: return jsonify({'status': 'error', 'error': 'Job not found'}), 404
+    if job['status'] == 'done':
+        del _async_jobs[job_id]
+        return jsonify({'status': 'done', 'content': job['content']})
+    if job['status'] == 'error':
+        err = job.get('error', 'Unknown error')
+        del _async_jobs[job_id]
+        return jsonify({'status': 'error', 'error': err}), 500
+    return jsonify({'status': job['status']})
+
 # ── Wolf Stock Scanner page ───────────────────────────────────
 @app.route('/byakugan')
 @login_required
