@@ -361,12 +361,24 @@ async function runScan(){
     if(!sd.job_id) throw new Error('Failed to start scan');
 
     const result = await new Promise((res,rej)=>{
+      let attempts=0;
+      const maxAttempts=40; // 40 x 3s = 2 minutes max
       const poll = setInterval(async()=>{
+        attempts++;
         try{
           const r = await fetch('/api/ai-infra-poll/'+sd.job_id);
           const d = await r.json();
-          if(d.status==='done'){clearInterval(poll);res(d);}
+          if(d.status==='done'){
+            clearInterval(poll);
+            // Validate result actually has picks
+            if(!d.result||!(d.result.picks||d.result.stocks)||!(d.result.picks||d.result.stocks).length){
+              rej(new Error('Scan returned empty — yfinance may be slow. Please try again in 30 seconds.'));
+            } else {
+              res(d);
+            }
+          }
           else if(d.status==='error'){clearInterval(poll);rej(new Error(d.error||'Scan failed'));}
+          else if(attempts>=maxAttempts){clearInterval(poll);rej(new Error('Scan timed out. Render server may be busy — please try again.'));}
         }catch(e){clearInterval(poll);rej(e);}
       },3000);
     });
@@ -376,7 +388,15 @@ async function runScan(){
     renderResults(result);
   }catch(e){
     clearInterval(stepTimer);
-    panel.innerHTML=`<div class="error-box">❌ ${e.message}<br><br><span style="font-size:10px;color:var(--text3)">Try again — check your connection</span></div>`;
+    panel.innerHTML=`<div class="error-box" style="text-align:center;padding:30px;">
+      <div style="font-size:24px;margin-bottom:12px;">⚠️</div>
+      <div style="font-size:13px;color:var(--red);margin-bottom:10px;">${e.message}</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.7;">
+        The AI scanner pulls live data from Yahoo Finance which can be slow.<br>
+        Wait 30 seconds and try again — it usually works on retry.<br><br>
+        <button onclick="runScan()" style="padding:8px 20px;background:rgba(51,221,255,0.1);border:1px solid var(--cyan);color:var(--cyan);cursor:pointer;border-radius:4px;font-size:10px;letter-spacing:1px;">🔄 TRY AGAIN</button>
+      </div>
+    </div>`;
   }
   btn.disabled=false; btn.textContent='🚀 SCAN AI THE FUTURE';
 }

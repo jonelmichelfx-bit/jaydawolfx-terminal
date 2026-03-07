@@ -366,6 +366,7 @@ input::placeholder{color:var(--text-dim);}
     <a href="/forex-wolf" class="ntab" style="color:var(--gold);border-color:rgba(255,215,0,0.3);">🐺 WOLF PICKS</a>
     <a href="/wolf-elite" class="ntab">📈 ELITE</a>
     <a href="/pricing" class="ntab">PLANS</a>
+    <a href="/education" class="ntab">🎓 ACADEMY</a>
   </div>
   <div class="nav-right">
     <span class="dot-live"></span>
@@ -1631,12 +1632,6 @@ function renderWarRoom(text,box){
     const stanceColor=stance.includes('HAWK')?'var(--red)':stance.includes('DOV')?'var(--green)':'var(--gold)';
     const trajColor=traj.includes('RAIS')?'var(--red)':traj.includes('CUT')?'var(--green)':'var(--gold)';
 
-    // Update stat bar
-    html+=`<script>
-      document.getElementById('cs-fed').textContent='${stance||"NEUTRAL"}';
-      document.getElementById('cs-fed').style.color='${stanceColor}';
-    <\/script>`;
-
     html+=`<div style="background:rgba(255,165,0,0.05);border:1px solid rgba(255,165,0,0.2);border-radius:6px;padding:16px;margin-bottom:10px;">
       <div style="font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--orange);margin-bottom:12px;display:flex;align-items:center;gap:8px;">🏦 FEDERAL RESERVE & RATE POLICY</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
@@ -1768,16 +1763,6 @@ function renderWarRoom(text,box){
     const final=as.match(/Wolf Final Word:\s*([\s\S]*?)$/i)?.[1]?.trim()||'';
     const riskColor=risk.includes('EXTREME')?'var(--red)':risk.includes('HIGH')?'var(--orange)':risk.includes('MEDIUM')?'var(--gold)':'var(--green)';
 
-    // Update stat bar
-    html+=`<script>
-      document.getElementById('conflict-stats').style.display='grid';
-      document.getElementById('cs-risk').textContent='${risk||"—"}';
-      document.getElementById('cs-risk').style.color='${riskColor}';
-      document.getElementById('cs-sent').textContent=text.includes('RISK-OFF')?'RISK-OFF':text.includes('RISK-ON')?'RISK-ON':'MIXED';
-      document.getElementById('cs-sent').style.color=text.includes('RISK-OFF')?'var(--red)':text.includes('RISK-ON')?'var(--green)':'var(--gold)';
-      document.getElementById('cs-haven').textContent='JPY/CHF/GOLD';
-    <\/script>`;
-
     html+=`<div style="background:linear-gradient(135deg,rgba(255,51,85,0.06),rgba(10,20,32,0));border:1px solid rgba(255,51,85,0.2);border-radius:6px;padding:16px;margin-bottom:10px;">
       <div style="font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--red);margin-bottom:12px;">🌍 GLOBAL RISK ASSESSMENT</div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
@@ -1794,6 +1779,35 @@ function renderWarRoom(text,box){
   }
 
   box.innerHTML=html||`<div class="panel"><div class="ai-out">${fmt(text)}</div></div>`;
+  // Update stat bar after HTML is in DOM
+  try{
+    const fedEl=document.getElementById('cs-fed');
+    const riskEl=document.getElementById('cs-risk');
+    const sentEl=document.getElementById('cs-sent');
+    const havenEl=document.getElementById('cs-haven');
+    const statsEl=document.getElementById('conflict-stats');
+    if(statsEl) statsEl.style.display='grid';
+    // Fed stance
+    const fedM=text.match(/Current Fed Stance:\s*([^\n]+)/i);
+    if(fedEl&&fedM){
+      const stance=fedM[1].trim();
+      fedEl.textContent=stance.split(' ')[0]||'NEUTRAL';
+      fedEl.style.color=stance.includes('HAWK')?'var(--red)':stance.includes('DOV')?'var(--green)':'var(--gold)';
+    }
+    // Risk level
+    const riskM=text.match(/OVERALL GEOPOLITICAL RISK:\s*([^\n]+)/i);
+    if(riskEl&&riskM){
+      const risk=riskM[1].trim();
+      riskEl.textContent=risk;
+      riskEl.style.color=risk.includes('EXTREME')?'var(--red)':risk.includes('HIGH')?'var(--orange)':risk.includes('MEDIUM')?'var(--gold)':'var(--green)';
+    }
+    if(sentEl){
+      const isOff=text.includes('RISK-OFF');
+      sentEl.textContent=isOff?'RISK-OFF':text.includes('RISK-ON')?'RISK-ON':'MIXED';
+      sentEl.style.color=isOff?'var(--red)':text.includes('RISK-ON')?'var(--green)':'var(--gold)';
+    }
+    if(havenEl) havenEl.textContent='JPY/CHF/GOLD';
+  }catch(e){}
 }
 
 // ── TRACKER (removed) ──────────────────────────────────────────────────────────
