@@ -1698,22 +1698,32 @@ def byakugan_poll(job_id):
 # (before the "if __name__ == '__main__':" line)
 # ═══════════════════════════════════════════════════════════════
 
+# Full AI Infra universe — rotates daily so every stock gets scanned every 2-3 days
+AI_INFRA_UNIVERSE_FULL = [
+    'NVDA','MRVL','INTC','SMCI','CRDO',
+    'APLD','IREN','NBIS','DLR',
+    'OKLO','CEG','VST','ETN',
+    'MOD','STRL','CLS',
+    'PATH','TER','ISRG',
+    'PLTR','AI',
+]
+
 AI_INFRA_UNIVERSE = {
-    'ALL': [
-        'MRVL','INTC','SMCI','CRDO',
-        'APLD','IREN','NBIS',
-        'OKLO','CEG','VST',
-        'MOD','STRL','CLS',
-        'PATH','TER',
-        'PLTR','AI',
-    ],
-    'CHIPS':      ['MRVL','INTC','AMD','AVGO','CRDO','MU'],
-    'SERVERS':    ['SMCI','CLS','JBL','DELL'],
-    'DATACENTER': ['APLD','IREN','NBIS','DLR'],
-    'POWER':      ['OKLO','CEG','VST','ETN'],
-    'ROBOTICS':   ['PATH','TER','ISRG'],
+    'CHIPS':      ['NVDA','MRVL','INTC','AMD','AVGO','CRDO','MU'],
+    'SERVERS':    ['SMCI','CLS','JBL','DELL','NVDA'],
+    'DATACENTER': ['APLD','IREN','NBIS','DLR','SMCI'],
+    'POWER':      ['OKLO','CEG','VST','ETN','NEE'],
+    'ROBOTICS':   ['PATH','TER','ISRG','NVDA','ABB'],
     'DEEP_VALUE': ['SMCI','INTC','MRVL','APLD','IREN','AI','PATH'],
 }
+
+def get_daily_rotation(date_str):
+    """Returns 7 stocks from full universe based on date rotation."""
+    import hashlib
+    day_seed = int(hashlib.md5(date_str.encode()).hexdigest(), 16) % len(AI_INFRA_UNIVERSE_FULL)
+    rotated = AI_INFRA_UNIVERSE_FULL[day_seed:] + AI_INFRA_UNIVERSE_FULL[:day_seed]
+    return rotated[:7]
+
 
 TICKER_CATEGORY = {
     'MRVL':'CHIPS',    'INTC':'CHIPS',    'AMD':'CHIPS',
@@ -1769,16 +1779,24 @@ def score_ai_infra_stock(ticker_sym):
         analyst_target = None; analyst_rating = None; num_analysts = None
         pe_ratio = None; revenue_growth = None; market_cap = None
         try:
-            info = ticker.info
-            analyst_target  = info.get('targetMeanPrice')
-            analyst_rating  = (info.get('recommendationKey','') or '').replace('_',' ').title() or None
-            num_analysts    = info.get('numberOfAnalystOpinions')
-            pe_ratio        = info.get('trailingPE')
-            revenue_growth  = info.get('revenueGrowth')
-            mc = info.get('marketCap', 0)
-            if mc > 1e12:   market_cap = f"{round(mc/1e12,1)}T"
-            elif mc > 1e9:  market_cap = f"{round(mc/1e9,1)}B"
-            elif mc > 1e6:  market_cap = f"{round(mc/1e6,1)}M"
+            from concurrent.futures import ThreadPoolExecutor as _TPE, TimeoutError as _TE
+            def _fetch_info():
+                return ticker.info
+            with _TPE(max_workers=1) as _ex:
+                _f = _ex.submit(_fetch_info)
+                try:
+                    info = _f.result(timeout=6)
+                    analyst_target  = info.get('targetMeanPrice')
+                    analyst_rating  = (info.get('recommendationKey','') or '').replace('_',' ').title() or None
+                    num_analysts    = info.get('numberOfAnalystOpinions')
+                    pe_ratio        = info.get('trailingPE')
+                    revenue_growth  = info.get('revenueGrowth')
+                    mc = info.get('marketCap', 0)
+                    if mc > 1e12:   market_cap = f"{round(mc/1e12,1)}T"
+                    elif mc > 1e9:  market_cap = f"{round(mc/1e9,1)}B"
+                    elif mc > 1e6:  market_cap = f"{round(mc/1e6,1)}M"
+                except _TE:
+                    print(f'[AIInfra info timeout {ticker_sym}] skipping analyst data')
         except Exception as e:
             print(f'[AIInfra info {ticker_sym}] {e}')
         upside_pct = round(((analyst_target - price) / price) * 100, 1) if analyst_target and price else None
@@ -1825,7 +1843,10 @@ _ai_infra_jobs = {}
 def _run_ai_infra_job(job_id, scan_filter, date_str):
     try:
         _ai_infra_jobs[job_id] = {'status': 'scanning'}
-        universe = AI_INFRA_UNIVERSE.get(scan_filter, AI_INFRA_UNIVERSE['ALL'])
+        if scan_filter == 'ALL':
+            universe = get_daily_rotation(date_str)
+        else:
+            universe = AI_INFRA_UNIVERSE.get(scan_filter, get_daily_rotation(date_str))
         regime   = get_market_regime()
         _ai_infra_jobs[job_id] = {'status': 'scoring'}
         scored = []
