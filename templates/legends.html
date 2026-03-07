@@ -904,7 +904,7 @@ async function runLegendAnalysis() {
       await new Promise(r => setTimeout(r, 2000));
       const pollRes = await fetch('/api/async-ai-poll/' + jobId);
       const pollData = await pollRes.json();
-      if(pollData.status === 'done') { result = pollData.result; break; }
+      if(pollData.status === 'done') { result = pollData.content; break; }
       if(pollData.status === 'error') throw new Error(pollData.error || 'Analysis failed');
     }
 
