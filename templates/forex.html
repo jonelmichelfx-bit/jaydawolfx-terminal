@@ -523,12 +523,11 @@ input::placeholder{color:var(--text-dim);}
       <a href="/wolf-scanner" style="text-decoration:none;"><button class="tab-btn" style="color:var(--gold);border-bottom-color:transparent;" onmouseover="this.style.borderBottomColor='var(--gold)'" onmouseout="this.style.borderBottomColor='transparent'">🐺 WOLF SCANNER</button></a>
       <button class="tab-btn" onclick="openTab('scenarios',this)">⚡ SCENARIOS</button>
       <button class="tab-btn" onclick="openTab('timeframes',this)">🕐 TIMEFRAMES</button>
-      <button class="tab-btn" onclick="openTab('sharingan',this)">👁 SHARINGAN</button>
+      <button class="tab-btn" onclick="openTab('sharingan',this)">📈 CHART</button>
       <button class="tab-btn t-gold" onclick="openTab('guaranteed',this)">🏆 TOP 3 DAY</button>
       <button class="tab-btn t-purple" onclick="openTab('swings',this)">📈 TOP 3 SWING</button>
       <button class="tab-btn" onclick="openTab('calculator',this)">🧮 CALCULATOR</button>
       <button class="tab-btn t-war" onclick="openTab('conflict',this)">⚔️ CONFLICTS</button>
-      <button class="tab-btn" onclick="openTab('tracker',this)">📋 TRACKER</button>
     </div>
 
     <!-- ANALYSIS TAB -->
@@ -747,42 +746,38 @@ input::placeholder{color:var(--text-dim);}
 
     <!-- CONFLICT TAB -->
     <div class="tab-pane" id="pane-conflict">
-      <div class="panel" style="border-color:rgba(255,51,85,0.2);">
-        <div class="ph war">⚔️ WORLD CONFLICT MONITOR</div>
-        <div style="font-size:12px;color:var(--text-mid);margin-bottom:14px;line-height:1.9;">
-          Wolf AI analyzes current global conflicts — USA/Iran, Russia/Ukraine, Middle East — and tells you exactly how each affects forex pairs. Safe haven flows, oil impact, risk sentiment, and which pairs to trade or avoid.
+      <!-- WAR ROOM HEADER -->
+      <div style="background:linear-gradient(135deg,rgba(255,51,85,0.08),rgba(10,20,32,0));border:1px solid rgba(255,51,85,0.25);border-radius:6px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:13px;letter-spacing:3px;color:var(--red);font-weight:bold;">⚔️ GLOBAL WAR ROOM</div>
+            <div style="font-size:11px;color:var(--text-mid);margin-top:4px;line-height:1.7;">Active conflicts · Fed policy · Macro shocks · FX impact — updated on demand by Wolf AI</div>
+          </div>
+          <button class="big-btn btn-red" id="conflict-btn" onclick="loadConflict()" style="padding:10px 20px;font-size:10px;letter-spacing:2px;">⚔️ GENERATE WAR ROOM BRIEFING</button>
         </div>
-        <button class="big-btn btn-red" id="conflict-btn" onclick="loadConflict()">⚔️ ANALYZE WORLD CONFLICTS & FX IMPACT</button>
+        <!-- Quick stat bar -->
+        <div id="conflict-stats" style="display:none;margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div style="background:rgba(255,51,85,0.08);border:1px solid rgba(255,51,85,0.2);border-radius:4px;padding:10px;text-align:center;">
+            <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);">RISK LEVEL</div>
+            <div style="font-size:16px;font-weight:bold;color:var(--red);font-family:var(--mono);" id="cs-risk">—</div>
+          </div>
+          <div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);border-radius:4px;padding:10px;text-align:center;">
+            <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);">FED STANCE</div>
+            <div style="font-size:13px;font-weight:bold;color:var(--orange);font-family:var(--mono);" id="cs-fed">—</div>
+          </div>
+          <div style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:4px;padding:10px;text-align:center;">
+            <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);">SENTIMENT</div>
+            <div style="font-size:13px;font-weight:bold;color:var(--green);font-family:var(--mono);" id="cs-sent">—</div>
+          </div>
+          <div style="background:rgba(51,221,255,0.05);border:1px solid rgba(51,221,255,0.15);border-radius:4px;padding:10px;text-align:center;">
+            <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);">SAFE HAVEN</div>
+            <div style="font-size:13px;font-weight:bold;color:var(--cyan);font-family:var(--mono);" id="cs-haven">—</div>
+          </div>
+        </div>
       </div>
-      <div id="conflict-box"><div class="empty">Click above to see how current world conflicts are affecting forex markets</div></div>
+      <div id="conflict-box"><div class="empty" style="padding:40px;text-align:center;color:var(--text-dim);">🌍 Click above to generate today's War Room briefing — conflicts, Fed policy, macro shocks and FX impact</div></div>
     </div>
 
-    <!-- TRACKER TAB -->
-    <div class="tab-pane" id="pane-tracker">
-      <div class="tracker-stats">
-        <div class="stat-box st-total"><div class="stat-l">TOTAL</div><div class="stat-v" id="st-total">0</div></div>
-        <div class="stat-box st-wins"><div class="stat-l">WINS</div><div class="stat-v" id="st-wins">0</div></div>
-        <div class="stat-box st-losses"><div class="stat-l">LOSSES</div><div class="stat-v" id="st-losses">0</div></div>
-        <div class="stat-box st-rate"><div class="stat-l">WIN RATE</div><div class="stat-v" id="st-rate">0%</div></div>
-        <div class="stat-box st-pips"><div class="stat-l">TOTAL PIPS</div><div class="stat-v" id="st-pips">0</div></div>
-      </div>
-      <div class="log-form">
-        <div class="ph" style="margin-bottom:10px;">LOG A TRADE</div>
-        <div class="form-grid">
-          <div class="fg"><div class="fl">PAIR</div><input id="t-pair" placeholder="EUR/USD" style="text-transform:uppercase"/></div>
-          <div class="fg"><div class="fl">DIRECTION</div><select id="t-dir"><option>BUY</option><option>SELL</option></select></div>
-          <div class="fg"><div class="fl">ENTRY</div><input id="t-entry" type="number" step="0.0001" placeholder="1.0842"/></div>
-          <div class="fg"><div class="fl">EXIT</div><input id="t-exit" type="number" step="0.0001" placeholder="1.0900"/></div>
-          <div class="fg"><div class="fl">STOP LOSS</div><input id="t-sl" type="number" step="0.0001" placeholder="1.0810"/></div>
-          <div class="fg"><div class="fl">TAKE PROFIT</div><input id="t-tp" type="number" step="0.0001" placeholder="1.0920"/></div>
-          <div class="fg"><div class="fl">RESULT</div><select id="t-result"><option>WIN</option><option>LOSS</option><option>PENDING</option><option>BREAKEVEN</option></select></div>
-          <div class="fg"><div class="fl">TYPE</div><select id="t-type"><option value="DAY">DAY TRADE</option><option value="SWING">SWING</option><option value="SCALP">SCALP</option><option value="GUARANTEED">GUARANTEED</option></select></div>
-        </div>
-        <div class="fg" style="margin-bottom:10px;"><div class="fl">NOTES</div><input id="t-notes" placeholder="Why you took this, what happened..."/></div>
-        <button class="submit-btn" onclick="logTrade()">+ LOG TRADE</button>
-      </div>
-      <div class="panel"><div class="ph">TRADE HISTORY</div><div id="trade-hist"><div class="empty">No trades logged yet.</div></div></div>
-    </div>
   </main>
 </div>
 
@@ -1550,98 +1545,226 @@ R:R: [improved ratio]`;
   btn.disabled=false;btn.textContent='🧮 ANALYZE MY TRADE';
 }
 
-// ── WORLD CONFLICT ────────────────────────────────────────────────────────────
+// ── WORLD CONFLICT WAR ROOM ──────────────────────────────────────────────────
 async function loadConflict(){
   const btn=document.getElementById('conflict-btn');
   const box=document.getElementById('conflict-box');
-  btn.disabled=true;btn.textContent='⏳ RESEARCHING CONFLICTS...';
-  box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--red)"></div><div class="load-txt" style="color:var(--red)">WOLF AI ANALYZING WORLD CONFLICTS...</div><div style="font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;">USA/Iran · Russia/Ukraine · Middle East · Oil · Safe Havens</div></div>`;
+  btn.disabled=true;btn.textContent='⏳ COMPILING WAR ROOM BRIEFING...';
+  box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--red)"></div><div class="load-txt" style="color:var(--red)">WOLF AI ANALYZING GLOBAL SITUATION...</div><div style="font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;">Conflicts · Fed Policy · Oil · Safe Havens · FX Impact</div></div>`;
   const now=new Date();
-  const prompt=`You are Wolf AI, geopolitical forex analyst. Date: ${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}.
+  const dateStr=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const prompt=`You are Wolf AI — elite geopolitical FX strategist. Date: ${dateStr}.
 
-Analyze ALL current major world conflicts and explain EXACTLY how each one affects forex pairs right now. Include USA vs Iran tensions specifically.
+Generate a comprehensive WAR ROOM BRIEFING covering ALL of the following sections. Be specific, current, and actionable. Use real data and real current events.
 
-For each conflict:
+=== SECTION 1: FEDERAL RESERVE & RATE POLICY ===
+Current Fed Stance: [HAWKISH/DOVISH/NEUTRAL]
+Current Fed Funds Rate: [rate]
+Next FOMC Meeting: [date and what to expect]
+Rate Trajectory: [RAISING/HOLDING/CUTTING — and why]
+USD Impact: [how current Fed policy is affecting USD right now]
+Key Pairs Affected By Fed:
+- EUR/USD: [direction and reason]
+- USD/JPY: [direction and reason]  
+- GBP/USD: [direction and reason]
+Wolf Fed Alert: [1-2 sentences — what traders must know about Fed right now]
 
-CONFLICT: [Name — Countries Involved]
-Status: [ACTIVE/ESCALATING/DE-ESCALATING/ONGOING]
-Summary: [2-3 sentences — current situation and latest developments]
-Oil Impact: [Effect on oil prices and oil-linked currencies like USD/CAD, USD/NOK]
-Safe Haven Impact: [Effect on USD, JPY, CHF, XAU/USD — where money is fleeing TO]
-Risk Sentiment: [RISK-OFF/RISK-ON/MIXED — explain why]
-Pairs Affected:
-- [PAIR]: [BUY/SELL/AVOID] — [specific reason this conflict affects this pair]
-- [PAIR]: [BUY/SELL/AVOID] — [reason]
-- [PAIR]: [BUY/SELL/AVOID] — [reason]
-Wolf Trade Alert: [1-2 sentences — best trade opportunity created by this conflict right now]
+=== SECTION 2: ACTIVE MILITARY CONFLICTS ===
+For each active conflict use this format:
 
-Cover: 1) USA vs Iran 2) Russia vs Ukraine 3) Middle East (Israel/Gaza/Lebanon) 4) Any other active conflicts
+CONFLICT: [Name]
+Status: [ACTIVE/ESCALATING/DE-ESCALATING]
+Latest: [2-3 sentences on what is happening RIGHT NOW]
+Oil Impact: [specific effect on oil and oil-linked pairs]
+Safe Haven Impact: [where money is fleeing — USD/JPY/CHF/Gold]
+Risk Sentiment: [RISK-OFF/RISK-ON/MIXED]
+FX Pairs:
+- [PAIR]: [BUY/SELL/AVOID] — [exact reason]
+- [PAIR]: [BUY/SELL/AVOID] — [exact reason]
+Wolf Alert: [best trade this conflict creates right now]
 
-End with:
-OVERALL GEOPOLITICAL RISK LEVEL: [LOW/MEDIUM/HIGH/EXTREME]
-Safe Haven Flows Right Now: [where money is moving]
-Best Pairs To Trade In This Environment: [3 pairs with direction and reason]
-Pairs To Avoid: [too risky right now]`;
+Cover these conflicts: 1) USA/Iran tensions 2) Russia/Ukraine 3) Israel/Gaza/Middle East 4) China/Taiwan tensions 5) Any other active flashpoints
+
+=== SECTION 3: MACRO SHOCKS & ECONOMIC WEAPONS ===
+Current Macro Theme: [main theme driving markets this week]
+Inflation Status: [where CPI is globally and what it means for FX]
+Tariffs & Trade Wars: [US tariffs, China response, Canada/Mexico impact on FX]
+Commodity Prices: [Oil, Gold, where they are and FX impact]
+Dollar Index (DXY): [current trend and what it means for all pairs]
+Key Economic Events This Week: [top 3 events traders must watch]
+
+=== SECTION 4: GLOBAL RISK ASSESSMENT ===
+OVERALL GEOPOLITICAL RISK: [LOW/MEDIUM/HIGH/EXTREME]
+Safe Haven Flows: [where money is moving right now and why]
+Risk-On Pairs: [best pairs if risk appetite returns]
+Risk-Off Pairs: [best pairs if risk escalates]
+Best 3 Pairs To Trade RIGHT NOW: [pair — direction — one line reason]
+Pairs To Avoid: [too volatile or unclear]
+Wolf Final Word: [2-3 sentences — your overall read on the market this week given everything above]`;
+
   try{
-    const text=await callAI(prompt,2500);
-    renderConflict(text,box);
+    const text=await callAI(prompt,3500);
+    renderWarRoom(text,box);
   }catch(e){
     box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
   }
-  btn.disabled=false;btn.textContent='⚔️ REFRESH CONFLICT ANALYSIS';
+  btn.disabled=false;btn.textContent='🔄 REFRESH WAR ROOM';
 }
 
-function renderConflict(text,box){
-  const sections=text.split(/CONFLICT:/i).filter(s=>s.trim().length>20);
+function renderWarRoom(text,box){
   let html='';
-  sections.forEach(s=>{
-    if(!s.trim())return;
-    const title=s.split('\n')[0].trim();
-    const statusM=s.match(/Status:\s*([^\n]+)/i);
-    const summaryM=s.match(/Summary:\s*([\s\S]*?)(?=Oil Impact:|$)/i);
-    const oilM=s.match(/Oil Impact:\s*([\s\S]*?)(?=Safe Haven:|$)/i);
-    const safeM=s.match(/Safe Haven Impact:\s*([\s\S]*?)(?=Risk Sentiment:|$)/i);
-    const sentM=s.match(/Risk Sentiment:\s*([^\n]+)/i);
-    const alertM=s.match(/Wolf Trade Alert:\s*([\s\S]*?)(?=CONFLICT:|OVERALL|$)/i);
-    const pairsM=s.match(/Pairs Affected:([\s\S]*?)(?=Wolf Trade|CONFLICT:|OVERALL|$)/i);
-    const status=statusM?.[1]?.trim()||'ONGOING';
-    const statusCls=status.includes('ESCAL')&&!status.includes('DE')?'imp-h':status.includes('DE')?'imp-l':'imp-war';
-    let pairsHtml='';
-    if(pairsM){
-      const pairs=pairsM[1].match(/[-•]\s*([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*([^\n]+)/gi)||[];
-      pairs.forEach(p=>{
-        const pm=p.match(/([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*(.+)/i);
-        if(pm){
-          const cls=pm[2]==='BUY'?'cc-bull':pm[2]==='AVOID'?'cc-neut':'cc-bear';
-          pairsHtml+=`<div class="cc-pair ${cls}">${pm[1]} ${pm[2]}</div>`;
-        }
-      });
-    }
-    html+=`<div class="conflict-card">
-      <div class="cc-top">
-        <div style="font-size:18px;">⚔️</div>
-        <div class="cc-title">${title}</div>
-        <span class="ni-imp ${statusCls}" style="margin-left:auto;">${status}</span>
+
+  // ── SECTION 1: FED ──
+  const fedSection=text.match(/SECTION 1[\s\S]*?(?=SECTION 2|===)/i);
+  if(fedSection){
+    const fs=fedSection[0];
+    const stance=fs.match(/Current Fed Stance:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const rate=fs.match(/Current Fed Funds Rate:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const fomc=fs.match(/Next FOMC Meeting:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const traj=fs.match(/Rate Trajectory:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const usdImpact=fs.match(/USD Impact:\s*([\s\S]*?)(?=Key Pairs|Wolf Fed)/i)?.[1]?.trim()||'';
+    const alert=fs.match(/Wolf Fed Alert:\s*([\s\S]*?)(?=SECTION|===|$)/i)?.[1]?.trim()||'';
+    const stanceColor=stance.includes('HAWK')?'var(--red)':stance.includes('DOV')?'var(--green)':'var(--gold)';
+    const trajColor=traj.includes('RAIS')?'var(--red)':traj.includes('CUT')?'var(--green)':'var(--gold)';
+
+    // Update stat bar
+    html+=`<script>
+      document.getElementById('cs-fed').textContent='${stance||"NEUTRAL"}';
+      document.getElementById('cs-fed').style.color='${stanceColor}';
+    <\/script>`;
+
+    html+=`<div style="background:rgba(255,165,0,0.05);border:1px solid rgba(255,165,0,0.2);border-radius:6px;padding:16px;margin-bottom:10px;">
+      <div style="font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--orange);margin-bottom:12px;display:flex;align-items:center;gap:8px;">🏦 FEDERAL RESERVE & RATE POLICY</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+        <div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:4px;padding:10px;">
+          <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);">FED STANCE</div>
+          <div style="font-size:14px;font-weight:bold;color:${stanceColor};font-family:var(--mono);margin-top:4px;">${stance||'—'}</div>
+        </div>
+        <div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:4px;padding:10px;">
+          <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);">RATE</div>
+          <div style="font-size:14px;font-weight:bold;color:var(--orange);font-family:var(--mono);margin-top:4px;">${rate||'—'}</div>
+        </div>
+        <div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:4px;padding:10px;">
+          <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);">TRAJECTORY</div>
+          <div style="font-size:12px;font-weight:bold;color:${trajColor};font-family:var(--mono);margin-top:4px;">${traj?.split('—')[0]?.trim()||'—'}</div>
+        </div>
       </div>
-      ${summaryM?`<div class="cc-body">${summaryM[1].trim()}</div>`:''}
-      ${oilM?`<div class="cc-body" style="color:var(--orange);font-size:11px;"><strong>🛢 OIL:</strong> ${oilM[1].trim()}</div>`:''}
-      ${safeM?`<div class="cc-body" style="color:var(--gold);font-size:11px;"><strong>🏦 SAFE HAVENS:</strong> ${safeM[1].trim()}</div>`:''}
-      ${sentM?`<div class="cc-body" style="font-size:11px;"><strong>SENTIMENT:</strong> <span style="color:${sentM[1].includes('OFF')?'var(--red)':sentM[1].includes('ON')?'var(--green)':'var(--gold)'};font-weight:bold;">${sentM[1].trim()}</span></div>`:''}
-      ${pairsHtml?`<div class="cc-pairs">${pairsHtml}</div>`:''}
-      ${alertM?`<div class="cc-body" style="color:var(--cyan);font-size:12px;font-weight:bold;border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">🐺 WOLF ALERT: ${alertM[1].trim()}</div>`:''}
-    </div>`;
-  });
-  const overall=text.match(/OVERALL GEOPOLITICAL[\s\S]*$/i);
-  if(overall){
-    html+=`<div class="panel" style="border-color:rgba(255,51,85,0.2);margin-top:8px;">
-      <div class="ph war">OVERALL MARKET ASSESSMENT</div>
-      <div class="ai-out" style="font-size:12px;">${fmt(overall[0])}</div>
+      ${usdImpact?`<div style="font-size:11px;color:var(--text-mid);line-height:1.7;margin-bottom:8px;padding:8px;background:rgba(255,165,0,0.04);border-radius:4px;"><strong style="color:var(--orange);">USD IMPACT:</strong> ${usdImpact}</div>`:''}
+      ${fomc?`<div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;">📅 <strong>Next FOMC:</strong> ${fomc}</div>`:''}
+      ${alert?`<div style="background:rgba(255,165,0,0.08);border-left:3px solid var(--orange);padding:10px 12px;border-radius:0 4px 4px 0;font-size:12px;color:var(--orange);font-weight:bold;">🐺 ${alert}</div>`:''}
     </div>`;
   }
+
+  // ── SECTION 2: CONFLICTS ──
+  const conflictSection=text.match(/SECTION 2[\s\S]*?(?=SECTION 3|===)/i);
+  if(conflictSection){
+    const conflicts=conflictSection[0].split(/\nCONFLICT:/i).filter(s=>s.trim().length>20);
+    conflicts.forEach(s=>{
+      if(!s.trim()||s.trim().startsWith('SECTION'))return;
+      const title=s.split('\n')[0].trim().replace(/^SECTION 2.*$/i,'').trim();
+      if(!title||title.length<3)return;
+      const statusM=s.match(/Status:\s*([^\n]+)/i);
+      const latestM=s.match(/Latest:\s*([\s\S]*?)(?=Oil Impact:|$)/i);
+      const oilM=s.match(/Oil Impact:\s*([\s\S]*?)(?=Safe Haven:|$)/i);
+      const safeM=s.match(/Safe Haven Impact:\s*([\s\S]*?)(?=Risk Sentiment:|$)/i);
+      const sentM=s.match(/Risk Sentiment:\s*([^\n]+)/i);
+      const alertM=s.match(/Wolf Alert:\s*([\s\S]*?)(?=CONFLICT:|SECTION|===|$)/i);
+      const pairsM=s.match(/FX Pairs:([\s\S]*?)(?=Wolf Alert:|CONFLICT:|SECTION|===|$)/i);
+      const status=statusM?.[1]?.trim()||'ONGOING';
+      const statusCls=status.includes('ESCAL')&&!status.includes('DE')?'var(--red)':status.includes('DE')?'var(--green)':'var(--gold)';
+      let pairsHtml='';
+      if(pairsM){
+        const pairs=pairsM[1].match(/[-•]\s*([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*([^\n]+)/gi)||[];
+        pairs.forEach(p=>{
+          const pm=p.match(/([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*(.+)/i);
+          if(pm){
+            const cls=pm[2]==='BUY'?'cc-bull':pm[2]==='AVOID'?'cc-neut':'cc-bear';
+            pairsHtml+=`<div class="cc-pair ${cls}" title="${pm[3]}">${pm[1]} ${pm[2]}</div>`;
+          }
+        });
+      }
+      html+=`<div class="conflict-card" style="margin-bottom:10px;">
+        <div class="cc-top">
+          <div style="font-size:18px;">⚔️</div>
+          <div class="cc-title">${title}</div>
+          <span style="margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:3px;background:rgba(255,51,85,0.1);color:${statusCls};border:1px solid ${statusCls};">${status}</span>
+        </div>
+        ${latestM?`<div class="cc-body" style="line-height:1.7;">${latestM[1].trim()}</div>`:''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;">
+          ${oilM?`<div style="background:rgba(255,165,0,0.05);border:1px solid rgba(255,165,0,0.15);border-radius:4px;padding:8px;font-size:11px;"><div style="color:var(--orange);font-size:8px;letter-spacing:1px;margin-bottom:4px;">🛢 OIL IMPACT</div>${oilM[1].trim()}</div>`:''}
+          ${safeM?`<div style="background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);border-radius:4px;padding:8px;font-size:11px;"><div style="color:var(--gold);font-size:8px;letter-spacing:1px;margin-bottom:4px;">🏦 SAFE HAVENS</div>${safeM[1].trim()}</div>`:''}
+        </div>
+        ${sentM?`<div style="font-size:11px;margin-bottom:6px;"><strong>SENTIMENT:</strong> <span style="color:${sentM[1].includes('OFF')?'var(--red)':sentM[1].includes('ON')?'var(--green)':'var(--gold)'};font-weight:bold;">${sentM[1].trim()}</span></div>`:''}
+        ${pairsHtml?`<div class="cc-pairs" style="margin:8px 0;">${pairsHtml}</div>`:''}
+        ${alertM?`<div style="background:rgba(51,221,255,0.05);border-left:3px solid var(--cyan);padding:10px 12px;border-radius:0 4px 4px 0;font-size:12px;color:var(--cyan);font-weight:bold;margin-top:6px;">🐺 WOLF ALERT: ${alertM[1].trim()}</div>`:''}
+      </div>`;
+    });
+  }
+
+  // ── SECTION 3: MACRO ──
+  const macroSection=text.match(/SECTION 3[\s\S]*?(?=SECTION 4|===)/i);
+  if(macroSection){
+    const ms=macroSection[0];
+    const theme=ms.match(/Current Macro Theme:\s*([\s\S]*?)(?=Inflation|$)/i)?.[1]?.trim()||'';
+    const inflation=ms.match(/Inflation Status:\s*([\s\S]*?)(?=Tariffs|$)/i)?.[1]?.trim()||'';
+    const tariffs=ms.match(/Tariffs.*?:\s*([\s\S]*?)(?=Commodity|$)/i)?.[1]?.trim()||'';
+    const commodities=ms.match(/Commodity Prices:\s*([\s\S]*?)(?=Dollar|$)/i)?.[1]?.trim()||'';
+    const dxy=ms.match(/Dollar Index.*?:\s*([\s\S]*?)(?=Key Economic|$)/i)?.[1]?.trim()||'';
+    const events=ms.match(/Key Economic Events.*?:\s*([\s\S]*?)(?=SECTION|===|$)/i)?.[1]?.trim()||'';
+
+    html+=`<div style="background:rgba(51,221,255,0.03);border:1px solid rgba(51,221,255,0.15);border-radius:6px;padding:16px;margin-bottom:10px;">
+      <div style="font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--cyan);margin-bottom:12px;">📊 MACRO SHOCKS & ECONOMIC WEAPONS</div>
+      ${theme?`<div style="font-size:12px;color:var(--text-mid);background:rgba(51,221,255,0.05);border-radius:4px;padding:10px;margin-bottom:10px;line-height:1.7;"><strong style="color:var(--cyan);">THIS WEEK'S THEME:</strong> ${theme}</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        ${inflation?`<div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:11px;"><div style="font-size:8px;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;">📈 INFLATION</div>${inflation}</div>`:''}
+        ${tariffs?`<div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:11px;"><div style="font-size:8px;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;">🚧 TARIFFS & TRADE</div>${tariffs}</div>`:''}
+        ${commodities?`<div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:11px;"><div style="font-size:8px;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;">🛢 COMMODITIES</div>${commodities}</div>`:''}
+        ${dxy?`<div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:11px;"><div style="font-size:8px;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;">💵 DXY DOLLAR INDEX</div>${dxy}</div>`:''}
+      </div>
+      ${events?`<div style="background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);border-radius:4px;padding:10px;font-size:11px;"><div style="font-size:8px;letter-spacing:1px;color:var(--gold);margin-bottom:6px;">📅 KEY EVENTS THIS WEEK</div>${events.split('\n').filter(l=>l.trim()).map(l=>`<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-mid);">• ${l.trim().replace(/^[-•]\s*/,'')}</div>`).join('')}</div>`:''}
+    </div>`;
+  }
+
+  // ── SECTION 4: FINAL ASSESSMENT ──
+  const assessSection=text.match(/SECTION 4[\s\S]*$/i);
+  if(assessSection){
+    const as=assessSection[0];
+    const risk=as.match(/OVERALL GEOPOLITICAL RISK:\s*([^\n]+)/i)?.[1]?.trim()||'';
+    const haven=as.match(/Safe Haven Flows:\s*([\s\S]*?)(?=Risk-On|$)/i)?.[1]?.trim()||'';
+    const best=as.match(/Best 3 Pairs[\s\S]*?:\s*([\s\S]*?)(?=Pairs To Avoid|$)/i)?.[1]?.trim()||'';
+    const avoid=as.match(/Pairs To Avoid:\s*([\s\S]*?)(?=Wolf Final|$)/i)?.[1]?.trim()||'';
+    const final=as.match(/Wolf Final Word:\s*([\s\S]*?)$/i)?.[1]?.trim()||'';
+    const riskColor=risk.includes('EXTREME')?'var(--red)':risk.includes('HIGH')?'var(--orange)':risk.includes('MEDIUM')?'var(--gold)':'var(--green)';
+
+    // Update stat bar
+    html+=`<script>
+      document.getElementById('conflict-stats').style.display='grid';
+      document.getElementById('cs-risk').textContent='${risk||"—"}';
+      document.getElementById('cs-risk').style.color='${riskColor}';
+      document.getElementById('cs-sent').textContent=text.includes('RISK-OFF')?'RISK-OFF':text.includes('RISK-ON')?'RISK-ON':'MIXED';
+      document.getElementById('cs-sent').style.color=text.includes('RISK-OFF')?'var(--red)':text.includes('RISK-ON')?'var(--green)':'var(--gold)';
+      document.getElementById('cs-haven').textContent='JPY/CHF/GOLD';
+    <\/script>`;
+
+    html+=`<div style="background:linear-gradient(135deg,rgba(255,51,85,0.06),rgba(10,20,32,0));border:1px solid rgba(255,51,85,0.2);border-radius:6px;padding:16px;margin-bottom:10px;">
+      <div style="font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--red);margin-bottom:12px;">🌍 GLOBAL RISK ASSESSMENT</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);">OVERALL RISK:</div>
+        <div style="font-family:var(--mono);font-size:16px;font-weight:bold;color:${riskColor};">${risk||'—'}</div>
+      </div>
+      ${haven?`<div style="font-size:11px;color:var(--text-mid);margin-bottom:10px;padding:8px;background:rgba(255,215,0,0.04);border-radius:4px;"><strong style="color:var(--gold);">🏦 SAFE HAVEN FLOWS:</strong> ${haven}</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        ${best?`<div style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.15);border-radius:4px;padding:10px;"><div style="font-size:8px;letter-spacing:1px;color:var(--green);margin-bottom:6px;">✅ BEST PAIRS NOW</div>${best.split('\n').filter(l=>l.trim()).map(l=>`<div style="font-size:11px;padding:3px 0;color:var(--text-mid);">• ${l.trim().replace(/^[-•]\s*/,'')}</div>`).join('')}</div>`:''}
+        ${avoid?`<div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.15);border-radius:4px;padding:10px;"><div style="font-size:8px;letter-spacing:1px;color:var(--red);margin-bottom:6px;">🚫 PAIRS TO AVOID</div>${avoid.split('\n').filter(l=>l.trim()).map(l=>`<div style="font-size:11px;padding:3px 0;color:var(--text-mid);">• ${l.trim().replace(/^[-•]\s*/,'')}</div>`).join('')}</div>`:''}
+      </div>
+      ${final?`<div style="background:rgba(51,221,255,0.05);border-left:3px solid var(--cyan);padding:12px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--cyan);line-height:1.7;font-weight:bold;">🐺 WOLF FINAL WORD: ${final}</div>`:''}
+    </div>`;
+  }
+
   box.innerHTML=html||`<div class="panel"><div class="ai-out">${fmt(text)}</div></div>`;
 }
 
-// ── TRACKER ───────────────────────────────────────────────────────────────────
+// ── TRACKER (removed) ──────────────────────────────────────────────────────────
 function quickLog(pair,dir,entry,sl,tp,type){
   // Fill tracker form
   const setVal=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
