@@ -2485,24 +2485,13 @@ One clear sentence: what to do today with SPY options. Maximum 20 words. Direct 
 
     const signalColor = pips > 0 ? 'var(--green)' : pips < 0 ? 'var(--red)' : 'var(--gold)';
 
-    optBox.innerHTML = `
-      ${verdict ? \`<div style="background:rgba(0,207,255,0.04);border-left:3px solid #00cfff;padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.8;margin-bottom:10px;">
-        <strong style="color:#00cfff;">📡 SIGNAL VERDICT:</strong><br>\${verdict}
-      </div>\` : ''}
-
-      \${play ? \`<div class="spy-option-card">
-        <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">⚡ OPTIONS PLAY</div>
-        <div style="font-size:12px;color:var(--text-mid);line-height:1.8;">\${play.replace(/\n/g,'<br>')}</div>
-      </div>\` : ''}
-
-      \${risks ? \`<div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.15);border-radius:4px;padding:10px;margin-bottom:10px;font-size:11px;color:var(--text-mid);line-height:1.7;">
-        <strong style="color:var(--red);">⚠️ KEY RISKS:</strong><br>\${risks.replace(/\n/g,'<br>')}
-      </div>\` : ''}
-
-      \${wolf ? \`<div style="background:rgba(51,221,255,0.06);border-left:3px solid var(--cyan);padding:12px 14px;border-radius:0 4px 4px 0;font-size:13px;font-weight:bold;color:var(--cyan);">
-        🐺 WOLF VERDICT: \${wolf}
-      </div>\` : ''}
-    `;
+    // String concat only — NEVER use nested backticks, they break all JS
+    let spyHtml = '';
+    if(verdict) spyHtml += '<div style="background:rgba(0,207,255,0.04);border-left:3px solid #00cfff;padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.8;margin-bottom:10px;"><strong style="color:#00cfff;">📡 SIGNAL VERDICT:</strong><br>' + verdict + '</div>';
+    if(play) spyHtml += '<div class="spy-option-card"><div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">⚡ OPTIONS PLAY</div><div style="font-size:12px;color:var(--text-mid);line-height:1.8;">' + play.replace(/\n/g,'<br>') + '</div></div>';
+    if(risks) spyHtml += '<div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.15);border-radius:4px;padding:10px;margin-bottom:10px;font-size:11px;color:var(--text-mid);line-height:1.7;"><strong style="color:var(--red);">⚠️ KEY RISKS:</strong><br>' + risks.replace(/\n/g,'<br>') + '</div>';
+    if(wolf) spyHtml += '<div style="background:rgba(51,221,255,0.06);border-left:3px solid var(--cyan);padding:12px 14px;border-radius:0 4px 4px 0;font-size:13px;font-weight:bold;color:var(--cyan);">🐺 WOLF VERDICT: ' + wolf + '</div>';
+    optBox.innerHTML = spyHtml;
   } catch(e){
     optBox.innerHTML = '<div style="color:var(--red);font-size:11px;">Error: ' + e.message + '</div>';
   }
