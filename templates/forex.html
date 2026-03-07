@@ -680,7 +680,7 @@ input::placeholder{color:var(--text-dim);}
           </div>
         </div>
         <iframe id="tv-iframe" class="tv-iframe"
-          src="https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=EURUSD&interval=60&theme=dark&style=1&locale=en&toolbar_bg=%23080c0f&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=true&studies=RSI%40tv-basicstudies,MACD%40tv-basicstudies,BB%40tv-basicstudies"
+          src="https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=EURUSD&interval=60&theme=dark&style=1&locale=en&toolbar_bg=%23080c0f&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=true&studies=RSI%40tv-basicstudies%2CMACD%40tv-basicstudies%2CBB%40tv-basicstudies"
           allowtransparency="true" scrolling="no" allowfullscreen></iframe>
       </div>
       <div class="panel">
@@ -1009,7 +1009,7 @@ function updTVChart(pair){
   if(label)label.textContent=pair;
   const iframe=document.getElementById('tv-iframe');
   if(iframe){
-    iframe.src=`https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=${sym}&interval=${currentTVInterval}&theme=dark&style=1&locale=en&toolbar_bg=%23080c0f&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=true&studies=RSI%40tv-basicstudies,MACD%40tv-basicstudies,BB%40tv-basicstudies`;
+    iframe.src=`https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=${sym}&interval=${currentTVInterval}&theme=dark&style=1&locale=en&toolbar_bg=%23080c0f&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=true&studies=RSI%40tv-basicstudies%2CMACD%40tv-basicstudies%2CBB%40tv-basicstudies`;
   }
 }
 
@@ -1716,7 +1716,7 @@ function renderWarRoom(text,box){
           <span style="margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:3px;background:rgba(255,51,85,0.1);color:${statusCls};border:1px solid ${statusCls};">${status}</span>
         </div>
         ${latestM?`<div class="cc-body" style="line-height:1.8;font-size:12px;">${latestM[1].trim()}</div>`:''}
-        ${whyM?`<div class="cc-body" style="background:rgba(255,215,0,0.04);border-left:3px solid var(--gold);padding:8px 10px;font-size:11px;line-height:1.7;margin:6px 0;"><strong style="color:var(--gold);">💰 WHY MARKETS CARE:</strong> ${whyM[1].trim()}</div>`:''}`
+        ${whyM?`<div class="cc-body" style="background:rgba(255,215,0,0.04);border-left:3px solid var(--gold);padding:8px 10px;font-size:11px;line-height:1.7;margin:6px 0;"><strong style="color:var(--gold);">💰 WHY MARKETS CARE:</strong> ${whyM[1].trim()}</div>`:''}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;">
           ${oilM?`<div style="background:rgba(255,165,0,0.05);border:1px solid rgba(255,165,0,0.15);border-radius:4px;padding:8px;font-size:11px;"><div style="color:var(--orange);font-size:8px;letter-spacing:1px;margin-bottom:4px;">🛢 OIL IMPACT</div>${oilM[1].trim()}</div>`:''}
           ${safeM?`<div style="background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);border-radius:4px;padding:8px;font-size:11px;"><div style="color:var(--gold);font-size:8px;letter-spacing:1px;margin-bottom:4px;">🏦 SAFE HAVENS</div>${safeM[1].trim()}</div>`:''}
