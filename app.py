@@ -101,6 +101,7 @@ YF_MAP = {
     'USD/CHF': 'USDCHF=X', 'AUD/USD': 'AUDUSD=X', 'USD/CAD': 'USDCAD=X',
     'NZD/USD': 'NZDUSD=X', 'EUR/GBP': 'EURGBP=X', 'EUR/JPY': 'EURJPY=X',
     'GBP/JPY': 'GBPJPY=X', 'XAU/USD': 'GC=F',    'DXY':     'DX-Y.NYB',
+    'SPY':     'SPY',      'QQQ':     'QQQ',      'VIX':     '^VIX',
 }
 
 # Candle cache — avoid re-fetching on every request

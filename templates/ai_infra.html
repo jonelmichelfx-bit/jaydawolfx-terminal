@@ -371,9 +371,12 @@ async function runScan(){
           if(d.status==='done'){
             clearInterval(poll);
             // Validate result actually has picks
-            if(!d.result||!(d.result.picks||d.result.stocks)||!(d.result.picks||d.result.stocks).length){
+            if(!(d.picks||d.stocks)||!(d.picks||d.stocks).length){
               rej(new Error('Scan returned empty — yfinance may be slow. Please try again in 30 seconds.'));
             } else {
+              // Normalize: backend returns picks, frontend expects stocks
+              if(d.picks && !d.stocks) d.stocks = d.picks;
+              if(d.sector_read && !d.market_read) d.market_read = d.sector_read;
               res(d);
             }
           }
