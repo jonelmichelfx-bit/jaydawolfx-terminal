@@ -1553,37 +1553,41 @@ async function loadConflict(){
   box.innerHTML=`<div class="load-ctr"><div class="spinner" style="border-top-color:var(--red)"></div><div class="load-txt" style="color:var(--red)">WOLF AI ANALYZING GLOBAL SITUATION...</div><div style="font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;">Conflicts · Fed Policy · Oil · Safe Havens · FX Impact</div></div>`;
   const now=new Date();
   const dateStr=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const prompt=`You are Wolf AI — elite geopolitical FX strategist. Date: ${dateStr}.
+  const prompt=`You are Wolf AI — the world's clearest geopolitical trading analyst. Write like you are explaining to a smart high school student who wants to understand how world events move money. Use SIMPLE words. Short sentences. No jargon without explanation. Date: ${dateStr}.
 
-Generate a comprehensive WAR ROOM BRIEFING covering ALL of the following sections. Be specific, current, and actionable. Use real data and real current events.
+Generate a WAR ROOM BRIEFING. Be specific and clear. Use real current events happening RIGHT NOW.
 
 === SECTION 1: FEDERAL RESERVE & RATE POLICY ===
-Current Fed Stance: [HAWKISH/DOVISH/NEUTRAL]
-Current Fed Funds Rate: [rate]
-Next FOMC Meeting: [date and what to expect]
-Rate Trajectory: [RAISING/HOLDING/CUTTING — and why]
-USD Impact: [how current Fed policy is affecting USD right now]
+Current Fed Stance: [HAWKISH meaning RAISING rates / DOVISH meaning CUTTING rates / NEUTRAL meaning HOLDING]
+Current Fed Funds Rate: [exact rate like 5.25%]
+Next FOMC Meeting: [exact date]
+Rate Trajectory: [RAISING / HOLDING / CUTTING — then explain in plain english WHY in 1 sentence]
+USD Impact: [explain in 2 plain sentences — when Fed raises rates, what happens to the dollar and why traders care]
 Key Pairs Affected By Fed:
-- EUR/USD: [direction and reason]
-- USD/JPY: [direction and reason]  
-- GBP/USD: [direction and reason]
-Wolf Fed Alert: [1-2 sentences — what traders must know about Fed right now]
+- EUR/USD: [BUY or SELL — explain in one plain sentence why]
+- USD/JPY: [BUY or SELL — explain in one plain sentence why]
+- GBP/USD: [BUY or SELL — explain in one plain sentence why]
+Wolf Fed Alert: [2 sentences max — the most important thing traders need to know about the Fed right now, in plain english]
 
 === SECTION 2: ACTIVE MILITARY CONFLICTS ===
-For each active conflict use this format:
+For each active conflict use EXACTLY this format:
 
-CONFLICT: [Name]
-Status: [ACTIVE/ESCALATING/DE-ESCALATING]
-Latest: [2-3 sentences on what is happening RIGHT NOW]
-Oil Impact: [specific effect on oil and oil-linked pairs]
-Safe Haven Impact: [where money is fleeing — USD/JPY/CHF/Gold]
-Risk Sentiment: [RISK-OFF/RISK-ON/MIXED]
-FX Pairs:
-- [PAIR]: [BUY/SELL/AVOID] — [exact reason]
-- [PAIR]: [BUY/SELL/AVOID] — [exact reason]
-Wolf Alert: [best trade this conflict creates right now]
+CONFLICT: [Name of the conflict — countries involved]
+Status: [ACTIVE / ESCALATING / DE-ESCALATING]
+What Is Happening: [3 sentences — explain the situation like you are telling a friend. What started it, what is happening now, why it matters to markets]
+Why Markets Care: [2 sentences — explain in plain words how war affects money, oil, and currencies]
+Oil Impact: [1-2 sentences — does this push oil UP or DOWN and why]
+Safe Havens: [1-2 sentences — which currencies are people buying to stay safe and why — explain what a safe haven currency IS]
+Risk Level: [RISK-OFF meaning traders are scared / RISK-ON meaning traders are confident]
+Pairs That Go UP because of this conflict:
+- [PAIR] goes UP — [plain english reason — e.g. "USD/JPY rises because Japan Yen is a safe haven and people buy it when scared"]
+Pairs That Go DOWN because of this conflict:
+- [PAIR] goes DOWN — [plain english reason]
+Pairs To Avoid Right Now:
+- [PAIR] — [why it is too risky or unpredictable right now]
+Wolf Trade Alert: [2 sentences — the single best trade opportunity this conflict creates right now and exactly why]
 
-Cover these conflicts: 1) USA/Iran tensions 2) Russia/Ukraine 3) Israel/Gaza/Middle East 4) China/Taiwan tensions 5) Any other active flashpoints
+Cover these 5 conflicts with full detail: 1) USA/Iran tensions 2) Russia/Ukraine war 3) Israel/Gaza/Middle East 4) China/Taiwan/South China Sea 5) US Tariff War (Trump tariffs on China, Canada, Mexico and how they are moving currencies)
 
 === SECTION 3: MACRO SHOCKS & ECONOMIC WEAPONS ===
 Current Macro Theme: [main theme driving markets this week]
@@ -1664,7 +1668,8 @@ function renderWarRoom(text,box){
       const title=s.split('\n')[0].trim().replace(/^SECTION 2.*$/i,'').trim();
       if(!title||title.length<3)return;
       const statusM=s.match(/Status:\s*([^\n]+)/i);
-      const latestM=s.match(/Latest:\s*([\s\S]*?)(?=Oil Impact:|$)/i);
+      const latestM=s.match(/What Is Happening:\s*([\s\S]*?)(?=Why Markets|Oil Impact:|$)/i)||s.match(/Latest:\s*([\s\S]*?)(?=Why Markets|Oil Impact:|$)/i);
+      const whyM=s.match(/Why Markets Care:\s*([\s\S]*?)(?=Oil Impact:|$)/i);
       const oilM=s.match(/Oil Impact:\s*([\s\S]*?)(?=Safe Haven:|$)/i);
       const safeM=s.match(/Safe Haven Impact:\s*([\s\S]*?)(?=Risk Sentiment:|$)/i);
       const sentM=s.match(/Risk Sentiment:\s*([^\n]+)/i);
@@ -1674,14 +1679,40 @@ function renderWarRoom(text,box){
       const statusCls=status.includes('ESCAL')&&!status.includes('DE')?'var(--red)':status.includes('DE')?'var(--green)':'var(--gold)';
       let pairsHtml='';
       if(pairsM){
-        const pairs=pairsM[1].match(/[-•]\s*([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*([^\n]+)/gi)||[];
-        pairs.forEach(p=>{
-          const pm=p.match(/([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*(.+)/i);
-          if(pm){
-            const cls=pm[2]==='BUY'?'cc-bull':pm[2]==='AVOID'?'cc-neut':'cc-bear';
-            pairsHtml+=`<div class="cc-pair ${cls}" title="${pm[3]}">${pm[1]} ${pm[2]}</div>`;
-          }
-        });
+        // Parse UP pairs
+        const upM=s.match(/Pairs That Go UP[\s\S]*?(?=Pairs That Go DOWN|Wolf Trade|CONFLICT:|SECTION|===|$)/i);
+        const downM=s.match(/Pairs That Go DOWN[\s\S]*?(?=Pairs To Avoid|Wolf Trade|CONFLICT:|SECTION|===|$)/i);
+        const avoidM2=s.match(/Pairs To Avoid[\s\S]*?(?=Wolf Trade|CONFLICT:|SECTION|===|$)/i);
+        if(upM){
+          const upPairs=upM[0].match(/[-•]\s*([A-Z\/]+)[^\n]+/gi)||[];
+          upPairs.forEach(p=>{
+            const pm=p.match(/([A-Z\/]+)\s*(?:goes UP)?\s*[—\-]?\s*(.+)/i);
+            if(pm&&pm[1].includes('/')) pairsHtml+=`<div class="cc-pair cc-bull" style="max-width:none;padding:6px 10px;font-size:10px;line-height:1.4;display:block;margin:4px 0;"><span style="font-weight:bold;font-size:12px;">↑ ${pm[1].trim()}</span> — ${pm[2]?.trim()||''}</div>`;
+          });
+        }
+        if(downM){
+          const downPairs=downM[0].match(/[-•]\s*([A-Z\/]+)[^\n]+/gi)||[];
+          downPairs.forEach(p=>{
+            const pm=p.match(/([A-Z\/]+)\s*(?:goes DOWN)?\s*[—\-]?\s*(.+)/i);
+            if(pm&&pm[1].includes('/')) pairsHtml+=`<div class="cc-pair cc-bear" style="max-width:none;padding:6px 10px;font-size:10px;line-height:1.4;display:block;margin:4px 0;"><span style="font-weight:bold;font-size:12px;">↓ ${pm[1].trim()}</span> — ${pm[2]?.trim()||''}</div>`;
+          });
+        }
+        if(avoidM2){
+          const avPairs=avoidM2[0].match(/[-•]\s*([A-Z\/]+)[^\n]+/gi)||[];
+          avPairs.forEach(p=>{
+            const pm=p.match(/([A-Z\/]+)\s*[—\-]?\s*(.+)/i);
+            if(pm&&pm[1].includes('/')) pairsHtml+=`<div class="cc-pair cc-neut" style="max-width:none;padding:6px 10px;font-size:10px;line-height:1.4;display:block;margin:4px 0;"><span style="font-weight:bold;font-size:12px;">⚠ ${pm[1].trim()}</span> — ${pm[2]?.trim()||''}</div>`;
+          });
+        }
+        // Fallback to old format
+        if(!pairsHtml&&pairsM){
+          const pairs=pairsM[1].match(/[-•]\s*([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*([^\n]+)/gi)||[];
+          pairs.forEach(p=>{
+            const pm=p.match(/([A-Z\/]+):\s*(BUY|SELL|AVOID)\s*[—\-]\s*(.+)/i);
+            if(pm){const cls=pm[2]==='BUY'?'cc-bull':pm[2]==='AVOID'?'cc-neut':'cc-bear';
+              pairsHtml+=`<div class="cc-pair ${cls}">${pm[1]} ${pm[2]}</div>`;}
+          });
+        }
       }
       html+=`<div class="conflict-card" style="margin-bottom:10px;">
         <div class="cc-top">
@@ -1689,7 +1720,8 @@ function renderWarRoom(text,box){
           <div class="cc-title">${title}</div>
           <span style="margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:3px;background:rgba(255,51,85,0.1);color:${statusCls};border:1px solid ${statusCls};">${status}</span>
         </div>
-        ${latestM?`<div class="cc-body" style="line-height:1.7;">${latestM[1].trim()}</div>`:''}
+        ${latestM?`<div class="cc-body" style="line-height:1.8;font-size:12px;">${latestM[1].trim()}</div>`:''}
+        ${whyM?`<div class="cc-body" style="background:rgba(255,215,0,0.04);border-left:3px solid var(--gold);padding:8px 10px;font-size:11px;line-height:1.7;margin:6px 0;"><strong style="color:var(--gold);">💰 WHY MARKETS CARE:</strong> ${whyM[1].trim()}</div>`:''}`
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;">
           ${oilM?`<div style="background:rgba(255,165,0,0.05);border:1px solid rgba(255,165,0,0.15);border-radius:4px;padding:8px;font-size:11px;"><div style="color:var(--orange);font-size:8px;letter-spacing:1px;margin-bottom:4px;">🛢 OIL IMPACT</div>${oilM[1].trim()}</div>`:''}
           ${safeM?`<div style="background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);border-radius:4px;padding:8px;font-size:11px;"><div style="color:var(--gold);font-size:8px;letter-spacing:1px;margin-bottom:4px;">🏦 SAFE HAVENS</div>${safeM[1].trim()}</div>`:''}

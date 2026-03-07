@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wolf Academy — Learn Forex & Stocks</title>
+<style>
+:root{
+  --bg:#080c0f;--surface:#0d1520;--surface2:#111d2e;--border:#1a2a3a;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --gold:#ffd700;--orange:#ff6b35;--green:#00ff88;--red:#ff3355;
+  --cyan:#33ddff;--purple:#8b5cf6;--mono:'Courier New',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;}
+
+/* NAV */
+.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:16px;height:48px;}
+.nav-brand{font-family:var(--mono);font-size:13px;letter-spacing:3px;color:var(--gold);font-weight:bold;}
+.nav-tabs{display:flex;gap:2px;flex:1;}
+.ntab{padding:6px 12px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text3);border-bottom:2px solid transparent;text-decoration:none;transition:all .2s;}
+.ntab:hover{color:var(--text2);}
+.ntab.active{color:var(--gold);border-color:var(--gold);}
+
+/* LAYOUT */
+.layout{display:flex;height:calc(100vh - 48px);}
+.sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:12px 0;}
+.main{flex:1;overflow-y:auto;padding:24px;}
+
+/* SIDEBAR */
+.sb-section{padding:8px 16px 4px;font-size:8px;letter-spacing:2px;color:var(--text3);font-family:var(--mono);}
+.sb-item{padding:10px 20px;font-size:12px;color:var(--text2);cursor:pointer;border-left:3px solid transparent;transition:all .2s;line-height:1.4;}
+.sb-item:hover{background:rgba(255,215,0,0.04);color:var(--text);}
+.sb-item.active{background:rgba(255,215,0,0.06);border-color:var(--gold);color:var(--gold);}
+.sb-item .sb-num{font-family:var(--mono);font-size:10px;color:var(--text3);margin-right:8px;}
+.sb-item .sb-badge{font-size:8px;padding:2px 6px;border-radius:3px;margin-left:6px;font-family:var(--mono);}
+.badge-forex{background:rgba(51,221,255,0.1);color:var(--cyan);}
+.badge-stocks{background:rgba(255,107,53,0.1);color:var(--orange);}
+.badge-both{background:rgba(139,92,246,0.1);color:var(--purple);}
+
+/* LESSON */
+.lesson{display:none;max-width:800px;}
+.lesson.active{display:block;}
+.lesson-header{margin-bottom:24px;}
+.lesson-tag{font-size:9px;letter-spacing:2px;font-family:var(--mono);margin-bottom:6px;}
+.lesson-tag.forex{color:var(--cyan);}
+.lesson-tag.stocks{color:var(--orange);}
+.lesson-tag.both{color:var(--purple);}
+.lesson-title{font-size:22px;font-weight:bold;color:var(--text);line-height:1.3;margin-bottom:8px;}
+.lesson-sub{font-size:14px;color:var(--text2);line-height:1.6;}
+
+/* CONTENT BLOCKS */
+.lesson p{font-size:14px;color:var(--text2);line-height:1.8;margin-bottom:16px;}
+.lesson p strong{color:var(--text);}
+.callout{border-radius:6px;padding:14px 16px;margin:16px 0;font-size:13px;line-height:1.7;}
+.callout.gold{background:rgba(255,215,0,0.06);border-left:4px solid var(--gold);color:var(--text2);}
+.callout.cyan{background:rgba(51,221,255,0.05);border-left:4px solid var(--cyan);color:var(--text2);}
+.callout.green{background:rgba(0,255,136,0.05);border-left:4px solid var(--green);color:var(--text2);}
+.callout.red{background:rgba(255,51,85,0.05);border-left:4px solid var(--red);color:var(--text2);}
+.callout.purple{background:rgba(139,92,246,0.06);border-left:4px solid var(--purple);color:var(--text2);}
+.callout strong{color:var(--text);}
+
+.example-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:16px;margin:16px 0;}
+.example-box .ex-title{font-size:9px;letter-spacing:2px;font-family:var(--mono);color:var(--orange);margin-bottom:10px;}
+.example-box p{font-size:13px;margin-bottom:8px;}
+
+.term-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;}
+.term-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px;}
+.term-card .term{font-family:var(--mono);font-size:11px;font-weight:bold;color:var(--gold);margin-bottom:6px;}
+.term-card .def{font-size:12px;color:var(--text2);line-height:1.6;}
+
+.step-list{margin:16px 0;}
+.step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start;}
+.step-num{width:28px;height:28px;min-width:28px;border-radius:50%;background:rgba(255,215,0,0.1);border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--gold);font-weight:bold;}
+.step-body{font-size:13px;color:var(--text2);line-height:1.7;padding-top:4px;}
+.step-body strong{color:var(--text);}
+
+.h2{font-size:16px;font-weight:bold;color:var(--text);margin:24px 0 10px;font-family:var(--mono);letter-spacing:1px;border-bottom:1px solid var(--border);padding-bottom:8px;}
+.h2.cyan{color:var(--cyan);}
+.h2.orange{color:var(--orange);}
+.h2.gold{color:var(--gold);}
+.h2.purple{color:var(--purple);}
+
+/* QUIZ */
+.quiz{background:var(--surface2);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:20px;margin:24px 0;}
+.quiz-q{font-size:14px;font-weight:bold;color:var(--text);margin-bottom:14px;}
+.quiz-opt{padding:10px 14px;margin:6px 0;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .2s;}
+.quiz-opt:hover{border-color:var(--gold);color:var(--text);}
+.quiz-opt.correct{background:rgba(0,255,136,0.1);border-color:var(--green);color:var(--green);}
+.quiz-opt.wrong{background:rgba(255,51,85,0.1);border-color:var(--red);color:var(--red);}
+.quiz-result{display:none;margin-top:12px;padding:10px 14px;border-radius:4px;font-size:13px;line-height:1.6;}
+.quiz-result.show{display:block;}
+
+/* NAV BUTTONS */
+.lesson-nav{display:flex;gap:10px;margin-top:32px;padding-top:20px;border-top:1px solid var(--border);}
+.nav-btn{padding:10px 20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1px;transition:all .2s;}
+.nav-btn:hover{border-color:var(--gold);color:var(--gold);}
+.nav-btn.primary{background:rgba(255,215,0,0.1);border-color:var(--gold);color:var(--gold);}
+
+/* PROGRESS */
+.progress-bar{height:3px;background:var(--border);margin-bottom:24px;border-radius:2px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--orange));border-radius:2px;transition:width .4s;}
+
+/* WELCOME */
+.welcome{text-align:center;padding:40px 20px;max-width:600px;margin:0 auto;}
+.wolf-icon{font-size:48px;margin-bottom:16px;}
+.welcome h1{font-size:26px;font-weight:bold;margin-bottom:12px;}
+.welcome p{font-size:14px;color:var(--text2);line-height:1.8;margin-bottom:24px;}
+.track-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0;}
+.track-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:20px;cursor:pointer;transition:all .2s;text-align:left;}
+.track-card:hover{border-color:var(--gold);background:rgba(255,215,0,0.04);}
+.track-icon{font-size:24px;margin-bottom:8px;}
+.track-title{font-size:14px;font-weight:bold;margin-bottom:4px;}
+.track-desc{font-size:11px;color:var(--text3);line-height:1.5;}
+.track-count{font-size:9px;letter-spacing:1px;color:var(--text3);font-family:var(--mono);margin-top:8px;}
+
+@media(max-width:600px){
+  .term-grid{grid-template-columns:1fr;}
+  .layout{flex-direction:column;}
+  .sidebar{width:100%;min-width:unset;height:auto;border-right:none;border-bottom:1px solid var(--border);}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-brand">🐺 WOLF TERMINAL</div>
+  <div class="nav-tabs">
+    <a href="/" class="ntab">STOCKS</a>
+    <a href="/forex" class="ntab">FOREX</a>
+    <a href="/forex-wolf" class="ntab" style="color:var(--gold);">🐺 WOLF PICKS</a>
+    <a href="/wolf-elite" class="ntab">📈 ELITE</a>
+    <a href="/education" class="ntab active">🎓 ACADEMY</a>
+    <a href="/pricing" class="ntab">PLANS</a>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-section">START HERE</div>
+    <div class="sb-item active" onclick="showLesson('welcome')"><span class="sb-num">00</span>Welcome to Wolf Academy<span class="sb-badge badge-both">BOTH</span></div>
+
+    <div class="sb-section">FOREX BASICS</div>
+    <div class="sb-item" onclick="showLesson('what-is-forex')"><span class="sb-num">01</span>What Is Forex?<span class="sb-badge badge-forex">FOREX</span></div>
+    <div class="sb-item" onclick="showLesson('currency-pairs')"><span class="sb-num">02</span>Currency Pairs<span class="sb-badge badge-forex">FOREX</span></div>
+    <div class="sb-item" onclick="showLesson('pips')"><span class="sb-num">03</span>What Are Pips?<span class="sb-badge badge-forex">FOREX</span></div>
+    <div class="sb-item" onclick="showLesson('sessions')"><span class="sb-num">04</span>Market Sessions<span class="sb-badge badge-forex">FOREX</span></div>
+    <div class="sb-item" onclick="showLesson('leverage')"><span class="sb-num">05</span>Leverage & Margin<span class="sb-badge badge-forex">FOREX</span></div>
+
+    <div class="sb-section">STOCKS BASICS</div>
+    <div class="sb-item" onclick="showLesson('what-is-stock')"><span class="sb-num">06</span>What Is a Stock?<span class="sb-badge badge-stocks">STOCKS</span></div>
+    <div class="sb-item" onclick="showLesson('how-market-works')"><span class="sb-num">07</span>How The Market Works<span class="sb-badge badge-stocks">STOCKS</span></div>
+    <div class="sb-item" onclick="showLesson('options-basics')"><span class="sb-num">08</span>Options Explained<span class="sb-badge badge-stocks">STOCKS</span></div>
+
+    <div class="sb-section">READING THE MARKET</div>
+    <div class="sb-item" onclick="showLesson('candlesticks')"><span class="sb-num">09</span>How To Read Charts<span class="sb-badge badge-both">BOTH</span></div>
+    <div class="sb-item" onclick="showLesson('support-resistance')"><span class="sb-num">10</span>Support & Resistance<span class="sb-badge badge-both">BOTH</span></div>
+    <div class="sb-item" onclick="showLesson('indicators')"><span class="sb-num">11</span>RSI, EMA & MACD<span class="sb-badge badge-both">BOTH</span></div>
+    <div class="sb-item" onclick="showLesson('trend-analysis')"><span class="sb-num">12</span>Trend Analysis<span class="sb-badge badge-both">BOTH</span></div>
+
+    <div class="sb-section">RISK & MINDSET</div>
+    <div class="sb-item" onclick="showLesson('risk-management')"><span class="sb-num">13</span>Risk Management<span class="sb-badge badge-both">BOTH</span></div>
+    <div class="sb-item" onclick="showLesson('trading-psychology')"><span class="sb-num">14</span>Trading Psychology<span class="sb-badge badge-both">BOTH</span></div>
+    <div class="sb-item" onclick="showLesson('how-to-start')"><span class="sb-num">15</span>How To Start Trading<span class="sb-badge badge-both">BOTH</span></div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+    <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+
+    <!-- LESSON 00: WELCOME -->
+    <div class="lesson active" id="lesson-welcome">
+      <div class="welcome">
+        <div class="wolf-icon">🐺</div>
+        <h1>Welcome to Wolf Academy</h1>
+        <p>You don't need a finance degree to trade. You need the right knowledge, the right tools, and the right mindset. This academy will take you from complete beginner to understanding how professional traders think — step by step, in plain english.</p>
+        <div class="track-grid">
+          <div class="track-card" onclick="showLesson('what-is-forex')">
+            <div class="track-icon">💱</div>
+            <div class="track-title" style="color:var(--cyan);">Forex Track</div>
+            <div class="track-desc">Learn currency trading — how pairs work, what pips are, when to trade, and how to read the market.</div>
+            <div class="track-count">5 LESSONS · BEGINNER</div>
+          </div>
+          <div class="track-card" onclick="showLesson('what-is-stock')">
+            <div class="track-icon">📈</div>
+            <div class="track-title" style="color:var(--orange);">Stocks Track</div>
+            <div class="track-desc">Learn how stocks and options work — how companies go public, how to read earnings, and how to profit.</div>
+            <div class="track-count">3 LESSONS · BEGINNER</div>
+          </div>
+          <div class="track-card" onclick="showLesson('candlesticks')">
+            <div class="track-icon">📊</div>
+            <div class="track-title" style="color:var(--purple);">Chart Reading</div>
+            <div class="track-desc">Learn to read any chart — candlesticks, trends, support & resistance, and the indicators pros use.</div>
+            <div class="track-count">4 LESSONS · INTERMEDIATE</div>
+          </div>
+          <div class="track-card" onclick="showLesson('risk-management')">
+            <div class="track-icon">🛡</div>
+            <div class="track-title" style="color:var(--gold);">Risk & Mindset</div>
+            <div class="track-desc">The most important part of trading that nobody teaches — how to protect your money and your mind.</div>
+            <div class="track-count">3 LESSONS · ESSENTIAL</div>
+          </div>
+        </div>
+        <div class="callout gold"><strong>💡 Pro Tip:</strong> Don't skip the Risk Management lesson. Most traders lose money not because they can't read charts — but because they don't manage risk. Start from lesson 01 and go in order for best results.</div>
+      </div>
+    </div>
+
+    <!-- LESSON 01: WHAT IS FOREX -->
+    <div class="lesson" id="lesson-what-is-forex">
+      <div class="lesson-header">
+        <div class="lesson-tag forex">LESSON 01 · FOREX BASICS</div>
+        <div class="lesson-title">What Is Forex?</div>
+        <div class="lesson-sub">The biggest financial market in the world — and how ordinary people trade it</div>
+      </div>
+      <p>Forex stands for <strong>Foreign Exchange</strong>. It is simply the act of buying one country's currency and selling another country's currency at the same time.</p>
+      <p>Think about it this way — if you traveled from the US to Europe, you would exchange your US Dollars for Euros at the airport. That is forex. The only difference is that traders do this electronically, in seconds, trying to profit from the change in value between currencies.</p>
+      <div class="callout cyan"><strong>🌍 The Size of the Forex Market:</strong> Over <strong>$7.5 TRILLION</strong> is traded every single day in forex. That is bigger than the stock market, bigger than crypto, bigger than any other market on earth. It runs 24 hours a day, 5 days a week.</div>
+      <div class="h2 cyan">// Why Do Currency Values Change?</div>
+      <p>Currency values move up and down based on how strong or weak a country's economy is. Here are the main reasons currencies move:</p>
+      <div class="step-list">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Interest Rates:</strong> When a country's central bank (like the US Federal Reserve) raises interest rates, their currency usually gets stronger. Why? Because investors from around the world move their money there to earn more interest. More demand for that currency = higher price.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Economic Data:</strong> When a country's economy is doing well — low unemployment, strong growth, good earnings — their currency tends to rise. When the economy is struggling, the currency falls.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>World Events & Conflict:</strong> War, political instability, natural disasters — these cause traders to sell currencies of affected countries and buy "safe haven" currencies like the Japanese Yen (JPY), Swiss Franc (CHF), or US Dollar (USD).</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Supply and Demand:</strong> Like anything — when more people want a currency, its price goes up. When more people want to sell it, its price goes down.</div></div>
+      </div>
+      <div class="example-box">
+        <div class="ex-title">📖 REAL WORLD EXAMPLE</div>
+        <p>In 2022, the US Federal Reserve raised interest rates aggressively to fight inflation. As a result, the US Dollar became the strongest it had been in 20 years. The Euro dropped to below $1.00 for the first time ever. Traders who understood this made huge profits by selling EUR/USD (betting the Euro would fall against the Dollar).</p>
+      </div>
+      <div class="callout green"><strong>✅ Key Takeaway:</strong> Forex is simply trading one currency against another. Values move based on interest rates, economic health, and world events. Your job as a trader is to predict which direction a currency is heading before it gets there.</div>
+      <div class="quiz">
+        <div class="quiz-q">Quick Check: What is the MAIN reason the US Dollar got stronger in 2022?</div>
+        <div class="quiz-opt" onclick="answer(this,'wrong')">The US went to war</div>
+        <div class="quiz-opt" onclick="answer(this,'correct')">The Federal Reserve raised interest rates</div>
+        <div class="quiz-opt" onclick="answer(this,'wrong')">The price of oil dropped</div>
+        <div class="quiz-result" id="qr-1"></div>
+      </div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('welcome')">← Back</button>
+        <button class="nav-btn primary" onclick="showLesson('currency-pairs')">Next: Currency Pairs →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 02: CURRENCY PAIRS -->
+    <div class="lesson" id="lesson-currency-pairs">
+      <div class="lesson-header">
+        <div class="lesson-tag forex">LESSON 02 · FOREX BASICS</div>
+        <div class="lesson-title">Currency Pairs — The Building Block of Forex</div>
+        <div class="lesson-sub">Why currencies always trade in pairs, and how to read them</div>
+      </div>
+      <p>In forex, you never buy just one currency. You always <strong>buy one and sell another at the same time</strong>. This is called a <strong>currency pair</strong>.</p>
+      <p>Every currency pair looks like this: <strong>EUR/USD = 1.0850</strong>. This means 1 Euro costs 1.0850 US Dollars right now.</p>
+      <div class="h2 cyan">// How To Read a Currency Pair</div>
+      <div class="example-box">
+        <div class="ex-title">📖 BREAKING DOWN EUR/USD</div>
+        <p><strong>EUR</strong> = The Base Currency (the one you are buying or selling)</p>
+        <p><strong>USD</strong> = The Quote Currency (the one you are pricing it in)</p>
+        <p><strong>1.0850</strong> = It costs $1.0850 to buy 1 Euro</p>
+        <p style="margin-top:10px;color:var(--green);">If EUR/USD goes UP from 1.0850 to 1.0950, the Euro got stronger (you profit if you BOUGHT)</p>
+        <p style="color:var(--red);">If EUR/USD goes DOWN from 1.0850 to 1.0750, the Euro got weaker (you profit if you SOLD)</p>
+      </div>
+      <div class="h2 cyan">// The Major Pairs — Most Traded in the World</div>
+      <div class="term-grid">
+        <div class="term-card"><div class="term">EUR/USD</div><div class="def">Euro vs US Dollar — the most traded pair. Moves a lot during US and European sessions. Affected by Fed and ECB decisions.</div></div>
+        <div class="term-card"><div class="term">GBP/USD</div><div class="def">British Pound vs Dollar. Called "Cable." Very volatile — moves fast. Affected by UK economic data and Bank of England decisions.</div></div>
+        <div class="term-card"><div class="term">USD/JPY</div><div class="def">Dollar vs Japanese Yen. Yen is a safe haven — goes UP when the world is scared. Affected by Bank of Japan policy.</div></div>
+        <div class="term-card"><div class="term">USD/CHF</div><div class="def">Dollar vs Swiss Franc. CHF is another safe haven. Switzerland stays neutral in wars so money flows there during crises.</div></div>
+        <div class="term-card"><div class="term">AUD/USD</div><div class="def">Australian Dollar vs USD. Called "Aussie." Moves with commodity prices (especially iron ore and copper) and China's economy.</div></div>
+        <div class="term-card"><div class="term">USD/CAD</div><div class="def">Dollar vs Canadian Dollar. Called "Loonie." Strongly linked to oil prices — when oil rises, CAD usually rises too.</div></div>
+      </div>
+      <div class="callout gold"><strong>💡 Safe Haven Explained:</strong> A "safe haven" currency is one that people rush to BUY when the world feels dangerous or uncertain. Think of it like people buying gold when they are scared. The Japanese Yen (JPY), Swiss Franc (CHF), and sometimes the US Dollar (USD) are the main safe havens in forex.</div>
+      <div class="quiz">
+        <div class="quiz-q">If EUR/USD moves from 1.0800 to 1.0700, what happened?</div>
+        <div class="quiz-opt" onclick="answer(this,'correct')">The Euro got WEAKER against the Dollar</div>
+        <div class="quiz-opt" onclick="answer(this,'wrong')">The Euro got STRONGER against the Dollar</div>
+        <div class="quiz-opt" onclick="answer(this,'wrong')">Nothing changed — they are equal</div>
+        <div class="quiz-result" id="qr-2"></div>
+      </div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('what-is-forex')">← Lesson 01</button>
+        <button class="nav-btn primary" onclick="showLesson('pips')">Next: What Are Pips →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 03: PIPS -->
+    <div class="lesson" id="lesson-pips">
+      <div class="lesson-header">
+        <div class="lesson-tag forex">LESSON 03 · FOREX BASICS</div>
+        <div class="lesson-title">What Are Pips? How Forex Profits Are Measured</div>
+        <div class="lesson-sub">The unit of measurement every forex trader must know</div>
+      </div>
+      <p>A <strong>pip</strong> is the smallest standard unit of movement in a currency pair. It stands for <strong>"Percentage In Point"</strong>. Most pairs move in pips of 0.0001 — that is the 4th decimal place.</p>
+      <div class="example-box">
+        <div class="ex-title">📖 PIP EXAMPLE — EUR/USD</div>
+        <p>EUR/USD moves from <strong>1.08<span style="color:var(--gold);">50</span></strong> to <strong>1.08<span style="color:var(--green);">80</span></strong></p>
+        <p>That is a move of <strong style="color:var(--green);">30 pips</strong> (0.0030)</p>
+        <p style="margin-top:8px;">On a standard lot (100,000 units), each pip = approximately <strong style="color:var(--gold);">$10</strong></p>
+        <p>So 30 pips = <strong style="color:var(--green);">$300 profit</strong></p>
+      </div>
+      <div class="h2 cyan">// Lot Sizes — How Much You Are Trading</div>
+      <div class="term-grid">
+        <div class="term-card"><div class="term">Standard Lot</div><div class="def">100,000 units of currency. Each pip = ~$10. For experienced traders with large accounts.</div></div>
+        <div class="term-card"><div class="term">Mini Lot</div><div class="def">10,000 units. Each pip = ~$1. Good for intermediate traders.</div></div>
+        <div class="term-card"><div class="term">Micro Lot</div><div class="def">1,000 units. Each pip = ~$0.10. Perfect for beginners — very low risk while learning.</div></div>
+        <div class="term-card"><div class="term">Spread</div><div class="def">The difference between the buy price and sell price. This is what your broker charges. A spread of 1.2 pips on EUR/USD means you start each trade 1.2 pips in the negative.</div></div>
+      </div>
+      <div class="callout red"><strong>⚠ Important:</strong> Always start with micro lots when you are learning. A 50 pip loss on a micro lot is only $5. The same loss on a standard lot is $500. Keep your losses small while you are developing your skills.</div>
+      <div class="example-box">
+        <div class="ex-title">📖 CALCULATING YOUR PROFIT/LOSS</div>
+        <p><strong>You buy EUR/USD at 1.0850</strong> with 1 mini lot (10,000 units)</p>
+        <p>Price moves to <strong>1.0920</strong> — you close the trade</p>
+        <p>Movement = 70 pips × $1 per pip = <strong style="color:var(--green);">$70 profit</strong></p>
+        <p style="margin-top:8px;">If price moved DOWN to 1.0780 — that is 70 pips against you = <strong style="color:var(--red);">$70 loss</strong></p>
+      </div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('currency-pairs')">← Lesson 02</button>
+        <button class="nav-btn primary" onclick="showLesson('sessions')">Next: Market Sessions →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 04: SESSIONS -->
+    <div class="lesson" id="lesson-sessions">
+      <div class="lesson-header">
+        <div class="lesson-tag forex">LESSON 04 · FOREX BASICS</div>
+        <div class="lesson-title">Market Sessions — When To Trade</div>
+        <div class="lesson-sub">Forex runs 24/5 — but not all hours are equal</div>
+      </div>
+      <p>Forex runs 24 hours a day, Monday to Friday. But there are <strong>four major trading sessions</strong> when different banks and traders around the world are active. The best trading opportunities happen when sessions <strong>overlap</strong> — that is when volume and volatility are highest.</p>
+      <div class="term-grid">
+        <div class="term-card"><div class="term">🇦🇺 Sydney Session</div><div class="def"><strong>10 PM – 7 AM EST.</strong> Quietest session. Low volume. AUD and NZD pairs most active. Not ideal for beginners.</div></div>
+        <div class="term-card"><div class="term">🇯🇵 Tokyo Session</div><div class="def"><strong>7 PM – 4 AM EST.</strong> JPY pairs most active. Can be slow. Watch for Bank of Japan news. USD/JPY and GBP/JPY move here.</div></div>
+        <div class="term-card" style="border-color:rgba(51,221,255,0.3);"><div class="term" style="color:var(--cyan);">🇬🇧 London Session ⭐</div><div class="def"><strong>3 AM – 12 PM EST.</strong> MOST VOLATILE session. 40% of all daily forex volume. EUR, GBP pairs are very active. Best for serious traders.</div></div>
+        <div class="term-card" style="border-color:rgba(255,107,53,0.3);"><div class="term" style="color:var(--orange);">🇺🇸 New York Session ⭐</div><div class="def"><strong>8 AM – 5 PM EST.</strong> Second most active. US economic data releases move the market big. USD pairs are most active.</div></div>
+      </div>
+      <div class="callout gold"><strong>⭐ The Golden Window:</strong> The best time to trade is the <strong>London/New York overlap: 8 AM – 12 PM EST</strong>. Both major markets are open at the same time, volume is massive, and pairs like EUR/USD, GBP/USD, and USD/JPY make their biggest moves of the day here.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('pips')">← Lesson 03</button>
+        <button class="nav-btn primary" onclick="showLesson('leverage')">Next: Leverage & Margin →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 05: LEVERAGE -->
+    <div class="lesson" id="lesson-leverage">
+      <div class="lesson-header">
+        <div class="lesson-tag forex">LESSON 05 · FOREX BASICS</div>
+        <div class="lesson-title">Leverage & Margin — The Double-Edged Sword</div>
+        <div class="lesson-sub">How traders control large positions with small accounts — and why it is dangerous</div>
+      </div>
+      <p><strong>Leverage</strong> means your broker lets you control a much larger trade than your account balance. For example, with 100:1 leverage, you can control $100,000 worth of currency with just $1,000 in your account.</p>
+      <div class="example-box">
+        <div class="ex-title">📖 LEVERAGE EXAMPLE</div>
+        <p>You have <strong>$1,000</strong> in your account</p>
+        <p>Your broker offers <strong>50:1 leverage</strong></p>
+        <p>You can trade up to <strong style="color:var(--gold);">$50,000</strong> worth of currency</p>
+        <p style="margin-top:8px;color:var(--green);">A 1% move in your favor = <strong>$500 profit</strong> (50% of your account!)</p>
+        <p style="color:var(--red);">A 1% move against you = <strong>$500 loss</strong> (50% of your account wiped)</p>
+      </div>
+      <p><strong>Margin</strong> is the deposit your broker holds as collateral while your trade is open. If your losses approach your margin, the broker will automatically close your trade — this is called a <strong>margin call</strong>.</p>
+      <div class="callout red"><strong>⚠ The Most Important Warning:</strong> High leverage is how beginner traders blow up their accounts fast. Never use more than 10:1 leverage when starting out. Most professional traders use 5:1 or less. The goal is to stay in the game long enough to become profitable — not to get rich overnight.</div>
+      <div class="callout green"><strong>✅ Rule of Thumb:</strong> Never risk more than 1-2% of your account on a single trade. If you have $1,000, your maximum loss per trade should be $10-$20. This keeps you alive long enough to learn.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('sessions')">← Lesson 04</button>
+        <button class="nav-btn primary" onclick="showLesson('what-is-stock')">Next: What Is a Stock →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 06: WHAT IS A STOCK -->
+    <div class="lesson" id="lesson-what-is-stock">
+      <div class="lesson-header">
+        <div class="lesson-tag stocks">LESSON 06 · STOCKS BASICS</div>
+        <div class="lesson-title">What Is a Stock?</div>
+        <div class="lesson-sub">How owning a piece of a company can make you wealthy</div>
+      </div>
+      <p>A <strong>stock</strong> (also called a <strong>share</strong>) is a small piece of ownership in a company. When you buy 1 share of Apple, you literally own a tiny fraction of Apple Inc. — including its profits, its assets, and its future growth.</p>
+      <p>Companies sell stock to raise money. Instead of borrowing from a bank, they sell pieces of ownership to thousands of investors. In return, investors hope the company grows and their shares become worth more over time.</p>
+      <div class="callout cyan"><strong>📈 Simple Example:</strong> In 2003, Apple's stock was worth about $1 per share (adjusted for splits). By 2024, it was worth over $190. If you had invested $1,000 in 2003, it would be worth over $190,000 today — without doing anything except holding.</div>
+      <div class="h2 orange">// How Stock Prices Move</div>
+      <div class="step-list">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Earnings Reports:</strong> Every 3 months, companies report their profits. If they beat expectations, the stock usually jumps. If they miss, it drops. This is the biggest short-term driver of individual stocks.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>News & Announcements:</strong> New products, partnerships, lawsuits, CEO changes — any major news can move a stock significantly in minutes.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Market Sentiment:</strong> When the overall market is feeling positive (RISK-ON), most stocks rise together. When fear takes over (RISK-OFF), most stocks fall. This is why the VIX (Fear Index) matters.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Interest Rates:</strong> When the Fed raises rates, it becomes more expensive to borrow money — this slows down companies and their growth projections, which tends to push stock prices lower.</div></div>
+      </div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('leverage')">← Lesson 05</button>
+        <button class="nav-btn primary" onclick="showLesson('how-market-works')">Next: How The Market Works →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 07: HOW MARKET WORKS -->
+    <div class="lesson" id="lesson-how-market-works">
+      <div class="lesson-header">
+        <div class="lesson-tag stocks">LESSON 07 · STOCKS BASICS</div>
+        <div class="lesson-title">How The Stock Market Works</div>
+        <div class="lesson-sub">The NYSE, NASDAQ, SPY, VIX — what they all mean</div>
+      </div>
+      <p>The stock market is where buyers and sellers meet to trade shares of companies. The two biggest stock exchanges in the world are the <strong>NYSE</strong> (New York Stock Exchange) and <strong>NASDAQ</strong>. Both are based in New York and open <strong>9:30 AM – 4:00 PM EST</strong>, Monday to Friday.</p>
+      <div class="term-grid">
+        <div class="term-card"><div class="term">SPY / S&P 500</div><div class="def">A basket of the 500 biggest US companies. When people say "the market is up," they usually mean the S&P 500. It is the best measure of the overall US stock market health.</div></div>
+        <div class="term-card"><div class="term">VIX — Fear Index</div><div class="def">Measures how scared or calm the market is. VIX above 30 = extreme fear, stocks usually falling. VIX below 15 = calm, stocks usually rising. Wolf Terminal shows this in every scan.</div></div>
+        <div class="term-card"><div class="term">Bull Market</div><div class="def">When prices are rising and people are optimistic. A 20% rise from a low is officially a bull market. 2023-2024 was a strong bull market driven by AI hype.</div></div>
+        <div class="term-card"><div class="term">Bear Market</div><div class="def">When prices are falling and fear is high. A 20% drop from a high is officially a bear market. 2022 was a bear market caused by inflation and rising interest rates.</div></div>
+      </div>
+      <div class="callout purple"><strong>🐺 How Wolf Terminal Uses This:</strong> Every Wolf scan checks the SPY price, the VIX level, and the overall market regime (BULLISH / NEUTRAL / BEARISH) before making picks. When VIX is above 25, the scanner becomes more conservative. When the market is in a BULLISH regime, it looks for more aggressive BUY signals.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('what-is-stock')">← Lesson 06</button>
+        <button class="nav-btn primary" onclick="showLesson('options-basics')">Next: Options Explained →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 08: OPTIONS -->
+    <div class="lesson" id="lesson-options-basics">
+      <div class="lesson-header">
+        <div class="lesson-tag stocks">LESSON 08 · STOCKS BASICS</div>
+        <div class="lesson-title">Options Explained Simply</div>
+        <div class="lesson-sub">What calls and puts are — and why traders love them</div>
+      </div>
+      <p>An <strong>option</strong> is a contract that gives you the RIGHT to buy or sell a stock at a specific price, before a specific date. You pay a small premium upfront for this right.</p>
+      <div class="term-grid">
+        <div class="term-card" style="border-color:rgba(0,255,136,0.3);"><div class="term" style="color:var(--green);">CALL Option</div><div class="def">Gives you the right to BUY a stock at a set price. You buy a CALL when you think the stock is going UP. If it does, your call gains value fast.</div></div>
+        <div class="term-card" style="border-color:rgba(255,51,85,0.3);"><div class="term" style="color:var(--red);">PUT Option</div><div class="def">Gives you the right to SELL a stock at a set price. You buy a PUT when you think the stock is going DOWN. Puts are also used to protect (hedge) a portfolio.</div></div>
+        <div class="term-card"><div class="term">Strike Price</div><div class="def">The price at which you can exercise your option. If NVDA is at $100 and you buy a $105 CALL, the stock needs to reach $105 before your option is "in the money."</div></div>
+        <div class="term-card"><div class="term">Expiration Date</div><div class="def">Options expire. If the stock doesn't reach your strike price before expiration, the option expires worthless and you lose the premium you paid. Time is always working against you as a buyer.</div></div>
+      </div>
+      <div class="example-box">
+        <div class="ex-title">📖 SIMPLE CALL OPTION EXAMPLE</div>
+        <p>NVDA is at $100. You think it will rise after earnings next week.</p>
+        <p>You buy 1 CALL option: Strike $105, Expiry in 7 days, Premium = $2.00 (cost: $200 for 1 contract of 100 shares)</p>
+        <p style="margin-top:8px;color:var(--green);">NVDA jumps to $120 after earnings → Your $105 call is now worth ~$15 → You made $1,300 profit on $200 invested</p>
+        <p style="color:var(--red);">NVDA stays at $100 or drops → Option expires worthless → You lose $200 maximum</p>
+      </div>
+      <div class="callout gold"><strong>💡 Why Options?</strong> Options give you massive leverage with defined risk. Your maximum loss is only what you paid (the premium). But your potential gain can be 5x, 10x, or more. This is why Wolf Terminal includes an options play recommendation with every stock pick.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('how-market-works')">← Lesson 07</button>
+        <button class="nav-btn primary" onclick="showLesson('candlesticks')">Next: How To Read Charts →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 09: CANDLESTICKS & CHARTS -->
+    <div class="lesson" id="lesson-candlesticks">
+      <div class="lesson-header">
+        <div class="lesson-tag both">LESSON 09 · READING THE MARKET</div>
+        <div class="lesson-title">How To Read Charts — Candlesticks</div>
+        <div class="lesson-sub">The language every trader speaks — learn it once, use it forever</div>
+      </div>
+      <p>Every price chart is made up of <strong>candlesticks</strong>. Each candle tells you exactly what happened during that time period — whether it was 1 minute, 1 hour, or 1 day.</p>
+      <div class="example-box">
+        <div class="ex-title">📖 HOW TO READ ONE CANDLE</div>
+        <p><strong>Green / White Candle</strong> = Price CLOSED higher than it opened → Buyers were in control</p>
+        <p><strong>Red / Black Candle</strong> = Price CLOSED lower than it opened → Sellers were in control</p>
+        <p style="margin-top:8px;"><strong>The Body</strong> = Distance between open and close price</p>
+        <p><strong>The Wick (Shadow)</strong> = The highest and lowest point the price reached — but then rejected</p>
+        <p style="margin-top:8px;color:var(--gold);"><strong>Long upper wick</strong> = Price tried to go higher but got rejected → sellers pushed back</p>
+        <p style="color:var(--cyan);"><strong>Long lower wick</strong> = Price tried to go lower but got rejected → buyers stepped in</p>
+      </div>
+      <div class="h2 purple">// Key Candle Patterns To Know</div>
+      <div class="term-grid">
+        <div class="term-card"><div class="term">Doji</div><div class="def">Open and close are almost equal — tiny body, long wicks. Means the market is UNDECIDED. Often signals a reversal is coming. Pay attention when you see a Doji after a big trend.</div></div>
+        <div class="term-card"><div class="term">Engulfing Pattern</div><div class="def">A big candle that completely "swallows" the previous candle. Bullish Engulfing (green swallows red) = buyers taking over. Bearish Engulfing (red swallows green) = sellers taking over.</div></div>
+        <div class="term-card"><div class="term">Hammer</div><div class="def">Small body at the top, very long lower wick. Looks like a hammer. Means sellers tried to push price down but buyers rejected them hard. Usually a BULLISH signal at a support level.</div></div>
+        <div class="term-card"><div class="term">Shooting Star</div><div class="def">Small body at the bottom, very long upper wick. Means buyers tried to push price up but sellers rejected them. Usually a BEARISH signal at a resistance level.</div></div>
+      </div>
+      <div class="callout cyan"><strong>💡 The Most Important Skill:</strong> You don't need to memorize every pattern. Learn to ask one question looking at any candle: "Who was in control — buyers or sellers — and where did they get rejected?" That question alone will teach you more than any pattern list.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('options-basics')">← Lesson 08</button>
+        <button class="nav-btn primary" onclick="showLesson('support-resistance')">Next: Support & Resistance →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 10: SUPPORT & RESISTANCE -->
+    <div class="lesson" id="lesson-support-resistance">
+      <div class="lesson-header">
+        <div class="lesson-tag both">LESSON 10 · READING THE MARKET</div>
+        <div class="lesson-title">Support & Resistance — The Foundation of Every Trade</div>
+        <div class="lesson-sub">The price levels where buyers and sellers have fought before — and will fight again</div>
+      </div>
+      <p><strong>Support</strong> is a price level where buyers have stepped in and stopped price from falling. Think of it as a floor. When price falls to this level, buyers show up and push it back up.</p>
+      <p><strong>Resistance</strong> is a price level where sellers have stepped in and stopped price from rising. Think of it as a ceiling. When price rises to this level, sellers show up and push it back down.</p>
+      <div class="callout gold"><strong>🔑 The Golden Rule:</strong> When price breaks THROUGH a resistance level, that old resistance often becomes the new support. When price breaks BELOW a support level, that old support often becomes the new resistance. This is called a <strong>"role reversal"</strong> and it is one of the most powerful concepts in all of trading.</div>
+      <div class="example-box">
+        <div class="ex-title">📖 HOW TO USE SUPPORT & RESISTANCE</div>
+        <p><strong>Buying at Support:</strong> Wait for price to come down and touch a known support level. Look for a bullish candle pattern (like a hammer or engulfing) to confirm buyers are defending it. Enter with a stop loss just below the support level.</p>
+        <p style="margin-top:8px;"><strong>Selling at Resistance:</strong> Wait for price to rise and touch a known resistance level. Look for a bearish candle pattern (like a shooting star) to confirm sellers are rejecting it. Enter with a stop loss just above the resistance level.</p>
+      </div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('candlesticks')">← Lesson 09</button>
+        <button class="nav-btn primary" onclick="showLesson('indicators')">Next: RSI, EMA & MACD →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 11: INDICATORS -->
+    <div class="lesson" id="lesson-indicators">
+      <div class="lesson-header">
+        <div class="lesson-tag both">LESSON 11 · READING THE MARKET</div>
+        <div class="lesson-title">RSI, EMA & MACD — The Three Most Important Indicators</div>
+        <div class="lesson-sub">The tools that Wolf Terminal uses in every scan — now you will understand what they mean</div>
+      </div>
+      <div class="h2 purple">// RSI — Relative Strength Index</div>
+      <p>RSI measures how fast and how much price has been moving. It gives you a number from 0 to 100.</p>
+      <div class="term-grid">
+        <div class="term-card" style="border-color:rgba(255,51,85,0.3);"><div class="term" style="color:var(--red);">RSI Above 70</div><div class="def"><strong>OVERBOUGHT</strong> — The market has moved up too fast. It may be due for a pullback. Not a signal to short immediately, but a warning to be cautious about new buys.</div></div>
+        <div class="term-card" style="border-color:rgba(0,255,136,0.3);"><div class="term" style="color:var(--green);">RSI Below 30</div><div class="def"><strong>OVERSOLD</strong> — The market has dropped too fast. It may be due for a bounce. Potential buying opportunity, especially at a known support level.</div></div>
+        <div class="term-card"><div class="term">RSI 40–60</div><div class="def">Neutral zone — no clear signal. The trend is not extreme in either direction. Wait for RSI to reach the extremes before acting on it alone.</div></div>
+        <div class="term-card"><div class="term">RSI Divergence</div><div class="def">When price makes a new high but RSI makes a lower high — this is a warning that momentum is fading. One of the most powerful reversal signals.</div></div>
+      </div>
+      <div class="h2 purple">// EMA — Exponential Moving Average</div>
+      <p>An EMA is a line on the chart that shows the average price over a set number of periods. It smooths out the noise and shows the overall trend direction.</p>
+      <div class="callout cyan"><strong>The Three EMAs Wolf Uses:</strong><br><strong>EMA 20</strong> = Short-term trend (roughly 1 month). Price above EMA 20 = short-term bullish.<br><strong>EMA 50</strong> = Medium-term trend (roughly 3 months). The most watched moving average by institutions.<br><strong>EMA 200</strong> = Long-term trend (roughly 1 year). THE most important line on any chart. Price above EMA 200 = UPTREND. Price below = DOWNTREND. Every professional trader watches this.</div>
+      <div class="h2 purple">// MACD — Momentum Indicator</div>
+      <p>MACD shows the relationship between two moving averages and helps identify when momentum is shifting. When the MACD line crosses above zero, it is bullish. When it crosses below, it is bearish. A MACD crossing above its signal line is a BUY signal. Crossing below is a SELL signal.</p>
+      <div class="callout green"><strong>✅ How Wolf Terminal Uses These:</strong> Every scan checks if price is above or below EMA 200 (trend), RSI level (momentum), and MACD bias (direction). When all three align — price above EMA 200, RSI between 40-60, and MACD bullish — that is a high-confidence BUY setup.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('support-resistance')">← Lesson 10</button>
+        <button class="nav-btn primary" onclick="showLesson('trend-analysis')">Next: Trend Analysis →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 12: TREND ANALYSIS -->
+    <div class="lesson" id="lesson-trend-analysis">
+      <div class="lesson-header">
+        <div class="lesson-tag both">LESSON 12 · READING THE MARKET</div>
+        <div class="lesson-title">Trend Analysis — Trade With The Flow, Not Against It</div>
+        <div class="lesson-sub">The single most important concept in all of technical analysis</div>
+      </div>
+      <p>The most fundamental rule in trading: <strong>"The trend is your friend."</strong> Trying to trade against a strong trend is like trying to swim upstream — you might make progress sometimes, but you will exhaust yourself and likely get swept away.</p>
+      <div class="step-list">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Identify the Trend on the Higher Timeframe First:</strong> Always start by looking at the weekly or daily chart. Is price making higher highs and higher lows? That is an UPTREND. Lower highs and lower lows? That is a DOWNTREND.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Look for Entry on the Lower Timeframe:</strong> Once you know the daily trend is UP, drop to the 4-hour or 1-hour chart and wait for a pullback to a support level or EMA. That is your entry point — you are buying in the direction of the bigger trend at a better price.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Do Not Fight Institutional Money:</strong> Banks and hedge funds move the market. When they decide a trend is in place, they hold their positions for weeks or months. Your job is to identify what direction they are pushing and follow them — not fight them.</div></div>
+      </div>
+      <div class="callout red"><strong>⚠ The Biggest Beginner Mistake:</strong> Trying to call the top or bottom of a move. "It has gone up too much, I am going to short it." This is how accounts get destroyed. A strong trend can continue much further than logic suggests. Trade WITH the trend until it clearly breaks — then reassess.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('indicators')">← Lesson 11</button>
+        <button class="nav-btn primary" onclick="showLesson('risk-management')">Next: Risk Management →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 13: RISK MANAGEMENT -->
+    <div class="lesson" id="lesson-risk-management">
+      <div class="lesson-header">
+        <div class="lesson-tag both">LESSON 13 · RISK & MINDSET</div>
+        <div class="lesson-title">Risk Management — The Skill That Separates Winners From Losers</div>
+        <div class="lesson-sub">You cannot control whether a trade wins. You can always control how much you lose.</div>
+      </div>
+      <p>Here is the truth that nobody wants to hear when they start trading: <strong>even the best traders in the world are wrong 40-50% of the time.</strong> What makes them profitable is not that they win more often — it is that when they win, they win bigger than when they lose.</p>
+      <div class="callout gold"><strong>🔑 The Golden Formula:</strong> If you risk $100 to make $300 (3:1 reward to risk), you only need to be right 34% of the time to be profitable. You can be WRONG on more than half your trades and still make money. Risk management is everything.</div>
+      <div class="h2 gold">// The 1% Rule</div>
+      <p>Never risk more than <strong>1-2% of your total account</strong> on any single trade. Here is why this is life-changing:</p>
+      <div class="example-box">
+        <div class="ex-title">📖 THE MATH OF SURVIVAL</div>
+        <p>Account: $5,000 | Rule: Never risk more than 1% ($50) per trade</p>
+        <p style="color:var(--red);">Even if you lose 10 trades in a row: You still have $4,500 — you are still in the game</p>
+        <p style="margin-top:8px;">Account: $5,000 | Bad habit: Risking 20% ($1,000) per trade</p>
+        <p style="color:var(--red);">5 losses in a row: Account is at $0. Game over.</p>
+        <p style="margin-top:8px;color:var(--green);">The trader who survives long enough to learn is the trader who eventually wins.</p>
+      </div>
+      <div class="h2 gold">// Stop Loss — Your Best Friend</div>
+      <p>A <strong>stop loss</strong> is an order you place that automatically closes your trade if price moves against you by a certain amount. It is not optional — it is required if you want to survive as a trader.</p>
+      <div class="callout green"><strong>✅ How To Set A Stop Loss:</strong> Place your stop loss at a level where your trade idea is WRONG. For a buy trade at a support level, the stop goes just below the support. If price breaks below support, your idea was wrong — and you exit with a controlled loss before it gets worse.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('trend-analysis')">← Lesson 12</button>
+        <button class="nav-btn primary" onclick="showLesson('trading-psychology')">Next: Trading Psychology →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 14: PSYCHOLOGY -->
+    <div class="lesson" id="lesson-trading-psychology">
+      <div class="lesson-header">
+        <div class="lesson-tag both">LESSON 14 · RISK & MINDSET</div>
+        <div class="lesson-title">Trading Psychology — Why Smart People Lose Money</div>
+        <div class="lesson-sub">The emotional traps that destroy more accounts than bad analysis</div>
+      </div>
+      <p>You can understand every indicator, know every pattern, and still lose money — because when real money is on the line, emotions take over. The market is designed to make you emotional. Learning to trade your <strong>plan, not your feelings</strong>, is the hardest and most valuable skill in trading.</p>
+      <div class="term-grid">
+        <div class="term-card" style="border-color:rgba(255,51,85,0.3);"><div class="term" style="color:var(--red);">Fear of Missing Out (FOMO)</div><div class="def">Chasing a trade after it already moved big because you are scared of missing the profit. Almost always results in buying the top or selling the bottom. If you missed it, the next setup is coming. Wait.</div></div>
+        <div class="term-card" style="border-color:rgba(255,51,85,0.3);"><div class="term" style="color:var(--red);">Revenge Trading</div><div class="def">After a loss, jumping back into the market immediately to "win it back." You are now trading on emotion, not analysis. This is how small losses become account-destroying losses. Walk away after a bad trade.</div></div>
+        <div class="term-card" style="border-color:rgba(255,165,0,0.3);"><div class="term" style="color:var(--orange);">Moving Your Stop Loss</div><div class="def">When a trade goes against you, moving your stop loss further away to "give it more room." You are now changing the rules after the game started. This leads to massive losses. Honor your stop — always.</div></div>
+        <div class="term-card" style="border-color:rgba(255,165,0,0.3);"><div class="term" style="color:var(--orange);">Overtrading</div><div class="def">Taking too many trades because you are bored or want to make money faster. Quality over quantity — the best traders take 2-5 high-confidence trades per week, not 20 random ones per day.</div></div>
+      </div>
+      <div class="callout purple"><strong>🐺 Wolf's Mindset Rule:</strong> Before entering any trade, write down: Why I am entering. Where my stop loss is. Where my target is. If the trade hits my stop — it is not a loss, it is the cost of doing business. A professional trader treats losses the same way a business owner treats expenses. They are part of the operation.</div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('risk-management')">← Lesson 13</button>
+        <button class="nav-btn primary" onclick="showLesson('how-to-start')">Next: How To Start →</button>
+      </div>
+    </div>
+
+    <!-- LESSON 15: HOW TO START -->
+    <div class="lesson" id="lesson-how-to-start">
+      <div class="lesson-header">
+        <div class="lesson-tag both">LESSON 15 · YOUR JOURNEY STARTS NOW</div>
+        <div class="lesson-title">How To Start Trading — The Right Way</div>
+        <div class="lesson-sub">A step-by-step roadmap from zero to your first real trade</div>
+      </div>
+      <div class="step-list">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Practice on a Demo Account First:</strong> Every major broker offers a free demo account with fake money. Trade on demo for at least 30-60 days before touching real money. Treat it exactly like real money — same position sizes, same rules. If you cannot be profitable on demo, you are not ready for real money.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Start With One Market:</strong> Do not try to trade forex AND stocks AND crypto at the same time. Pick one. Master it. For forex beginners, start with EUR/USD — it is the most liquid, tightest spread, and most analyzed pair in the world.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Keep a Trading Journal:</strong> Write down every trade — why you entered, what happened, what you learned. This is how professionals improve. The traders who journal are the traders who grow.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Use Wolf Terminal as Your Edge:</strong> The Byakugan scanner, Wolf Picks, AI The Future scanner, and War Room conflict analysis all give you professional-level analysis in seconds. Use these tools to confirm your own analysis — not to replace it.</div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body"><strong>Start With a Small Real Account:</strong> When you are consistently profitable on demo for 2 months, start with $100-$500 real money. Use micro lots. The goal is to build confidence and consistency — the big money comes after you have mastered the small account.</div></div>
+      </div>
+      <div class="callout gold"><strong>🐺 Wolf's Final Word:</strong> Trading is a skill — just like playing an instrument or learning a language. Nobody is profitable their first month. Nobody. The traders who make it are the ones who treat it like a business, commit to learning every day, manage their risk obsessively, and never quit. You have the tools. You have the knowledge. Now go and put in the work.</div>
+      <div style="text-align:center;padding:30px 0;">
+        <div style="font-size:32px;margin-bottom:12px;">🎓</div>
+        <div style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">ACADEMY COMPLETE</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:20px;">You have completed all 15 lessons. Time to put it into practice.</div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <a href="/forex" style="padding:12px 24px;background:rgba(51,221,255,0.1);border:1px solid var(--cyan);color:var(--cyan);text-decoration:none;border-radius:4px;font-family:var(--mono);font-size:10px;letter-spacing:2px;">GO TO FOREX TERMINAL</a>
+          <a href="/" style="padding:12px 24px;background:rgba(255,107,53,0.1);border:1px solid var(--orange);color:var(--orange);text-decoration:none;border-radius:4px;font-family:var(--mono);font-size:10px;letter-spacing:2px;">GO TO STOCKS SCANNER</a>
+        </div>
+      </div>
+      <div class="lesson-nav">
+        <button class="nav-btn" onclick="showLesson('trading-psychology')">← Lesson 14</button>
+        <button class="nav-btn primary" onclick="showLesson('welcome')">↑ Back to Start</button>
+      </div>
+    </div>
+
+  </div><!-- end main -->
+</div><!-- end layout -->
+
+<script>
+const LESSONS = ['welcome','what-is-forex','currency-pairs','pips','sessions','leverage','what-is-stock','how-market-works','options-basics','candlesticks','support-resistance','indicators','trend-analysis','risk-management','trading-psychology','how-to-start'];
+
+function showLesson(id){
+  document.querySelectorAll('.lesson').forEach(l=>l.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
+  const lesson=document.getElementById('lesson-'+id);
+  if(lesson) lesson.classList.add('active');
+  // Highlight sidebar
+  document.querySelectorAll('.sb-item').forEach(s=>{
+    if(s.getAttribute('onclick')&&s.getAttribute('onclick').includes("'"+id+"'")) s.classList.add('active');
+  });
+  // Update progress
+  const idx=LESSONS.indexOf(id);
+  const pct=idx>=0?Math.round((idx/LESSONS.length)*100):0;
+  document.getElementById('progress').style.width=pct+'%';
+  // Scroll to top
+  document.querySelector('.main').scrollTo({top:0,behavior:'smooth'});
+}
+
+function answer(el, type){
+  const parent=el.parentElement;
+  // Disable all options
+  parent.querySelectorAll('.quiz-opt').forEach(o=>o.style.pointerEvents='none');
+  el.classList.add(type);
+  const result=parent.querySelector('.quiz-result');
+  if(result){
+    result.classList.add('show');
+    if(type==='correct'){
+      result.style.background='rgba(0,255,136,0.08)';
+      result.style.borderLeft='3px solid var(--green)';
+      result.style.color='var(--green)';
+      result.innerHTML='✅ Correct! Great job.';
+    } else {
+      result.style.background='rgba(255,51,85,0.08)';
+      result.style.borderLeft='3px solid var(--red)';
+      result.style.color='var(--red)';
+      result.innerHTML='❌ Not quite — re-read the lesson and try to understand why the correct answer makes sense.';
+      // Show correct answer
+      parent.querySelectorAll('.quiz-opt').forEach(o=>{if(o.getAttribute('onclick')&&o.getAttribute('onclick').includes('correct'))o.classList.add('correct');});
+    }
+  }
+}
+</script>
+</body>
+</html>

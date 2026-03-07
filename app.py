@@ -1698,32 +1698,22 @@ def byakugan_poll(job_id):
 # (before the "if __name__ == '__main__':" line)
 # ═══════════════════════════════════════════════════════════════
 
-# Full AI Infra universe — rotates daily so every stock gets scanned every 2-3 days
-AI_INFRA_UNIVERSE_FULL = [
-    'NVDA','MRVL','INTC','SMCI','CRDO',
-    'APLD','IREN','NBIS','DLR',
-    'OKLO','CEG','VST','ETN',
-    'MOD','STRL','CLS',
-    'PATH','TER','ISRG',
-    'PLTR','AI',
-]
-
 AI_INFRA_UNIVERSE = {
-    'CHIPS':      ['NVDA','MRVL','INTC','AMD','AVGO','CRDO','MU'],
-    'SERVERS':    ['SMCI','CLS','JBL','DELL','NVDA'],
-    'DATACENTER': ['APLD','IREN','NBIS','DLR','SMCI'],
-    'POWER':      ['OKLO','CEG','VST','ETN','NEE'],
-    'ROBOTICS':   ['PATH','TER','ISRG','NVDA','ABB'],
+    'ALL': [
+        'MRVL','INTC','SMCI','CRDO',
+        'APLD','IREN','NBIS',
+        'OKLO','CEG','VST',
+        'MOD','STRL','CLS',
+        'PATH','TER',
+        'PLTR','AI',
+    ],
+    'CHIPS':      ['MRVL','INTC','AMD','AVGO','CRDO','MU'],
+    'SERVERS':    ['SMCI','CLS','JBL','DELL'],
+    'DATACENTER': ['APLD','IREN','NBIS','DLR'],
+    'POWER':      ['OKLO','CEG','VST','ETN'],
+    'ROBOTICS':   ['PATH','TER','ISRG'],
     'DEEP_VALUE': ['SMCI','INTC','MRVL','APLD','IREN','AI','PATH'],
 }
-
-def get_daily_rotation(date_str):
-    """Returns 7 stocks from full universe based on date rotation."""
-    import hashlib
-    day_seed = int(hashlib.md5(date_str.encode()).hexdigest(), 16) % len(AI_INFRA_UNIVERSE_FULL)
-    rotated = AI_INFRA_UNIVERSE_FULL[day_seed:] + AI_INFRA_UNIVERSE_FULL[:day_seed]
-    return rotated[:7]
-
 
 TICKER_CATEGORY = {
     'MRVL':'CHIPS',    'INTC':'CHIPS',    'AMD':'CHIPS',
@@ -1770,35 +1760,37 @@ def score_ai_infra_stock(ticker_sym):
         return None
     try:
         import yfinance as yf
+        import concurrent.futures as cf
         ticker = yf.Ticker(ticker_sym)
-        hist   = ticker.history(period='1y', interval='1d')
+        # hist already pulled in score_stock but we need 52w data
+        try:
+            hist = ticker.history(period='1y', interval='1d', timeout=8)
+        except Exception:
+            hist = None
         price  = base['price']
-        week52_high = round(float(hist['High'].tail(252).max()), 2) if not hist.empty else None
-        week52_low  = round(float(hist['Low'].tail(252).min()),  2) if not hist.empty else None
+        week52_high = round(float(hist['High'].tail(252).max()), 2) if hist is not None and not hist.empty else None
+        week52_low  = round(float(hist['Low'].tail(252).min()),  2) if hist is not None and not hist.empty else None
         vs_52w_high = round(((price - week52_high) / week52_high) * 100, 1) if week52_high else None
         analyst_target = None; analyst_rating = None; num_analysts = None
         pe_ratio = None; revenue_growth = None; market_cap = None
+        # Wrap ticker.info in strict 5-second timeout — never block the whole job
+        def _get_info():
+            return ticker.info
         try:
-            from concurrent.futures import ThreadPoolExecutor as _TPE, TimeoutError as _TE
-            def _fetch_info():
-                return ticker.info
-            with _TPE(max_workers=1) as _ex:
-                _f = _ex.submit(_fetch_info)
-                try:
-                    info = _f.result(timeout=6)
-                    analyst_target  = info.get('targetMeanPrice')
-                    analyst_rating  = (info.get('recommendationKey','') or '').replace('_',' ').title() or None
-                    num_analysts    = info.get('numberOfAnalystOpinions')
-                    pe_ratio        = info.get('trailingPE')
-                    revenue_growth  = info.get('revenueGrowth')
-                    mc = info.get('marketCap', 0)
-                    if mc > 1e12:   market_cap = f"{round(mc/1e12,1)}T"
-                    elif mc > 1e9:  market_cap = f"{round(mc/1e9,1)}B"
-                    elif mc > 1e6:  market_cap = f"{round(mc/1e6,1)}M"
-                except _TE:
-                    print(f'[AIInfra info timeout {ticker_sym}] skipping analyst data')
+            with cf.ThreadPoolExecutor(max_workers=1) as ex:
+                fut = ex.submit(_get_info)
+                info = fut.result(timeout=5)
+            analyst_target  = info.get('targetMeanPrice')
+            analyst_rating  = (info.get('recommendationKey','') or '').replace('_',' ').title() or None
+            num_analysts    = info.get('numberOfAnalystOpinions')
+            pe_ratio        = info.get('trailingPE')
+            revenue_growth  = info.get('revenueGrowth')
+            mc = info.get('marketCap', 0)
+            if mc > 1e12:   market_cap = f"{round(mc/1e12,1)}T"
+            elif mc > 1e9:  market_cap = f"{round(mc/1e9,1)}B"
+            elif mc > 1e6:  market_cap = f"{round(mc/1e6,1)}M"
         except Exception as e:
-            print(f'[AIInfra info {ticker_sym}] {e}')
+            print(f'[AIInfra info SKIP {ticker_sym}] {e}')
         upside_pct = round(((analyst_target - price) / price) * 100, 1) if analyst_target and price else None
         score = base['score']
         if vs_52w_high:
@@ -1843,10 +1835,7 @@ _ai_infra_jobs = {}
 def _run_ai_infra_job(job_id, scan_filter, date_str):
     try:
         _ai_infra_jobs[job_id] = {'status': 'scanning'}
-        if scan_filter == 'ALL':
-            universe = get_daily_rotation(date_str)
-        else:
-            universe = AI_INFRA_UNIVERSE.get(scan_filter, get_daily_rotation(date_str))
+        universe = AI_INFRA_UNIVERSE.get(scan_filter, AI_INFRA_UNIVERSE['ALL'])
         regime   = get_market_regime()
         _ai_infra_jobs[job_id] = {'status': 'scoring'}
         scored = []
@@ -1864,8 +1853,28 @@ def _run_ai_infra_job(job_id, scan_filter, date_str):
             -(x.get('upside_pct') or 0)
         ))
         top5 = scored[:5]
-        if not top5:
+        # If scoring failed entirely, use raw universe with base prices so we always return something
+        if not scored:
+            print(f'[AIInfra] WARNING: zero stocks scored for {scan_filter} — using fallback')
+            for sym in universe[:5]:
+                try:
+                    import yfinance as yf
+                    t = yf.Ticker(sym)
+                    h = t.history(period='5d', timeout=8)
+                    price = round(float(h['Close'].iloc[-1]), 2) if not h.empty else 0
+                    scored.append({'ticker':sym,'price':price,'score':50,'signal':'WATCH',
+                                   'rsi':50,'vol_ratio':1.0,'signals':[],'sr_levels':{},
+                                   'ema20':None,'ema50':None,'ema200':None,'macd_bias':'NEUTRAL',
+                                   'near_earnings':False,'news':[],
+                                   'ai_role':AI_ROLE_MAP.get(sym,''),'category':TICKER_CATEGORY.get(sym,'AI'),
+                                   'week52_high':None,'week52_low':None,'vs_52w_high':None,
+                                   'analyst_target':None,'analyst_rating':None,'num_analysts':None,
+                                   'upside_pct':None,'market_cap':None,'pe_ratio':None,'revenue_growth':None})
+                except Exception as fe:
+                    print(f'[AIInfra fallback {sym}] {fe}')
+        if not scored:
             _ai_infra_jobs[job_id] = {'status':'error','error':'No stocks scored'}; return
+        top5 = scored[:5]
         _ai_infra_jobs[job_id] = {'status': 'news'}
         for stock in top5:
             try: stock['news'] = get_news(stock['ticker'])[:3]
@@ -1935,6 +1944,10 @@ Respond ONLY in valid JSON (no markdown):
         import traceback; print(traceback.format_exc())
         _ai_infra_jobs[job_id] = {'status': 'error', 'error': str(e)}
 
+
+@app.route('/education')
+def education_page():
+    return render_template('education.html')
 
 @app.route('/ai-infra')
 @login_required
