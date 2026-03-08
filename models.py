@@ -12,28 +12,28 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(150), unique=True, nullable=False, index=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    
-    # Subscription
-    plan = db.Column(db.String(20), default='trial')  # trial, basic, elite, expired
+
+    # Subscription — plans: trial, basic, elite, byakugan, expired, admin
+    plan = db.Column(db.String(20), default='trial')
     trial_start = db.Column(db.DateTime, default=datetime.utcnow)
     trial_end = db.Column(db.DateTime)
     subscription_start = db.Column(db.DateTime)
     subscription_end = db.Column(db.DateTime)
-    
+
     # Stripe
     stripe_customer_id = db.Column(db.String(100), unique=True, nullable=True)
     stripe_subscription_id = db.Column(db.String(100), unique=True, nullable=True)
-    
+
     # Usage tracking
     analyses_today = db.Column(db.Integer, default=0)
     last_analysis_date = db.Column(db.Date, default=datetime.utcnow().date)
-    
+
     # Meta
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
     email_verified = db.Column(db.Boolean, default=False)
-    
+
     # Relationships
     journal_entries = db.relationship('TradeJournal', backref='user', lazy=True)
     alerts = db.relationship('Alert', backref='user', lazy=True)
@@ -43,7 +43,7 @@ class User(UserMixin, db.Model):
         self.username = username.strip()
         self.password_hash = generate_password_hash(password)
         self.trial_start = datetime.utcnow()
-        self.trial_end = datetime.utcnow() + timedelta(days=20)
+        self.trial_end = datetime.utcnow() + timedelta(days=180)  # 6 months free
         self.plan = 'trial'
 
     def check_password(self, password):
@@ -65,48 +65,54 @@ class User(UserMixin, db.Model):
 
     @property
     def has_active_subscription(self):
+        """Admin always active. Paid plans always active. Trial only if not expired."""
+        if self.plan == 'admin':
+            return True
+        if self.plan in ('basic', 'elite', 'byakugan'):
+            return True
         if self.plan == 'trial' and self.is_trial_active:
             return True
-
+        return False
 
     @property
     def effective_plan(self):
-        """Returns the actual plan considering trial/expiry state."""
+        """Returns the actual plan considering trial/expiry state. Admin is always admin."""
+        if self.plan == 'admin':
+            return 'admin'
+        if self.plan in ('basic', 'elite', 'byakugan'):
+            return self.plan
         if self.plan == 'trial':
             return 'trial' if self.is_trial_active else 'expired'
-
         return 'expired'
 
     @property
     def daily_analysis_limit(self):
+        """None = unlimited."""
         plan = self.effective_plan
-        if plan == 'expired':
-            return 0
-
-        return 0
+        if plan in ('elite', 'byakugan', 'admin'):
+            return None  # unlimited
+        if plan == 'basic':
+            return None  # unlimited on basic features
+        if plan == 'trial':
+            return None  # unlimited during trial
+        return 0  # expired
 
     def can_run_analysis(self):
-        """Check if user can run another analysis today."""
         if not self.has_active_subscription:
-            return False, "Your subscription has expired. Please upgrade to continue."
-        
+            return False, "Your trial has expired. Please upgrade to continue."
         today = datetime.utcnow().date()
         if self.last_analysis_date != today:
             self.analyses_today = 0
             self.last_analysis_date = today
             db.session.commit()
-
         limit = self.daily_analysis_limit
         if limit is None:
             return True, None
         if self.analyses_today >= limit:
-            plan = self.effective_plan
-
-            return False, f"Daily limit reached ({limit}/day). Your trial allows 5 analyses per day."
+            return False, f"Daily limit reached ({limit}/day)."
         return True, None
 
     def record_analysis(self):
-        """Increment analysis counter."""
         today = datetime.utcnow().date()
         if self.last_analysis_date != today:
             self.analyses_today = 0
@@ -115,7 +121,6 @@ class User(UserMixin, db.Model):
         db.session.commit()
 
     def upgrade_to(self, plan, months=1):
-        """Upgrade user to a paid plan."""
         now = datetime.utcnow()
         self.plan = plan
         self.subscription_start = now
@@ -131,7 +136,6 @@ class User(UserMixin, db.Model):
             'trial_days_remaining': self.trial_days_remaining,
             'analyses_today': self.analyses_today,
             'daily_limit': self.daily_analysis_limit,
-
         }
 
     def __repr__(self):
@@ -143,32 +147,27 @@ class TradeJournal(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    
-    # Trade info
+
     ticker = db.Column(db.String(20), nullable=False)
-    strategy = db.Column(db.String(100))  # e.g., "Bull Call Spread", "Iron Condor"
-    option_type = db.Column(db.String(10))  # call / put
+    strategy = db.Column(db.String(100))
+    option_type = db.Column(db.String(10))
     strike = db.Column(db.Float)
     expiration = db.Column(db.Date)
     contracts = db.Column(db.Integer, default=1)
-    
-    # Entry/Exit
+
     entry_price = db.Column(db.Float)
     exit_price = db.Column(db.Float)
     entry_date = db.Column(db.DateTime, default=datetime.utcnow)
     exit_date = db.Column(db.DateTime)
-    
-    # P&L
+
     realized_pnl = db.Column(db.Float)
     unrealized_pnl = db.Column(db.Float)
-    
-    # Notes
+
     thesis = db.Column(db.Text)
     notes = db.Column(db.Text)
     tags = db.Column(db.String(200))
-    
-    # Status
-    status = db.Column(db.String(20), default='open')  # open, closed, expired
+
+    status = db.Column(db.String(20), default='open')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -198,12 +197,12 @@ class Alert(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    
+
     ticker = db.Column(db.String(20), nullable=False)
-    alert_type = db.Column(db.String(50))  # price_above, price_below, iv_spike, delta_cross
+    alert_type = db.Column(db.String(50))
     threshold = db.Column(db.Float)
     message = db.Column(db.String(200))
-    
+
     is_active = db.Column(db.Boolean, default=True)
     triggered_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

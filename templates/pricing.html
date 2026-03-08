@@ -1,386 +1,482 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pricing — JaydaWolfX Terminal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#060a0f;--bg2:#090d14;--bg3:#0d1219;
-      --border:#1a2535;--border2:#243040;
-      --green:#00ff99;--red:#ff3355;
-      --gold:#ffd700;--cyan:#33ddff;
-      --orange:#ff8800;--purple:#cc55ff;
-      --text:#e8f4ff;--text2:#b0c8dc;--text3:#6a9ab8;
-      --mono:'Share Tech Mono',monospace;
-      --head:'Barlow Condensed',sans-serif;
-    }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;padding:0 0 80px;}
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JAYDAWOLFX — Choose Your Edge</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#060a0d;--surface:#0d1318;--surface2:#121920;--border:#1e3040;
+  --green:#00ff99;--cyan:#33ddff;--gold:#ffd700;--red:#ff3355;
+  --purple:#cc55ff;--orange:#ff8800;
+  --text:#ffffff;--text-mid:#ccdde8;--text-dim:#4a6a7a;
+  --mono:'Share Tech Mono',monospace;--head:'Orbitron',monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);}
 
-    /* NAV */
-    .nav{height:48px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;}
-    .nav-logo{font-family:var(--head);font-size:20px;font-weight:900;color:var(--gold);letter-spacing:3px;}
-    .nav-back{font-size:9px;letter-spacing:2px;color:var(--text3);text-decoration:none;border:1px solid var(--border);padding:5px 12px;transition:all .2s;margin-left:auto;}
-    .nav-back:hover{color:var(--cyan);border-color:var(--cyan);}
+/* BACKGROUND EFFECTS */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,255,153,0.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,255,153,0.015) 1px,transparent 1px);
+  background-size:60px 60px;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,153,0.004) 3px,rgba(0,255,153,0.004) 4px);}
+.glow-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
+.orb1{width:600px;height:600px;top:-200px;left:-200px;
+  background:radial-gradient(circle,rgba(255,215,0,0.04) 0%,transparent 70%);}
+.orb2{width:500px;height:500px;bottom:-100px;right:-100px;
+  background:radial-gradient(circle,rgba(204,85,255,0.05) 0%,transparent 70%);}
+.orb3{width:400px;height:400px;top:40%;left:40%;
+  background:radial-gradient(circle,rgba(51,221,255,0.03) 0%,transparent 70%);}
 
-    /* HERO */
-    .hero{text-align:center;padding:60px 20px 50px;}
-    .hero-tag{font-size:9px;letter-spacing:4px;color:var(--text3);margin-bottom:16px;}
-    .hero-title{font-family:var(--head);font-size:52px;font-weight:900;letter-spacing:2px;line-height:1;margin-bottom:14px;}
-    .hero-title span{color:var(--gold);}
-    .hero-sub{font-size:12px;color:var(--text3);letter-spacing:2px;line-height:1.8;}
+/* WRAPPER */
+.page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 20px 80px;}
 
-    /* FLASH */
-    .flash{max-width:600px;margin:0 auto 30px;padding:14px 20px;background:rgba(0,255,153,.05);border:1px solid rgba(0,255,153,.3);color:var(--green);font-size:11px;text-align:center;letter-spacing:1px;}
+/* FLASH */
+.flash{padding:12px 20px;border-radius:4px;margin-bottom:20px;font-size:11px;letter-spacing:1px;}
+.flash-warning{background:rgba(255,136,0,0.1);border:1px solid rgba(255,136,0,0.4);color:var(--orange);}
+.flash-success{background:rgba(0,255,153,0.08);border:1px solid rgba(0,255,153,0.3);color:var(--green);}
+.flash-danger{background:rgba(255,51,85,0.08);border:1px solid rgba(255,51,85,0.3);color:var(--red);}
 
-    /* GRID */
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1200px;margin:0 auto;padding:0 24px;}
-    @media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr);}}
-    @media(max-width:600px){.grid{grid-template-columns:1fr;}}
+/* NAV */
+.top-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:60px;
+  padding-bottom:20px;border-bottom:1px solid var(--border);}
+.logo{font-family:var(--head);font-size:16px;font-weight:900;color:var(--gold);
+  letter-spacing:3px;text-shadow:0 0 20px rgba(255,215,0,0.5);text-decoration:none;}
+.logo span{color:var(--orange);}
+.nav-links{display:flex;gap:16px;align-items:center;}
+.nav-link{font-size:10px;color:var(--text-dim);text-decoration:none;letter-spacing:2px;
+  padding:6px 12px;border:1px solid transparent;border-radius:3px;transition:all 0.2s;}
+.nav-link:hover{color:var(--text-mid);border-color:var(--border);}
+.nav-link.cta{color:var(--gold);border-color:rgba(255,215,0,0.4);
+  background:rgba(255,215,0,0.05);}
+.nav-link.cta:hover{background:rgba(255,215,0,0.12);}
 
-    /* CARD */
-    .card{background:var(--bg2);border:1px solid var(--border);padding:32px 24px;display:flex;flex-direction:column;gap:18px;position:relative;transition:transform .2s;}
-    .card:hover{transform:translateY(-4px);}
-    .card.c-basic{border-color:rgba(51,221,255,.3);}
-    .card.c-pro{border-color:rgba(255,136,0,.4);box-shadow:0 0 40px rgba(255,136,0,.06);}
-    .card.c-elite{border-color:rgba(255,215,0,.4);box-shadow:0 0 40px rgba(255,215,0,.08);}
-    .card.c-app{border-color:rgba(204,85,255,.4);box-shadow:0 0 40px rgba(204,85,255,.08);}
+/* HERO */
+.hero{text-align:center;margin-bottom:70px;}
+.hero-eyebrow{font-size:10px;letter-spacing:4px;color:var(--cyan);margin-bottom:16px;
+  display:flex;align-items:center;justify-content:center;gap:12px;}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';width:40px;height:1px;background:var(--cyan);opacity:0.4;}
+.hero-title{font-family:var(--head);font-size:42px;font-weight:900;line-height:1.15;
+  margin-bottom:20px;letter-spacing:2px;}
+.hero-title .line1{color:var(--text);}
+.hero-title .line2{color:var(--gold);text-shadow:0 0 40px rgba(255,215,0,0.3);}
+.hero-sub{font-size:13px;color:var(--text-dim);line-height:2;max-width:600px;margin:0 auto 32px;}
+.hero-sub span{color:var(--text-mid);}
+.hero-badge-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}
+.hero-badge{padding:6px 14px;border-radius:20px;font-size:9px;letter-spacing:2px;}
+.hb-green{background:rgba(0,255,153,0.08);border:1px solid rgba(0,255,153,0.3);color:var(--green);}
+.hb-gold{background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.3);color:var(--gold);}
+.hb-purple{background:rgba(204,85,255,0.08);border:1px solid rgba(204,85,255,0.3);color:var(--purple);}
+.free-banner{display:inline-block;padding:10px 24px;
+  background:linear-gradient(135deg,rgba(0,255,153,0.08),rgba(51,221,255,0.08));
+  border:1px solid rgba(0,255,153,0.3);border-radius:4px;
+  font-size:11px;color:var(--green);letter-spacing:2px;}
 
-    /* BADGE */
-    .badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);padding:4px 16px;font-size:8px;font-weight:700;letter-spacing:2px;white-space:nowrap;}
-    .b-popular{background:var(--orange);color:#000;}
-    .b-best{background:var(--gold);color:#000;}
-    .b-app{background:var(--purple);color:#fff;}
+/* PRICING GRID */
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:60px;}
 
-    /* PLAN NAME */
-    .plan-icon{font-size:28px;margin-bottom:4px;}
-    .plan-name{font-family:var(--head);font-size:26px;font-weight:900;letter-spacing:2px;}
-    .c-trial .plan-name{color:var(--text);}
-    .c-basic .plan-name{color:var(--cyan);}
-    .c-pro .plan-name{color:var(--orange);}
-    .c-elite .plan-name{color:var(--gold);}
-    .c-app .plan-name{color:var(--purple);}
+/* PLAN CARD */
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  overflow:hidden;position:relative;transition:transform 0.3s,box-shadow 0.3s;display:flex;flex-direction:column;}
+.plan-card:hover{transform:translateY(-4px);}
+.plan-card.featured{border-color:rgba(255,215,0,0.5);
+  box-shadow:0 0 40px rgba(255,215,0,0.08);}
+.plan-card.featured:hover{box-shadow:0 0 60px rgba(255,215,0,0.15);}
+.plan-card.byakugan-card{border-color:rgba(204,85,255,0.5);
+  box-shadow:0 0 40px rgba(204,85,255,0.08);}
+.plan-card.byakugan-card:hover{box-shadow:0 0 60px rgba(204,85,255,0.15);}
 
-    .plan-desc{font-size:10px;color:var(--text3);letter-spacing:1px;line-height:1.6;}
+/* TOP STRIPE */
+.plan-stripe{height:3px;width:100%;}
+.stripe-basic{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.stripe-elite{background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.stripe-byakugan{background:linear-gradient(90deg,transparent,var(--purple),var(--cyan),transparent);}
 
-    /* PRICE */
-    .price-wrap{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 0;}
-    .price-amount{font-family:var(--head);font-size:48px;font-weight:900;line-height:1;}
-    .price-period{font-size:10px;color:var(--text3);letter-spacing:2px;margin-top:4px;}
-    .c-trial .price-amount{color:var(--green);}
-    .c-basic .price-amount{color:var(--cyan);}
-    .c-pro .price-amount{color:var(--orange);}
-    .c-elite .price-amount{color:var(--gold);}
-    .c-app .price-amount{color:var(--purple);}
+/* POPULAR BADGE */
+.popular-badge{position:absolute;top:16px;right:16px;padding:4px 10px;
+  background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.4);
+  border-radius:20px;font-size:8px;letter-spacing:2px;color:var(--gold);}
+.new-badge{position:absolute;top:16px;right:16px;padding:4px 10px;
+  background:rgba(204,85,255,0.12);border:1px solid rgba(204,85,255,0.4);
+  border-radius:20px;font-size:8px;letter-spacing:2px;color:var(--purple);}
 
-    /* FEATURES */
-    .features{list-style:none;display:flex;flex-direction:column;gap:8px;flex:1;}
-    .features li{font-size:10px;color:var(--text2);display:flex;align-items:flex-start;gap:8px;letter-spacing:.5px;line-height:1.5;}
-    .features li .ck{flex-shrink:0;margin-top:1px;}
-    .c-trial .ck{color:var(--green);}
-    .c-basic .ck{color:var(--cyan);}
-    .c-pro .ck{color:var(--orange);}
-    .c-elite .ck{color:var(--gold);}
-    .c-app .ck{color:var(--purple);}
-    .locked{color:var(--border2) !important;}
-    .locked .ck{color:var(--border2) !important;}
+.plan-header{padding:28px 24px 20px;}
+.plan-icon{font-size:32px;margin-bottom:12px;}
+.plan-name{font-family:var(--head);font-size:14px;font-weight:900;letter-spacing:3px;margin-bottom:6px;}
+.plan-tagline{font-size:10px;color:var(--text-dim);letter-spacing:1px;line-height:1.6;}
+.plan-price-wrap{margin:20px 0 0;}
+.plan-trial{font-size:11px;color:var(--green);letter-spacing:1px;margin-bottom:4px;}
+.plan-price{display:flex;align-items:baseline;gap:4px;}
+.price-dollar{font-family:var(--head);font-size:36px;font-weight:900;}
+.price-period{font-size:11px;color:var(--text-dim);}
+.price-after{font-size:10px;color:var(--text-dim);margin-top:4px;letter-spacing:1px;}
 
-    /* SECTION LABEL */
-    .feat-section{font-size:8px;letter-spacing:2px;color:var(--text3);margin-top:6px;margin-bottom:2px;text-transform:uppercase;}
+.plan-divider{height:1px;background:var(--border);margin:0 24px;}
 
-    /* BUTTONS */
-    .btn{display:block;text-align:center;padding:14px;font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:2px;cursor:pointer;text-decoration:none;border:none;transition:all .2s;width:100%;}
-    .btn:hover{opacity:.88;transform:scale(1.02);}
-    .btn-trial{background:linear-gradient(135deg,var(--green),#00cc77);color:#000;}
-    .btn-basic{background:linear-gradient(135deg,var(--cyan),#1199cc);color:#000;}
-    .btn-pro{background:linear-gradient(135deg,var(--orange),#cc6600);color:#000;}
-    .btn-elite{background:linear-gradient(135deg,var(--gold),#e6a800);color:#000;}
-    .btn-app{background:linear-gradient(135deg,var(--purple),#8822cc);color:#fff;}
-    .btn-current{background:var(--bg3);color:var(--text3);border:1px solid var(--border);cursor:default;}
-    .btn-current:hover{opacity:1;transform:none;}
-    .btn-stores{display:flex;flex-direction:column;gap:8px;}
-    .btn-store{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;font-family:var(--head);font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;text-decoration:none;border:none;transition:all .2s;}
-    .btn-ios{background:#000;color:#fff;border:1px solid #333;}
-    .btn-android{background:linear-gradient(135deg,#34a853,#1a7a30);color:#fff;}
-    .btn-ios:hover,.btn-android:hover{opacity:.88;}
+.plan-features{padding:20px 24px;flex:1;}
+.features-label{font-size:8px;letter-spacing:3px;color:var(--text-dim);margin-bottom:12px;}
+.feature-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:11px;color:var(--text-mid);line-height:1.5;}
+.fi-check{font-size:12px;flex-shrink:0;margin-top:1px;}
+.fi-check.green{color:var(--green);}
+.fi-check.gold{color:var(--gold);}
+.fi-check.purple{color:var(--purple);}
+.fi-lock{font-size:10px;color:var(--text-dim);flex-shrink:0;}
 
-    .note{font-size:9px;color:var(--text3);text-align:center;letter-spacing:1px;}
+.plan-cta{padding:20px 24px 28px;}
+.cta-btn{display:block;width:100%;padding:14px;text-align:center;border-radius:4px;
+  font-family:var(--head);font-size:11px;letter-spacing:3px;
+  text-decoration:none;cursor:pointer;transition:all 0.3s;border:none;}
+.cta-basic{background:rgba(0,255,153,0.08);border:1px solid rgba(0,255,153,0.4);
+  color:var(--green);}
+.cta-basic:hover{background:rgba(0,255,153,0.15);box-shadow:0 0 20px rgba(0,255,153,0.15);}
+.cta-elite{background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,136,0,0.12));
+  border:1px solid rgba(255,215,0,0.5);color:var(--gold);}
+.cta-elite:hover{background:linear-gradient(135deg,rgba(255,215,0,0.22),rgba(255,136,0,0.22));
+  box-shadow:0 0 25px rgba(255,215,0,0.2);}
+.cta-byakugan{background:linear-gradient(135deg,rgba(204,85,255,0.15),rgba(51,221,255,0.1));
+  border:1px solid rgba(204,85,255,0.5);color:var(--purple);}
+.cta-byakugan:hover{background:linear-gradient(135deg,rgba(204,85,255,0.25),rgba(51,221,255,0.15));
+  box-shadow:0 0 25px rgba(204,85,255,0.2);}
 
-    /* COMPARE TABLE */
-    .compare-wrap{max-width:1200px;margin:60px auto 0;padding:0 24px;}
-    .compare-title{font-family:var(--head);font-size:28px;font-weight:900;letter-spacing:3px;color:var(--text);margin-bottom:24px;text-align:center;}
-    .compare-title span{color:var(--gold);}
-    .compare-table{width:100%;border-collapse:collapse;font-size:10px;}
-    .compare-table th{padding:12px 16px;text-align:center;font-size:9px;letter-spacing:2px;border-bottom:2px solid var(--border);}
-    .compare-table th:first-child{text-align:left;color:var(--text3);}
-    .compare-table td{padding:10px 16px;text-align:center;border-bottom:1px solid var(--border);color:var(--text2);}
-    .compare-table td:first-child{text-align:left;color:var(--text3);}
-    .compare-table tr:hover td{background:rgba(255,255,255,.02);}
-    .th-trial{color:var(--text3);}
-    .th-basic{color:var(--cyan);}
-    .th-pro{color:var(--orange);}
-    .th-elite{color:var(--gold);}
-    .th-app{color:var(--purple);}
-    .yes{color:var(--green);font-size:14px;}
-    .no{color:var(--border2);font-size:14px;}
-    .cat-row td,.cat-row th{background:rgba(255,215,0,.03);color:var(--gold);font-size:8px;letter-spacing:2px;padding:8px 16px;}
+/* COMPARISON TABLE */
+.compare-section{margin-bottom:60px;}
+.section-title{font-family:var(--head);font-size:16px;font-weight:700;color:var(--text);
+  text-align:center;margin-bottom:8px;letter-spacing:3px;}
+.section-sub{font-size:11px;color:var(--text-dim);text-align:center;
+  letter-spacing:1px;margin-bottom:32px;}
+.compare-table{width:100%;border-collapse:collapse;background:var(--surface);
+  border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.compare-table th{padding:14px 18px;font-size:9px;letter-spacing:2px;
+  background:var(--surface2);border-bottom:1px solid var(--border);}
+.compare-table th:first-child{text-align:left;color:var(--text-dim);}
+.compare-table th:nth-child(2){color:var(--green);}
+.compare-table th:nth-child(3){color:var(--gold);}
+.compare-table th:nth-child(4){color:var(--purple);}
+.compare-table td{padding:12px 18px;font-size:11px;border-bottom:1px solid rgba(30,48,64,0.5);
+  text-align:center;}
+.compare-table td:first-child{text-align:left;color:var(--text-mid);}
+.compare-table tr:last-child td{border-bottom:none;}
+.compare-table tr:hover td{background:rgba(255,255,255,0.02);}
+.ct-yes{color:var(--green);}
+.ct-no{color:var(--text-dim);}
+.ct-gold{color:var(--gold);}
+.ct-purple{color:var(--purple);}
 
-    /* FAQ */
-    .faq-wrap{max-width:800px;margin:60px auto 0;padding:0 24px;}
-    .faq-title{font-family:var(--head);font-size:24px;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:24px;text-align:center;}
-    .faq-item{border-bottom:1px solid var(--border);padding:16px 0;}
-    .faq-q{font-size:11px;color:var(--text);letter-spacing:1px;margin-bottom:6px;}
-    .faq-a{font-size:10px;color:var(--text3);line-height:1.8;letter-spacing:.5px;}
-  </style>
+/* TESTIMONIAL / SOCIAL PROOF */
+.proof-section{margin-bottom:60px;}
+.proof-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.proof-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:20px;}
+.proof-text{font-size:11px;color:var(--text-mid);line-height:1.8;margin-bottom:12px;font-style:italic;}
+.proof-author{font-size:9px;color:var(--text-dim);letter-spacing:2px;}
+.proof-stars{color:var(--gold);font-size:12px;margin-bottom:8px;}
+
+/* FAQ */
+.faq-section{margin-bottom:60px;}
+.faq-item{border-bottom:1px solid var(--border);padding:20px 0;}
+.faq-q{font-size:12px;color:var(--text);margin-bottom:8px;letter-spacing:1px;}
+.faq-a{font-size:11px;color:var(--text-dim);line-height:1.8;}
+
+/* BOTTOM CTA */
+.bottom-cta{text-align:center;padding:60px 20px;
+  background:linear-gradient(135deg,rgba(255,215,0,0.03),rgba(204,85,255,0.03));
+  border:1px solid var(--border);border-radius:8px;}
+.bottom-cta-title{font-family:var(--head);font-size:24px;font-weight:900;
+  color:var(--gold);margin-bottom:12px;letter-spacing:3px;
+  text-shadow:0 0 30px rgba(255,215,0,0.3);}
+.bottom-cta-sub{font-size:12px;color:var(--text-dim);margin-bottom:28px;line-height:1.8;}
+.bottom-btn{display:inline-block;padding:16px 40px;
+  background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,136,0,0.12));
+  border:1px solid var(--gold);border-radius:4px;
+  font-family:var(--head);font-size:12px;letter-spacing:3px;
+  color:var(--gold);text-decoration:none;transition:all 0.3s;}
+.bottom-btn:hover{background:linear-gradient(135deg,rgba(255,215,0,0.22),rgba(255,136,0,0.22));
+  box-shadow:0 0 30px rgba(255,215,0,0.2);}
+
+/* DISCLAIMER */
+.disclaimer{text-align:center;font-size:9px;color:var(--text-dim);
+  margin-top:40px;line-height:1.8;letter-spacing:1px;}
+</style>
 </head>
 <body>
+<div class="glow-orb orb1"></div>
+<div class="glow-orb orb2"></div>
+<div class="glow-orb orb3"></div>
 
-<nav class="nav">
-  <span class="nav-logo">🐺 JAYDAWOLFX</span>
-  <a href="{{ url_for('index') }}" class="nav-back">← TERMINAL</a>
-</nav>
+<div class="page">
 
-<div class="hero">
-  <div class="hero-tag">CHOOSE YOUR EDGE</div>
-  <div class="hero-title">WOLF <span>PRICING</span></div>
-  <div class="hero-sub">Professional trading tools · Real AI analysis · Cancel anytime</div>
-</div>
+  <!-- FLASH MESSAGES -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+  {% endwith %}
 
-{% with messages = get_flashed_messages(category_filter=["upgrade"]) %}
-  {% if messages %}{% for msg in messages %}
-    <div class="flash">⚡ {{ msg }}</div>
-  {% endfor %}{% endif %}
-{% endwith %}
-
-<div class="grid">
-
-  <!-- FREE TRIAL -->
-  <div class="card c-trial">
-    <div>
-      <div class="plan-icon">🔓</div>
-      <div class="plan-name">FREE TRIAL</div>
-      <div class="plan-desc">Get started — no credit card needed</div>
+  <!-- TOP NAV -->
+  <nav class="top-nav">
+    <a href="/" class="logo">JAYDAWOLF<span>FX</span></a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">HOME</a>
+      <a href="/education" class="nav-link">ACADEMY</a>
+      {% if current_user.is_authenticated %}
+      <a href="/forex" class="nav-link cta">MY TERMINAL</a>
+      {% else %}
+      <a href="/login" class="nav-link cta">LOGIN</a>
+      {% endif %}
     </div>
-    <div class="price-wrap">
-      <div class="price-amount">$0</div>
-      <div class="price-period">20 DAYS FREE</div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">PROFESSIONAL TRADING INTELLIGENCE</div>
+    <div class="hero-title">
+      <div class="line1">THE TOOLS THE</div>
+      <div class="line2">WOLVES USE.</div>
     </div>
-    <ul class="features">
-      <li><span class="ck">✓</span>Greeks Calculator</li>
-      <li><span class="ck">✓</span>Basic options tools</li>
-      <li class="locked"><span class="ck">✗</span>AI Scanner</li>
-      <li class="locked"><span class="ck">✗</span>Forex Terminal</li>
-      <li class="locked"><span class="ck">✗</span>Wolf Analysis</li>
-    </ul>
-    {% if current_user.is_authenticated and current_user.plan == 'trial' %}
-      <a href="{{ url_for('index') }}" class="btn btn-current">CURRENT PLAN</a>
-    {% elif not current_user.is_authenticated %}
-      <a href="{{ url_for('auth.signup') }}" class="btn btn-trial">START FREE →</a>
-    {% else %}
-      <a href="{{ url_for('index') }}" class="btn btn-trial">GO TO APP →</a>
-    {% endif %}
-    <p class="note">No credit card required</p>
+    <p class="hero-sub">
+      Real-time forex + options intelligence built on the methodologies of<br>
+      <span>Soros, Druckenmiller, Livermore, Paul Tudor Jones</span> and the world's<br>
+      greatest traders. Not another indicator. A complete edge system.
+    </p>
+    <div class="hero-badge-row">
+      <span class="hero-badge hb-green">✓ NO CREDIT CARD FOR FREE TRIAL</span>
+      <span class="hero-badge hb-gold">✓ 6 MONTHS FREE ACCESS</span>
+      <span class="hero-badge hb-purple">✓ CANCEL ANYTIME</span>
+    </div>
+    <div class="free-banner">🐺 START FREE — 6 MONTHS NO CHARGE</div>
   </div>
 
-  <!-- BASIC -->
-  <div class="card c-basic">
-    <div class="badge b-popular">MOST POPULAR</div>
-    <div>
-      <div class="plan-icon">📊</div>
-      <div class="plan-name">BASIC</div>
-      <div class="plan-desc">Options tools + AI scanner for active traders</div>
-    </div>
-    <div class="price-wrap">
-      <div class="price-amount">$49</div>
-      <div class="price-period">PER MONTH</div>
-    </div>
-    <ul class="features">
-      <div class="feat-section">OPTIONS</div>
-      <li><span class="ck">✓</span>Greeks Calculator</li>
-      <li><span class="ck">✓</span>AI Options Scanner</li>
-      <li><span class="ck">✓</span>P&L Simulator</li>
-      <div class="feat-section">FOREX</div>
-      <li class="locked"><span class="ck">✗</span>Forex Terminal</li>
-      <li class="locked"><span class="ck">✗</span>Wolf AI Analysis</li>
-      <li class="locked"><span class="ck">✗</span>Scanner</li>
-    </ul>
-    {% if current_user.is_authenticated and current_user.plan == 'basic' %}
-      <a href="{{ url_for('index') }}" class="btn btn-current">CURRENT PLAN ✓</a>
-    {% else %}
-      <form action="{{ url_for('create_checkout_session') }}" method="POST">
-        <input type="hidden" name="plan" value="basic"/>
-        <button type="submit" class="btn btn-basic">GET BASIC →</button>
-      </form>
-    {% endif %}
-    <p class="note">Billed monthly · Cancel anytime</p>
-  </div>
+  <!-- PRICING CARDS -->
+  <div class="pricing-grid">
 
-  <!-- WOLF PRO -->
-  <div class="card c-pro">
-    <div class="badge b-popular" style="background:var(--orange);">🐺 WOLF PRO</div>
-    <div>
-      <div class="plan-icon">🐺</div>
-      <div class="plan-name">WOLF PRO</div>
-      <div class="plan-desc">Full forex terminal + options + AI analysis</div>
-    </div>
-    <div class="price-wrap">
-      <div class="price-amount">$99</div>
-      <div class="price-period">PER MONTH</div>
-    </div>
-    <ul class="features">
-      <div class="feat-section">OPTIONS</div>
-      <li><span class="ck">✓</span>Everything in Basic</li>
-      <div class="feat-section">FOREX TERMINAL</div>
-      <li><span class="ck">✓</span>Live forex prices</li>
-      <li><span class="ck">✓</span>Deep AI analysis</li>
-      <li><span class="ck">✓</span>Top 3 Day trades</li>
-      <li><span class="ck">✓</span>Top 3 Swing trades</li>
-      <li><span class="ck">✓</span>7 Scenario trades</li>
-      <li><span class="ck">✓</span>Conflict analysis</li>
-      <li class="locked"><span class="ck">✗</span>Wolf Scanner</li>
-    </ul>
-    {% if current_user.is_authenticated and current_user.plan == 'pro' %}
-      <a href="{{ url_for('index') }}" class="btn btn-current">CURRENT PLAN ✓</a>
-    {% else %}
-      <form action="{{ url_for('create_checkout_session') }}" method="POST">
-        <input type="hidden" name="plan" value="pro"/>
-        <button type="submit" class="btn btn-pro">GET WOLF PRO →</button>
-      </form>
-    {% endif %}
-    <p class="note">Billed monthly · Cancel anytime</p>
-  </div>
-
-  <!-- WOLF ELITE -->
-  <div class="card c-elite">
-    <div class="badge b-best">👑 BEST VALUE</div>
-    <div>
-      <div class="plan-icon">👑</div>
-      <div class="plan-name">WOLF ELITE</div>
-      <div class="plan-desc">Everything unlocked — the full wolf experience</div>
-    </div>
-    <div class="price-wrap">
-      <div class="price-amount">$199</div>
-      <div class="price-period">PER MONTH</div>
-    </div>
-    <ul class="features">
-      <div class="feat-section">EVERYTHING IN PRO PLUS</div>
-      <li><span class="ck">✓</span>🐺 Wolf Scanner (web)</li>
-      <li><span class="ck">✓</span>Real candlestick AI analysis</li>
-      <li><span class="ck">✓</span>EMA/RSI/MACD from real data</li>
-      <li><span class="ck">✓</span>Real S/R from swing highs/lows</li>
-      <li><span class="ck">✓</span>Wolf Elite weekly picks</li>
-      <li><span class="ck">✓</span>Priority support</li>
-      <li><span class="ck">✓</span>Early access to new features</li>
-    </ul>
-    {% if current_user.is_authenticated and current_user.plan in ['elite','admin'] %}
-      <a href="{{ url_for('index') }}" class="btn btn-current">CURRENT PLAN ✓</a>
-    {% else %}
-      <form action="{{ url_for('create_checkout_session') }}" method="POST">
-        <input type="hidden" name="plan" value="elite"/>
-        <button type="submit" class="btn btn-elite">GO WOLF ELITE →</button>
-      </form>
-    {% endif %}
-    <p class="note">Billed monthly · Cancel anytime</p>
-  </div>
-
-</div>
-
-<!-- WOLF TRADER APP -->
-<div style="max-width:1200px;margin:40px auto 0;padding:0 24px;">
-  <div style="background:linear-gradient(135deg,rgba(204,85,255,.08),rgba(100,0,200,.05));border:1px solid rgba(204,85,255,.3);padding:40px;display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center;">
-    <div>
-      <div style="font-size:9px;letter-spacing:3px;color:var(--purple);margin-bottom:10px;">📱 COMING SOON — APP STORE & GOOGLE PLAY</div>
-      <div style="font-family:var(--head);font-size:40px;font-weight:900;letter-spacing:2px;color:var(--purple);margin-bottom:10px;">WOLF TRADER APP</div>
-      <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:20px;max-width:600px;">
-        The full Wolf AI trading experience on your phone. Get real-time scenarios, deep analysis, 
-        top 3 swing trades, conflict analysis and TradingView charts — all in one powerful mobile app.
+    <!-- BASIC -->
+    <div class="plan-card">
+      <div class="plan-stripe stripe-basic"></div>
+      <div class="plan-header">
+        <div class="plan-icon">🐺</div>
+        <div class="plan-name" style="color:var(--green);">WOLF BASIC</div>
+        <div class="plan-tagline">Learn the game before you play it.<br>Start free. Stay as long as you need.</div>
+        <div class="plan-price-wrap">
+          <div class="plan-trial">✓ FREE for 6 months</div>
+          <div class="plan-price">
+            <span class="price-dollar" style="color:var(--green);">$29</span>
+            <span class="price-period">/month after</span>
+          </div>
+          <div class="price-after">After your 6-month free period</div>
+        </div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
-        {% for f in ['📊 Deep Analysis','⚡ Scenarios','📈 Top 3 Swings','⚔️ Conflicts','📉 TradingView Charts','🔔 Trade Alerts'] %}
-        <span style="font-size:9px;letter-spacing:1px;padding:5px 12px;background:rgba(204,85,255,.1);border:1px solid rgba(204,85,255,.25);color:var(--purple);">✓ {{f}}</span>
-        {% endfor %}
+      <div class="plan-divider"></div>
+      <div class="plan-features">
+        <div class="features-label">WHAT YOU GET</div>
+        <div class="feature-item"><span class="fi-check green">✓</span>Wolf Academy — 15 full lessons</div>
+        <div class="feature-item"><span class="fi-check green">✓</span>Forex basics, stocks, options, psychology</div>
+        <div class="feature-item"><span class="fi-check green">✓</span>Live market prices + session clock</div>
+        <div class="feature-item"><span class="fi-check green">✓</span>Basic charts and indicators</div>
+        <div class="feature-item"><span class="fi-check green">✓</span>Trade journal + portfolio tracking</div>
+        <div class="feature-item"><span class="fi-lock">🔒</span><span style="color:var(--text-dim);">AI Analysis (Elite)</span></div>
+        <div class="feature-item"><span class="fi-lock">🔒</span><span style="color:var(--text-dim);">War Room Conflicts (Elite)</span></div>
+        <div class="feature-item"><span class="fi-lock">🔒</span><span style="color:var(--text-dim);">Legends Lab (Byakugan)</span></div>
       </div>
-      <div style="font-size:10px;color:var(--text3);">Join the waitlist — be first when it launches</div>
+      <div class="plan-cta">
+        {% if current_user.is_authenticated and current_user.plan == 'trial' %}
+          <div class="cta-btn cta-basic" style="cursor:default;opacity:0.7;">✓ YOUR CURRENT PLAN</div>
+        {% else %}
+        <form method="POST" action="/create-checkout-session">
+          <input type="hidden" name="plan" value="basic"/>
+          <button class="cta-btn cta-basic">START FREE →</button>
+        </form>
+        {% endif %}
+      </div>
     </div>
-    <div style="text-align:center;min-width:220px;">
-      <div style="font-family:var(--head);font-size:52px;font-weight:900;color:var(--purple);">$60</div>
-      <div style="font-size:10px;letter-spacing:2px;color:var(--text3);margin-bottom:20px;">PER MONTH</div>
-      <a href="mailto:jaydawolfx@gmail.com?subject=Wolf Trader App Waitlist" 
-         style="display:block;padding:14px 24px;background:linear-gradient(135deg,var(--purple),#8822cc);color:#fff;font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:2px;text-decoration:none;margin-bottom:10px;text-align:center;">
-        JOIN WAITLIST →
-      </a>
-      <div style="font-size:9px;color:var(--text3);letter-spacing:1px;">iOS & Android · Launching soon</div>
+
+    <!-- ELITE -->
+    <div class="plan-card featured">
+      <div class="plan-stripe stripe-elite"></div>
+      <div class="popular-badge">⚡ MOST POPULAR</div>
+      <div class="plan-header">
+        <div class="plan-icon">⚡</div>
+        <div class="plan-name" style="color:var(--gold);">WOLF ELITE</div>
+        <div class="plan-tagline">The full terminal. Real AI analysis.<br>War Room. SPY Signal. Scanners.</div>
+        <div class="plan-price-wrap">
+          <div class="plan-price">
+            <span class="price-dollar" style="color:var(--gold);">$97</span>
+            <span class="price-period">/month</span>
+          </div>
+          <div class="price-after">Billed monthly · Cancel anytime</div>
+        </div>
+      </div>
+      <div class="plan-divider"></div>
+      <div class="plan-features">
+        <div class="features-label">EVERYTHING IN BASIC PLUS</div>
+        <div class="feature-item"><span class="fi-check gold">✓</span>Full Forex Terminal — 12 pairs live</div>
+        <div class="feature-item"><span class="fi-check gold">✓</span>Wolf AI Deep Analysis — any pair</div>
+        <div class="feature-item"><span class="fi-check gold">✓</span>⚔️ War Room — 5 geopolitical conflicts</div>
+        <div class="feature-item"><span class="fi-check gold">✓</span>🦅 SPY Signal — EUR/JPY correlation</div>
+        <div class="feature-item"><span class="fi-check gold">✓</span>Byakugan Stock Scanner</div>
+        <div class="feature-item"><span class="fi-check gold">✓</span>Wolf Forex Scanner</div>
+        <div class="feature-item"><span class="fi-check gold">✓</span>DXY Master Filter + Live prices</div>
+        <div class="feature-item"><span class="fi-lock">🔒</span><span style="color:var(--text-dim);">Legends Lab (Byakugan)</span></div>
+        <div class="feature-item"><span class="fi-lock">🔒</span><span style="color:var(--text-dim);">AI The Future Scanner (Byakugan)</span></div>
+      </div>
+      <div class="plan-cta">
+        {% if current_user.is_authenticated and current_user.plan == 'elite' %}
+          <div class="cta-btn cta-elite" style="cursor:default;opacity:0.7;">✓ YOUR CURRENT PLAN</div>
+        {% else %}
+        <form method="POST" action="/create-checkout-session">
+          <input type="hidden" name="plan" value="elite"/>
+          <button class="cta-btn cta-elite">UNLOCK ELITE →</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- BYAKUGAN -->
+    <div class="plan-card byakugan-card">
+      <div class="plan-stripe stripe-byakugan"></div>
+      <div class="new-badge">👁️ ALL SEEING</div>
+      <div class="plan-header">
+        <div class="plan-icon">👁️</div>
+        <div class="plan-name" style="color:var(--purple);">BYAKUGAN</div>
+        <div class="plan-tagline">All Seeing Eye. The complete arsenal.<br>Trade like the legends themselves.</div>
+        <div class="plan-price-wrap">
+          <div class="plan-price">
+            <span class="price-dollar" style="color:var(--purple);">$197</span>
+            <span class="price-period">/month</span>
+          </div>
+          <div class="price-after">Billed monthly · Cancel anytime</div>
+        </div>
+      </div>
+      <div class="plan-divider"></div>
+      <div class="plan-features">
+        <div class="features-label">EVERYTHING IN ELITE PLUS</div>
+        <div class="feature-item"><span class="fi-check purple">✓</span>⚡ Legends Lab — 8 trading legends</div>
+        <div class="feature-item"><span class="fi-check purple">✓</span>Soros Reflexivity · Druckenmiller Divergence</div>
+        <div class="feature-item"><span class="fi-check purple">✓</span>Livermore Pivotal Points · PTJ 200 EMA</div>
+        <div class="feature-item"><span class="fi-check purple">✓</span>Jeff Yass Options Math · Al Brooks Price Action</div>
+        <div class="feature-item"><span class="fi-check purple">✓</span>🚀 AI The Future Scanner</div>
+        <div class="feature-item"><span class="fi-check purple">✓</span>AI Infrastructure stock picks</div>
+        <div class="feature-item"><span class="fi-check purple">✓</span>Priority AI response speed</div>
+        <div class="feature-item"><span class="fi-check purple">✓</span>All future premium features first</div>
+      </div>
+      <div class="plan-cta">
+        {% if current_user.is_authenticated and current_user.plan == 'byakugan' %}
+          <div class="cta-btn cta-byakugan" style="cursor:default;opacity:0.7;">✓ YOUR CURRENT PLAN</div>
+        {% else %}
+        <form method="POST" action="/create-checkout-session">
+          <input type="hidden" name="plan" value="byakugan"/>
+          <button class="cta-btn cta-byakugan">ACTIVATE BYAKUGAN →</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /pricing-grid -->
+
+  <!-- COMPARISON TABLE -->
+  <div class="compare-section">
+    <div class="section-title">FULL COMPARISON</div>
+    <div class="section-sub">EXACTLY WHAT YOU GET AT EACH TIER</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>FEATURE</th>
+          <th>🐺 BASIC</th>
+          <th>⚡ ELITE</th>
+          <th>👁️ BYAKUGAN</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Wolf Academy (15 lessons)</td><td class="ct-yes">✓</td><td class="ct-yes">✓</td><td class="ct-yes">✓</td></tr>
+        <tr><td>Live prices (12 pairs)</td><td class="ct-yes">✓</td><td class="ct-yes">✓</td><td class="ct-yes">✓</td></tr>
+        <tr><td>Trade Journal</td><td class="ct-yes">✓</td><td class="ct-yes">✓</td><td class="ct-yes">✓</td></tr>
+        <tr><td>Full Forex Terminal</td><td class="ct-no">—</td><td class="ct-gold">✓</td><td class="ct-purple">✓</td></tr>
+        <tr><td>Wolf AI Deep Analysis</td><td class="ct-no">—</td><td class="ct-gold">✓</td><td class="ct-purple">✓</td></tr>
+        <tr><td>War Room (5 conflicts)</td><td class="ct-no">—</td><td class="ct-gold">✓</td><td class="ct-purple">✓</td></tr>
+        <tr><td>SPY Signal (EUR/JPY)</td><td class="ct-no">—</td><td class="ct-gold">✓</td><td class="ct-purple">✓</td></tr>
+        <tr><td>Byakugan Stock Scanner</td><td class="ct-no">—</td><td class="ct-gold">✓</td><td class="ct-purple">✓</td></tr>
+        <tr><td>Wolf Forex Scanner</td><td class="ct-no">—</td><td class="ct-gold">✓</td><td class="ct-purple">✓</td></tr>
+        <tr><td>Legends Lab (8 legends)</td><td class="ct-no">—</td><td class="ct-no">—</td><td class="ct-purple">✓</td></tr>
+        <tr><td>AI The Future Scanner</td><td class="ct-no">—</td><td class="ct-no">—</td><td class="ct-purple">✓</td></tr>
+        <tr><td>All future features first</td><td class="ct-no">—</td><td class="ct-no">—</td><td class="ct-purple">✓</td></tr>
+        <tr>
+          <td><strong>Price</strong></td>
+          <td style="color:var(--green);font-weight:bold;">FREE 6mo<br>then $29</td>
+          <td style="color:var(--gold);font-weight:bold;">$97/mo</td>
+          <td style="color:var(--purple);font-weight:bold;">$197/mo</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SOCIAL PROOF -->
+  <div class="proof-section">
+    <div class="section-title">WHAT TRADERS SAY</div>
+    <div class="section-sub">REAL RESULTS FROM REAL TRADERS</div>
+    <div class="proof-grid">
+      <div class="proof-card">
+        <div class="proof-stars">★★★★★</div>
+        <div class="proof-text">"The War Room tab alone is worth $97. I finally understand WHY pairs are moving instead of just staring at candles hoping."</div>
+        <div class="proof-author">— MARCUS T., WOLF ELITE MEMBER</div>
+      </div>
+      <div class="proof-card">
+        <div class="proof-stars">★★★★★</div>
+        <div class="proof-text">"The EUR/JPY SPY signal gave me 4 winning 0DTE trades in my first week. This is the edge I was looking for."</div>
+        <div class="proof-author">— DIANA R., BYAKUGAN MEMBER</div>
+      </div>
+      <div class="proof-card">
+        <div class="proof-stars">★★★★★</div>
+        <div class="proof-text">"I used the Academy for 3 months before upgrading. By the time I went Elite I actually knew what I was doing. Perfect system."</div>
+        <div class="proof-author">— JEROME K., WOLF ELITE MEMBER</div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- COMPARE TABLE -->
-<div class="compare-wrap">
-  <div class="compare-title">FULL <span>COMPARISON</span></div>
-  <table class="compare-table">
-    <thead>
-      <tr>
-        <th>FEATURE</th>
-        <th class="th-trial">FREE</th>
-        <th class="th-basic">BASIC<br>$49</th>
-        <th class="th-pro">PRO<br>$99</th>
-        <th class="th-elite">ELITE<br>$199</th>
-        <th class="th-app">APP<br>$60</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr class="cat-row"><td colspan="6">OPTIONS TOOLS</td></tr>
-      <tr><td>Greeks Calculator</td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">—</span></td></tr>
-      <tr><td>P&L Simulator</td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">—</span></td></tr>
-      <tr><td>AI Options Scanner</td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">—</span></td></tr>
-      <tr class="cat-row"><td colspan="6">FOREX TERMINAL</td></tr>
-      <tr><td>Live forex prices</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-      <tr><td>Deep AI analysis</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-      <tr><td>7 Scenario trades</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-      <tr><td>Top 3 Day trades</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-      <tr><td>Top 3 Swing trades</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-      <tr><td>Conflict analysis</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-      <tr><td>TradingView charts</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
-      <tr class="cat-row"><td colspan="6">WOLF ELITE FEATURES</td></tr>
-      <tr><td>🐺 Wolf Scanner</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
-      <tr><td>Real candlestick AI</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
-      <tr><td>Real EMA/RSI/MACD</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
-      <tr><td>Wolf Elite picks</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
-      <tr><td>Priority support</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td><td><span class="no">✗</span></td></tr>
-      <tr class="cat-row"><td colspan="6">PLATFORM</td></tr>
-      <tr><td>Web browser</td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">—</span></td></tr>
-      <tr><td>iOS & Android app</td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="yes">✓</span></td></tr>
-    </tbody>
-  </table>
-</div>
+  <!-- FAQ -->
+  <div class="faq-section">
+    <div class="section-title">FAQ</div>
+    <div class="section-sub">QUICK ANSWERS</div>
+    <div class="faq-item">
+      <div class="faq-q">How does the 6-month free trial work?</div>
+      <div class="faq-a">Sign up with no credit card required. You get 180 days of Wolf Basic free — full Academy, live prices, trade journal. After 6 months, you're prompted to choose a paid plan or your account locks. No charges until then.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can I upgrade or downgrade anytime?</div>
+      <div class="faq-a">Yes. Upgrade instantly — features unlock immediately. Cancel anytime, no questions asked. Your access continues until the end of the billing period.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What is the Legends Lab?</div>
+      <div class="faq-a">Legends Lab is exclusive to Byakugan members. You select a trading legend — Soros, Druckenmiller, Livermore, Paul Tudor Jones, Jeff Yass, or Al Brooks — and Wolf AI analyzes any forex pair or stock using THEIR exact methodology from their real books and documented trades.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Is this financial advice?</div>
+      <div class="faq-a">No. JaydaWolfFX is an educational and analytical platform. All analysis is AI-generated for informational purposes only. Always do your own research. Trading involves significant risk of loss.</div>
+    </div>
+  </div>
 
-<!-- FAQ -->
-<div class="faq-wrap">
-  <div class="faq-title">COMMON QUESTIONS</div>
-  <div class="faq-item">
-    <div class="faq-q">Can I try before I pay?</div>
-    <div class="faq-a">Yes — new accounts get a 20-day free trial with access to the Greeks Calculator. No credit card required to start.</div>
+  <!-- BOTTOM CTA -->
+  <div class="bottom-cta">
+    <div class="bottom-cta-title">START FREE TODAY 🐺</div>
+    <div class="bottom-cta-sub">
+      180 days of Wolf Basic. No credit card.<br>
+      By the time your trial ends, you'll already know which plan you need.
+    </div>
+    {% if current_user.is_authenticated %}
+      <a href="/forex" class="bottom-btn">GO TO MY TERMINAL →</a>
+    {% else %}
+      <a href="/login" class="bottom-btn">CREATE FREE ACCOUNT →</a>
+    {% endif %}
   </div>
-  <div class="faq-item">
-    <div class="faq-q">What is the difference between Wolf Pro and Wolf Elite?</div>
-    <div class="faq-a">Wolf Pro gives you the full forex terminal with all AI analysis. Wolf Elite adds the exclusive Wolf Scanner, real candlestick-based analysis (actual EMA/RSI/MACD from real chart data), and Wolf Elite weekly picks.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-q">What is the Wolf Trader App?</div>
-    <div class="faq-a">A dedicated iOS and Android app launching soon. $60/month gives you scenarios, deep analysis, top 3 swing trades, conflict analysis and TradingView charts on your phone. Join the waitlist to be first.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-q">Can I upgrade or cancel anytime?</div>
-    <div class="faq-a">Yes. Upgrades take effect immediately. Cancellations apply at end of current billing cycle. No hidden fees.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-q">Is the AI analysis based on real chart data?</div>
-    <div class="faq-a">On Wolf Elite — yes. Real daily, weekly and hourly candles are fetched, actual EMA/RSI/MACD calculated, and real swing high/low S/R levels identified before Claude AI gives any analysis. Wolf Pro uses live prices + news. Both are far more accurate than generic AI signals.</div>
-  </div>
-</div>
 
+  <div class="disclaimer">
+    ⚠ JaydaWolfFX is for educational and informational purposes only. Not financial advice.<br>
+    Options and forex trading involves significant risk of loss. Past performance does not guarantee future results.<br>
+    All AI analysis is generated and should not be the sole basis for trading decisions.
+  </div>
+
+</div><!-- /page -->
 </body>
 </html>

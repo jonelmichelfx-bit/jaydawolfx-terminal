@@ -3,7 +3,7 @@ import anthropic
 from flask_login import LoginManager, current_user, login_required
 from models import db, User
 from auth import auth_bp
-from decorators import analysis_gate, basic_required, pro_required, elite_required
+from decorators import analysis_gate, basic_required, pro_required, elite_required, byakugan_required
 import stripe
 import numpy as np
 from scipy.stats import norm
@@ -35,6 +35,7 @@ STRIPE_PRICES = {
     'basic': os.environ.get('STRIPE_BASIC_PRICE_ID', 'price_REPLACE_BASIC'),
     'pro': os.environ.get('STRIPE_PRO_PRICE_ID', 'price_REPLACE_PRO'),
     'elite': os.environ.get('STRIPE_ELITE_PRICE_ID', 'price_REPLACE_ELITE'),
+    'byakugan': os.environ.get('STRIPE_BYAKUGAN_PRICE_ID', 'price_REPLACE_BYAKUGAN'),
 }
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
@@ -518,7 +519,7 @@ def wolf_elite(): return render_template('wolf_elite.html')
 @login_required
 def create_checkout_session():
     plan=request.form.get('plan')
-    if plan not in ('basic','pro','elite'): flash('Invalid plan selected.','danger'); return redirect(url_for('pricing'))
+    if plan not in ('basic','pro','elite','byakugan'): flash('Invalid plan selected.','danger'); return redirect(url_for('pricing'))
     try:
         checkout=stripe.checkout.Session.create(payment_method_types=['card'],mode='subscription',
             line_items=[{'price':STRIPE_PRICES[plan],'quantity':1}],
@@ -2074,13 +2075,13 @@ def education_page():
 
 @app.route('/legends')
 @login_required
-@elite_required
+@byakugan_required
 def legends_page():
     return render_template('legends.html')
 
 @app.route('/ai-infra')
 @login_required
-@elite_required
+@byakugan_required
 def ai_infra_page():
     return render_template('ai_infra.html')
 
