@@ -569,7 +569,7 @@ input::placeholder{color:var(--text-dim);}
   <main class="main-area">
     <div class="tab-bar">
       <button class="tab-btn active" onclick="openTab('analysis',this)">📊 ANALYSIS</button>
-      <a href="/wolf-scanner" style="text-decoration:none;"><button class="tab-btn" style="color:var(--gold);border-bottom-color:transparent;" onmouseover="this.style.borderBottomColor='var(--gold)'" onmouseout="this.style.borderBottomColor='transparent'">🐺 WOLF SCANNER</button></a>
+      
       <button class="tab-btn" onclick="openTab('scenarios',this)">⚡ SCENARIOS</button>
       <button class="tab-btn" onclick="openTab('timeframes',this)">🕐 TIMEFRAMES</button>
       <button class="tab-btn" onclick="openTab('sharingan',this)">📈 CHART</button>
@@ -2607,7 +2607,7 @@ async function loadSPYAnalysis(){
     'One sentence, max 20 words. Decisive. What is the trade right now?';
 
   try{
-    const text = await callAIAsync(prompt, 3000, '');
+    const text = await callAI(prompt, 3000);
     const getSection = (name) => {
       const m = text.match(new RegExp('SECTION: ' + name + '\\s*([\\s\\S]*?)(?=SECTION:|$)', 'i'));
       return m ? m[1].trim() : '';

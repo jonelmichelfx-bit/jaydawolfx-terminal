@@ -107,7 +107,7 @@ YF_MAP = {
 
 # Candle cache — avoid re-fetching on every request
 _candle_cache = {}
-_candle_cache_ttl = 300  # 5 minutes
+_candle_cache_ttl = 900  # 15 minutes — reuse candles across scanner requests
 
 def get_candles(pair, interval='1d', period='3mo'):
     cache_key = f"{pair}_{interval}_{period}"
@@ -251,10 +251,11 @@ def find_sr_levels(candles, current_price, lookback=50):
 
 def get_chart_analysis(pair, current_price):
     """
-    Upgraded: now wraps get_sage_chart_data for full real data.
-    Wolf Scanner + Forex Scanner automatically get:
-    - Wilder RSI, EMA9/20/50/200, market structure, ADR, weekly range %
-    - 16 candlestick patterns, swing S/R, London levels
+    FULL 5-timeframe chart analysis — wraps get_sage_chart_data.
+    Safe to call sequentially. Candle cache (15min TTL) prevents redundant fetches.
+    Wolf Scanner + Forex Scanner get identical real data as Sage Mode:
+    - Wilder RSI, EMA9/20/50/200, market structure (HH/HL/LH/LL)
+    - 16 candlestick patterns, real swing S/R, ADR, weekly range %, London levels
     """
     sage = get_sage_chart_data(pair, current_price)
     da   = sage.get("daily",   {})
@@ -264,10 +265,10 @@ def get_chart_analysis(pair, current_price):
     m15  = sage.get("m15",     {})
     sr   = sage.get("sr_levels", [])
 
-    w_trend = wk.get("trend", "NEUTRAL")
-    d_trend = da.get("trend", "NEUTRAL")
-    h_trend = h1.get("trend", "NEUTRAL")
-    h4_trend= h4.get("trend", "NEUTRAL")
+    w_trend  = wk.get("trend", "NEUTRAL")
+    d_trend  = da.get("trend", "NEUTRAL")
+    h_trend  = h1.get("trend", "NEUTRAL")
+    h4_trend = h4.get("trend", "NEUTRAL")
 
     bull = sum(1 for t in [w_trend, d_trend, h_trend, h4_trend] if t == "BULLISH")
     bear = sum(1 for t in [w_trend, d_trend, h_trend, h4_trend] if t == "BEARISH")
@@ -286,10 +287,12 @@ def get_chart_analysis(pair, current_price):
         "weekly_high": sage.get("weekly_high"),
         "weekly_low":  sage.get("weekly_low"),
         "trend_strength": sage.get("trend_strength", "UNKNOWN"),
+        "trend_score":    sage.get("trend_score", 0),
         "d1_patterns":  sage.get("d1_patterns",  []),
         "h4_patterns":  sage.get("h4_patterns",  []),
         "m15_patterns": sage.get("m15_patterns", []),
         "indicators": {
+            "ema9":      da.get("ema9"),
             "ema20":     da.get("ema20"),
             "ema50":     da.get("ema50"),
             "ema200":    da.get("ema200"),
@@ -299,6 +302,7 @@ def get_chart_analysis(pair, current_price):
             "bb_upper":  da.get("bb_upper"),
             "bb_mid":    da.get("bb_mid"),
             "bb_lower":  da.get("bb_lower"),
+            "bb_position": da.get("bb_position"),
         },
         "trend_summary": {
             "weekly":  w_trend,
@@ -386,14 +390,17 @@ def get_multi_pair_chart_data(pairs, current_prices):
         cp = float(price.get('price', 1.0)) if price else 1.0
         return pair, get_chart_analysis(pair, cp)
 
-    with ThreadPoolExecutor(max_workers=4) as ex:
-        futures = {ex.submit(fetch_one, p): p for p in pairs}
-        for f in as_completed(futures, timeout=30):
-            try:
-                pair, analysis = f.result()
-                results[pair] = analysis
-            except Exception as e:
-                print(f'Chart fetch error: {e}')
+    # Sequential fetch — prevents OOM crash on 2GB Render instance.
+    # yfinance is network I/O bound, not CPU bound, so sequential is nearly
+    # as fast while using 4x less RAM. Candle cache (15min TTL) means
+    # repeated scans are instant.
+    for pair in pairs:
+        try:
+            price = current_prices.get(pair, {})
+            cp = float(price.get('price', 1.0)) if price else 1.0
+            results[pair] = get_chart_analysis(pair, cp)
+        except Exception as e:
+            print(f'[ChartFetch] {pair}: {e}')
     return results
 
 # ── Options helpers ──────────────────────────────────────────
@@ -801,13 +808,6 @@ def forex(): return render_template('forex.html')
 @login_required
 def forex_wolf(): return render_template('forex_wolf.html')
 
-@app.route('/wolf-scanner')
-@login_required
-@elite_required
-def wolf_scanner_page(): return render_template('wolf_scanner.html')
-
-# ── Forex API ─────────────────────────────────────────────────
-
 @app.route('/api/forex-prices', methods=['GET'])
 @login_required
 def forex_prices():
@@ -1121,407 +1121,6 @@ def calculate_real_confidence(pair, direction, chart_data):
     return max(0, min(100, score))
 
 
-_wolf_scan_jobs = {}
-
-def _run_wolf_scan_job(job_id, scan_filter):
-    try:
-        _wolf_scan_jobs[job_id] = {'status': 'running'}
-        date_str = datetime.now().strftime('%A, %B %d, %Y')
-        session_name, _ = get_session()
-        prices, is_live = get_cached_prices()
-
-        if scan_filter == 'MAJORS':   scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','USD/CAD']
-        elif scan_filter == 'GOLD':   scan_pairs = ['XAU/USD','EUR/USD','USD/JPY','AUD/USD','NZD/USD']
-        elif scan_filter == 'ASIAN':  scan_pairs = ['USD/JPY','EUR/JPY','GBP/JPY','AUD/USD','NZD/USD']
-        elif scan_filter == 'LONDON': scan_pairs = ['EUR/USD','GBP/USD','EUR/GBP','USD/CHF','EUR/JPY']
-        else: scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD','USD/CHF']
-
-        prices_lines = []
-        for p in scan_pairs:
-            q = prices.get(p)
-            if q:
-                dp = 2 if 'JPY' in p or p == 'XAU/USD' else 5
-                prices_lines.append(f"{p}: {float(q['price']):.{dp}f} (H:{float(q['high']):.{dp}f} L:{float(q['low']):.{dp}f} Chg:{float(q.get('percent_change',0)):+.2f}%)")
-        prices_str = '\n'.join(prices_lines)
-
-        news_items = get_news()
-        news_str = '\n'.join([f"- {n['title']} ({n['source']}, {n['published']})" for n in news_items[:6]]) or "- Monitor key economic events"
-
-        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
-        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
-
-        prompt = f"""You are Wolf AI — professional forex trader using Soros, Druckenmiller, Kovner, Paul Tudor Jones methodology.
-
-TODAY: {date_str} | SESSION: {session_name}
-PRICES: {'LIVE' if is_live else 'REFERENCE'}
-
-LIVE PRICES:
-{prices_str}
-
-NEWS:
-{news_str}
-
-{chart_ctx}
-
-CRITICAL: Use the REAL chart data above. The S/R levels, EMA values, RSI readings are from ACTUAL candles.
-DO NOT make up levels — use the exact swing highs/lows provided above.
-
-Find the 5 BEST trades:
-STEP 1 — DXY direction drives everything (Soros)
-STEP 2 — Central bank divergence (Druckenmiller)
-STEP 3 — 4+ timeframe confluence required (Kovner)
-STEP 4 — Trade WITH the trend only
-STEP 5 — Use ONLY real S/R levels from chart data above
-STEP 6 — Both BUY and SELL scenarios per trade
-STEP 7 — Economic calendar warnings
-
-Respond ONLY in valid JSON (no markdown, no backticks):
-{{"scan_date":"{date_str}","session":"{session_name}","market_theme":"string","dxy_bias":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","wolf_commentary":"2-3 sentences","trades":[{{"rank":1,"pair":"EUR/USD","current_price":"1.0380","trend":"DOWNTREND","primary_direction":"SELL","wolf_score":8.5,"confidence":85,"aligned_count":5,"thesis":"3-4 sentence thesis citing real EMA/RSI/S/R data","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"confluences":["Price below EMA200 1.0520","RSI 38 bearish momentum","Real resistance at 1.0412 (swing high)","DXY bullish divergence"],"key_levels":[{{"type":"RESISTANCE","price":"1.0412","note":"Real swing high from chart data","distance_pips":32}},{{"type":"CURRENT","price":"1.0380","note":"Current price","distance_pips":0}},{{"type":"SUPPORT","price":"1.0340","note":"Real swing low from chart data","distance_pips":40}}],"buy_scenario":{{"trigger":"Break above real resistance 1.0412 on H4","entry":"1.0418","stop_loss":"1.0390","tp1":"1.0460","tp2":"1.0510","tp3":"1.0560","rr":"1:2.5","probability":25}},"sell_scenario":{{"trigger":"Reject real resistance 1.0400 break below 1.0360","entry":"1.0355","stop_loss":"1.0390","tp1":"1.0310","tp2":"1.0270","tp3":"1.0220","rr":"1:2.8","probability":75}},"warnings":[{{"level":"HIGH","text":"US CPI Thursday 8:30AM EST — wait for release"}}],"relevant_news":["string"]}}]}}"""
-
-        # Auto-retry up to 3 times if AI returns empty or bad JSON
-        result = None
-        last_error = None
-        for attempt in range(3):
-            try:
-                raw = call_claude(prompt, 6000)
-                if not raw or not raw.strip():
-                    raise ValueError('Empty response from AI')
-                result = parse_json_response(raw)
-                break  # success — stop retrying
-            except Exception as retry_err:
-                last_error = retry_err
-                print(f'[WolfScan] Attempt {attempt+1} failed: {retry_err}')
-                if attempt < 2:
-                    time.sleep(2)
-        if result is None:
-            raise Exception(f'AI failed after 3 attempts: {last_error}')
-
-
-        for trade in result.get('trades', []):
-            pair = trade.get('pair', '')
-            q = prices.get(pair)
-            if q:
-                dp = 2 if 'JPY' in pair or pair == 'XAU/USD' else 4
-                trade['current_price'] = f"{float(q['price']):.{dp}f}"
-            if pair in chart_data and chart_data[pair].get('sr_levels'):
-                trade['real_sr_levels'] = chart_data[pair]['sr_levels'][:6]
-
-            # ── OVERWRITE AI confidence with real data-driven score ──
-            direction = trade.get('primary_direction', 'BUY')
-            real_conf = calculate_real_confidence(pair, direction, chart_data)
-            trade['confidence'] = real_conf
-            # wolf_score out of 10 — derived from same real data
-            trade['wolf_score'] = round(real_conf / 10, 1)
-
-        _wolf_scan_jobs[job_id] = {'status': 'done', 'result': result}
-    except Exception as e:
-        import traceback; print(traceback.format_exc())
-        _wolf_scan_jobs[job_id] = {'status': 'error', 'error': str(e)}
-
-@app.route('/api/wolf-scan', methods=['POST'])
-@login_required
-def wolf_scan():
-    data = request.get_json() or {}
-    scan_filter = data.get('filter', 'ALL')
-    job_id = str(uuid.uuid4())
-    t = threading.Thread(target=_run_wolf_scan_job, args=(job_id, scan_filter))
-    t.daemon = True
-    t.start()
-    return jsonify({'job_id': job_id, 'status': 'running'})
-
-@app.route('/api/wolf-scan-result/<job_id>', methods=['GET'])
-@login_required
-def wolf_scan_result(job_id):
-    job = _wolf_scan_jobs.get(job_id)
-    if not job:
-        return jsonify({'status': 'not_found'}), 404
-    if job['status'] == 'running':
-        return jsonify({'status': 'running'})
-    if job['status'] == 'error':
-        return jsonify({'status': 'error', 'error': job.get('error', 'Unknown error')}), 500
-    result = job['result']
-    result['status'] = 'done'
-    # Clean up old job
-    _wolf_scan_jobs.pop(job_id, None)
-    return jsonify(result)
-
-# ── Admin ─────────────────────────────────────────────────────
-@app.route('/make-me-admin/<secret>')
-@login_required
-def make_me_admin(secret):
-    if secret != os.environ.get('ADMIN_SECRET', 'wolfadmin2026'):
-        return 'Wrong secret', 403
-    current_user.plan = 'admin'
-    db.session.commit()
-    return f'✅ {current_user.email} is now ADMIN — full access unlocked! <a href="/">Go to terminal</a>'
-# ═══════════════════════════════════════════════════════════════
-# WOLF STOCK SCANNER — Add these to app.py
-# ═══════════════════════════════════════════════════════════════
-
-# ── Stock Scanner watchlist (high volume, optionable stocks) ──
-SCAN_UNIVERSE = [
-    'AAPL','MSFT','NVDA','TSLA','AMD','META','GOOGL','AMZN',
-    'NFLX','COIN','PLTR','MARA','HOOD','UBER','DIS','JPM',
-    'GS','XOM','SMCI','AVGO','MU','CRM','SQ','PYPL'
-]
-
-# ── Market regime from SPY + VIX ─────────────────────────────
-def get_market_regime():
-    try:
-        import yfinance as yf
-        spy = yf.Ticker('SPY').history(period='5d', interval='1d', timeout=6)
-        vix = yf.Ticker('^VIX').history(period='5d', interval='1d', timeout=6)
-
-        spy_close = float(spy['Close'].iloc[-1])
-        spy_prev  = float(spy['Close'].iloc[-2])
-        spy_change = round(((spy_close - spy_prev) / spy_prev) * 100, 2)
-
-        vix_level = float(vix['Close'].iloc[-1]) if not vix.empty else 20.0
-
-        if vix_level > 30:   fear = 'EXTREME FEAR'; regime = 'BEARISH'
-        elif vix_level > 20: fear = 'FEAR';          regime = 'CAUTION'
-        elif vix_level > 15: fear = 'NEUTRAL';       regime = 'NEUTRAL'
-        else:                fear = 'GREED';          regime = 'BULLISH'
-
-        spy_trend = 'BULLISH' if spy_change > 0 else 'BEARISH'
-
-        return {
-            'spy_price': round(spy_close, 2),
-            'spy_change': spy_change,
-            'spy_trend': spy_trend,
-            'vix': round(vix_level, 1),
-            'fear_greed': fear,
-            'regime': regime
-        }
-    except Exception as e:
-        print(f'[MarketRegime] {e}')
-        return {'spy_price': 0, 'spy_change': 0, 'spy_trend': 'UNKNOWN', 'vix': 20, 'fear_greed': 'NEUTRAL', 'regime': 'NEUTRAL'}
-
-# ── Score a single stock ──────────────────────────────────────
-def score_stock(ticker_sym):
-    """
-    Score a stock 0-100 based on:
-    - Trend alignment (EMA20/50/200)
-    - RSI momentum
-    - Volume surge
-    - IV Rank (options attractiveness)
-    - Unusual options activity (vol/OI ratio)
-    - No earnings within 3 days
-    Returns dict with score and all data, or None if fails
-    """
-    try:
-        import yfinance as yf
-        import numpy as np
-        from datetime import datetime, timedelta
-
-        ticker = yf.Ticker(ticker_sym)
-
-        # ── Price + Volume history ────────────────────────────
-        hist = ticker.history(period='1y', interval='1d', timeout=8)
-        if hist is None or hist.empty or len(hist) < 50:
-            return None
-
-        closes  = hist['Close'].tolist()
-        volumes = hist['Volume'].tolist()
-        current_price = round(closes[-1], 2)
-
-        # ── EMAs ─────────────────────────────────────────────
-        ema20  = calc_ema(closes, 20)
-        ema50  = calc_ema(closes, 50)
-        ema200 = calc_ema(closes, min(200, len(closes)))
-        rsi    = calc_rsi(closes)
-        macd_val, macd_bias = calc_macd(closes)
-
-        # ── Volume surge ──────────────────────────────────────
-        avg_vol_20 = sum(volumes[-21:-1]) / 20 if len(volumes) >= 21 else 1
-        today_vol  = volumes[-1]
-        vol_ratio  = round(today_vol / avg_vol_20, 2) if avg_vol_20 > 0 else 1.0
-
-        # ── IV Rank (from options chain) ──────────────────────
-        iv_rank = None
-        unusual_activity = 0.0
-        call_vol = 0; put_vol = 0; total_oi = 0
-        options_strategy = 'LONG CALL'
-
-        try:
-            import concurrent.futures as _cf
-            def _get_opts():
-                e = ticker.options
-                if e: return ticker.option_chain(e[0])
-                return None
-            with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
-                _fut = _ex.submit(_get_opts)
-                _chain = _fut.result(timeout=5)
-            if _chain:
-                chain = _chain
-                exps = ['dummy']  # signal that we got chain
-            else:
-                raise Exception('no options')
-            if exps:
-                # Use nearest expiration for IV scan
-                calls = chain.calls
-                puts  = chain.puts
-
-                # IV from ATM options
-                atm_calls = calls[abs(calls['strike'] - current_price) < current_price * 0.05]
-                if not atm_calls.empty:
-                    iv_now = float(atm_calls['impliedVolatility'].mean())
-                else:
-                    iv_now = float(calls['impliedVolatility'].mean()) if not calls.empty else 0.3
-
-                # Volume and OI
-                call_vol = int(calls['volume'].sum()) if not calls.empty else 0
-                put_vol  = int(puts['volume'].sum())  if not puts.empty else 0
-                call_oi  = int(calls['openInterest'].sum()) if not calls.empty else 1
-                put_oi   = int(puts['openInterest'].sum())  if not puts.empty else 1
-                total_oi = call_oi + put_oi
-
-                # Unusual activity = volume/OI ratio (>1.0 = unusual)
-                unusual_activity = round((call_vol + put_vol) / max(total_oi, 1), 3)
-
-                # IV Rank approximation (compare to 52wk high/low IV proxy via price range)
-                high_52 = max(hist['High'].tail(252).tolist())
-                low_52  = min(hist['Low'].tail(252).tolist())
-                price_range = high_52 - low_52
-                iv_rank_approx = round(((current_price - low_52) / price_range) * 100) if price_range > 0 else 50
-                iv_rank = iv_rank_approx
-
-                # Strategy selection based on IV rank
-                if iv_rank > 60:
-                    options_strategy = 'CREDIT SPREAD'
-                elif iv_rank < 30:
-                    options_strategy = 'LONG CALL/PUT'
-                else:
-                    options_strategy = 'DEBIT SPREAD'
-
-        except Exception as ex:
-            print(f'[Options {ticker_sym}] {ex}')
-
-        # ── Earnings check ────────────────────────────────────
-        near_earnings = False
-        try:
-            cal = ticker.calendar
-            if cal is not None and not cal.empty:
-                # earnings date
-                earn_dates = cal.columns.tolist() if hasattr(cal, 'columns') else []
-                if earn_dates:
-                    earn_dt = datetime.strptime(str(earn_dates[0])[:10], '%Y-%m-%d')
-                    days_to_earn = abs((earn_dt - datetime.now()).days)
-                    near_earnings = days_to_earn <= 3
-        except:
-            pass
-
-        # ── Sector ───────────────────────────────────────────
-        sector = 'Unknown'
-        try:
-            info = ticker.fast_info
-            sector = getattr(info, 'sector', 'Unknown') or 'Unknown'
-        except:
-            pass
-
-        # ── Scoring ───────────────────────────────────────────
-        score = 0
-        direction = 'NEUTRAL'
-        signals = []
-
-        # Trend alignment (40 pts max)
-        above_ema20  = current_price > (ema20  or 0)
-        above_ema50  = current_price > (ema50  or 0)
-        above_ema200 = current_price > (ema200 or 0)
-
-        if above_ema200:
-            score += 15; signals.append('Above EMA200 (bullish structure)')
-        else:
-            score -= 5;  signals.append('Below EMA200 (bearish structure)')
-
-        if above_ema50:
-            score += 12; signals.append(f'Above EMA50 ({round(ema50,2)})')
-        if above_ema20:
-            score += 8;  signals.append(f'Above EMA20 ({round(ema20,2)})')
-
-        # RSI (20 pts)
-        if rsi:
-            if 45 <= rsi <= 65:
-                score += 20; signals.append(f'RSI {rsi} — momentum building')
-            elif 35 <= rsi < 45:
-                score += 12; signals.append(f'RSI {rsi} — oversold bounce potential')
-            elif rsi > 70:
-                score -= 10; signals.append(f'RSI {rsi} — overbought warning')
-            elif rsi < 30:
-                score += 8;  signals.append(f'RSI {rsi} — deep oversold')
-
-        # Volume surge (20 pts)
-        if vol_ratio >= 2.5:
-            score += 20; signals.append(f'Volume {vol_ratio}x average — strong conviction')
-        elif vol_ratio >= 1.5:
-            score += 12; signals.append(f'Volume {vol_ratio}x average — elevated')
-        elif vol_ratio >= 1.2:
-            score += 6;  signals.append(f'Volume {vol_ratio}x average — slightly elevated')
-
-        # Unusual options activity (15 pts)
-        if unusual_activity >= 1.5:
-            score += 15; signals.append(f'Unusual options activity {unusual_activity}x — institutional interest')
-        elif unusual_activity >= 0.8:
-            score += 8;  signals.append(f'Options activity {unusual_activity}x — moderate')
-
-        # MACD (5 pts)
-        if macd_bias == 'BULLISH':
-            score += 5; signals.append('MACD bullish crossover')
-        else:
-            signals.append('MACD bearish')
-
-        # Earnings penalty
-        if near_earnings:
-            score -= 20; signals.append('⚠️ EARNINGS WITHIN 3 DAYS — high IV crush risk')
-
-        # Direction
-        bull_signals = sum([above_ema20, above_ema50, above_ema200, macd_bias == 'BULLISH'])
-        if bull_signals >= 3:   direction = 'BULLISH'
-        elif bull_signals <= 1: direction = 'BEARISH'
-        else:                   direction = 'NEUTRAL'
-
-        # Recommended option
-        if direction == 'BULLISH':
-            rec_option = 'BUY CALLS'
-        elif direction == 'BEARISH':
-            rec_option = 'BUY PUTS'
-        else:
-            rec_option = 'WAIT FOR SETUP'
-
-        # S/R from daily candles
-        candles = []
-        for i, (ts, row) in enumerate(hist.tail(60).iterrows()):
-            candles.append({'high': float(row['High']), 'low': float(row['Low']),
-                           'open': float(row['Open']), 'close': float(row['Close'])})
-        sr_levels = find_sr_levels(candles, current_price, lookback=60) if candles else []
-
-        return {
-            'ticker': ticker_sym,
-            'price': current_price,
-            'score': max(0, min(100, score)),
-            'direction': direction,
-            'rec_option': rec_option,
-            'options_strategy': options_strategy,
-            'signals': signals,
-            'ema20': round(ema20, 2) if ema20 else None,
-            'ema50': round(ema50, 2) if ema50 else None,
-            'ema200': round(ema200, 2) if ema200 else None,
-            'rsi': rsi,
-            'macd_bias': macd_bias,
-            'vol_ratio': vol_ratio,
-            'iv_rank': iv_rank,
-            'unusual_activity': unusual_activity,
-            'call_vol': call_vol,
-            'put_vol': put_vol,
-            'near_earnings': near_earnings,
-            'sector': sector,
-            'sr_levels': sr_levels[:4],
-            'options_strategy': options_strategy,
-        }
-
-    except Exception as e:
-        print(f'[ScoreStock {ticker_sym}] {e}')
-        return None
 
 # ── ASYNC JOB STORE ─────────────────────────────────────────────────────────
 _async_jobs = {}
