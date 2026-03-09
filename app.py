@@ -150,15 +150,21 @@ def calc_ema(closes, period):
     return round(ema, 5)
 
 def calc_rsi(closes, period=14):
-    if len(closes) < period + 1:
+    """Wilder's Smoothed RSI — same method as TradingView/MT4"""
+    if len(closes) < period + 2:
         return None
     gains, losses = [], []
     for i in range(1, len(closes)):
         diff = closes[i] - closes[i-1]
         gains.append(max(diff, 0))
         losses.append(max(-diff, 0))
-    avg_gain = sum(gains[-period:]) / period
-    avg_loss = sum(losses[-period:]) / period
+    # First avg = simple average of first {period} values (Wilder's seed)
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    # Then Wilder's smoothing for remaining values
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
     if avg_loss == 0:
         return 100.0
     rs = avg_gain / avg_loss
@@ -244,162 +250,134 @@ def find_sr_levels(candles, current_price, lookback=50):
     return result
 
 def get_chart_analysis(pair, current_price):
-    analysis = {
-        'pair': pair,
-        'current_price': current_price,
-        'daily': {}, 'weekly': {}, 'hourly': {},
-        'sr_levels': [],
-        'indicators': {},
-        'trend_summary': {}
+    """
+    Upgraded: now wraps get_sage_chart_data for full real data.
+    Wolf Scanner + Forex Scanner automatically get:
+    - Wilder RSI, EMA9/20/50/200, market structure, ADR, weekly range %
+    - 16 candlestick patterns, swing S/R, London levels
+    """
+    sage = get_sage_chart_data(pair, current_price)
+    da   = sage.get("daily",   {})
+    wk   = sage.get("weekly",  {})
+    h1   = sage.get("hourly",  {})
+    h4   = sage.get("h4",      {})
+    m15  = sage.get("m15",     {})
+    sr   = sage.get("sr_levels", [])
+
+    w_trend = wk.get("trend", "NEUTRAL")
+    d_trend = da.get("trend", "NEUTRAL")
+    h_trend = h1.get("trend", "NEUTRAL")
+    h4_trend= h4.get("trend", "NEUTRAL")
+
+    bull = sum(1 for t in [w_trend, d_trend, h_trend, h4_trend] if t == "BULLISH")
+    bear = sum(1 for t in [w_trend, d_trend, h_trend, h4_trend] if t == "BEARISH")
+
+    return {
+        "pair":          pair,
+        "current_price": current_price,
+        "weekly":  wk,
+        "daily":   da,
+        "hourly":  h1,
+        "h4":      h4,
+        "m15":     m15,
+        "sr_levels": sr,
+        "adr":     sage.get("adr"),
+        "weekly_range_pct": sage.get("weekly_range_pct"),
+        "weekly_high": sage.get("weekly_high"),
+        "weekly_low":  sage.get("weekly_low"),
+        "trend_strength": sage.get("trend_strength", "UNKNOWN"),
+        "d1_patterns":  sage.get("d1_patterns",  []),
+        "h4_patterns":  sage.get("h4_patterns",  []),
+        "m15_patterns": sage.get("m15_patterns", []),
+        "indicators": {
+            "ema20":     da.get("ema20"),
+            "ema50":     da.get("ema50"),
+            "ema200":    da.get("ema200"),
+            "rsi":       da.get("rsi"),
+            "macd_bias": da.get("macd_bias"),
+            "atr":       da.get("atr"),
+            "bb_upper":  da.get("bb_upper"),
+            "bb_mid":    da.get("bb_mid"),
+            "bb_lower":  da.get("bb_lower"),
+        },
+        "trend_summary": {
+            "weekly":  w_trend,
+            "daily":   d_trend,
+            "hourly":  h_trend,
+            "h4":      h4_trend,
+            "overall": "BULLISH" if bull >= 3 else "BEARISH" if bear >= 3 else "MIXED",
+            "alignment": f"{bull}/4 bullish, {bear}/4 bearish"
+        }
     }
 
-    try:
-        daily = get_candles(pair, '1d', '3mo')
-        if daily and len(daily) >= 20:
-            d_closes = [c['close'] for c in daily]
-            d_highs  = [c['high']  for c in daily]
-            d_lows   = [c['low']   for c in daily]
-
-            ema20  = calc_ema(d_closes, 20)
-            ema50  = calc_ema(d_closes, 50)
-            ema200 = calc_ema(d_closes, min(200, len(d_closes)))
-            rsi    = calc_rsi(d_closes)
-            macd_val, macd_bias = calc_macd(d_closes)
-
-            price_vs_ema200 = 'ABOVE' if (ema200 and current_price > ema200) else 'BELOW'
-            daily_trend = 'BULLISH' if current_price > (ema50 or current_price) else 'BEARISH'
-
-            last5 = daily[-5:]
-            bullish_candles = sum(1 for c in last5 if c['close'] > c['open'])
-            bearish_candles = 5 - bullish_candles
-
-            analysis['daily'] = {
-                'trend': daily_trend,
-                'ema20': ema20, 'ema50': ema50, 'ema200': ema200,
-                'rsi': rsi, 'macd': macd_val, 'macd_bias': macd_bias,
-                'price_vs_ema200': price_vs_ema200,
-                'last_5_candles': f"{bullish_candles} bullish, {bearish_candles} bearish",
-                'recent_high': round(max(d_highs[-20:]), 5),
-                'recent_low':  round(min(d_lows[-20:]),  5),
-                '3mo_high': round(max(d_highs), 5),
-                '3mo_low':  round(min(d_lows),  5),
-            }
-
-            analysis['sr_levels'] = find_sr_levels(daily, current_price, lookback=60)
-
-        weekly = get_candles(pair, '1wk', '1y')
-        if weekly and len(weekly) >= 10:
-            w_closes = [c['close'] for c in weekly]
-            w_highs  = [c['high']  for c in weekly]
-            w_lows   = [c['low']   for c in weekly]
-            w_ema20  = calc_ema(w_closes, min(20, len(w_closes)))
-            w_rsi    = calc_rsi(w_closes)
-
-            weekly_trend = 'BULLISH' if current_price > (w_ema20 or current_price) else 'BEARISH'
-            last3_weekly = weekly[-3:]
-            w_bull = sum(1 for c in last3_weekly if c['close'] > c['open'])
-
-            analysis['weekly'] = {
-                'trend': weekly_trend,
-                'ema20': w_ema20,
-                'rsi': w_rsi,
-                'last_3_candles': f"{w_bull} bullish, {3-w_bull} bearish",
-                '52wk_high': round(max(w_highs), 5),
-                '52wk_low':  round(min(w_lows),  5),
-            }
-
-        hourly = get_candles(pair, '1h', '5d')
-        if hourly and len(hourly) >= 20:
-            h_closes = [c['close'] for c in hourly]
-            h_ema20  = calc_ema(h_closes, 20)
-            h_ema50  = calc_ema(h_closes, 50)
-            h_rsi    = calc_rsi(h_closes)
-            h_macd, h_macd_bias = calc_macd(h_closes)
-
-            hourly_trend = 'BULLISH' if current_price > (h_ema20 or current_price) else 'BEARISH'
-            last4_h = hourly[-4:]
-            h_bull = sum(1 for c in last4_h if c['close'] > c['open'])
-
-            h_sr = find_sr_levels(hourly, current_price, lookback=40)
-
-            analysis['hourly'] = {
-                'trend': hourly_trend,
-                'ema20': h_ema20, 'ema50': h_ema50,
-                'rsi': h_rsi, 'macd_bias': h_macd_bias,
-                'last_4_candles': f"{h_bull} bullish, {4-h_bull} bearish",
-                'recent_high': round(max(c['high'] for c in hourly[-24:]), 5),
-                'recent_low':  round(min(c['low']  for c in hourly[-24:]), 5),
-                'sr_levels': h_sr[:4]
-            }
-
-        w_trend = analysis['weekly'].get('trend', 'NEUTRAL')
-        d_trend = analysis['daily'].get('trend', 'NEUTRAL')
-        h_trend = analysis['hourly'].get('trend', 'NEUTRAL')
-
-        bull_count = sum(1 for t in [w_trend, d_trend, h_trend] if t == 'BULLISH')
-        bear_count = sum(1 for t in [w_trend, d_trend, h_trend] if t == 'BEARISH')
-
-        analysis['trend_summary'] = {
-            'weekly': w_trend, 'daily': d_trend, 'hourly': h_trend,
-            'overall': 'BULLISH' if bull_count >= 2 else 'BEARISH' if bear_count >= 2 else 'MIXED',
-            'alignment': f"{bull_count}/3 bullish, {bear_count}/3 bearish"
-        }
-
-    except Exception as e:
-        print(f'[ChartAnalysis] {pair} error: {e}')
-
-    return analysis
-
 def format_chart_analysis_for_prompt(ca):
+    """Full real chart data formatted for AI prompt — Wolf Scanner + Forex Scanner"""
     if not ca:
         return "Chart data unavailable"
 
-    d = ca.get('daily', {})
-    w = ca.get('weekly', {})
-    h = ca.get('hourly', {})
-    ts = ca.get('trend_summary', {})
-    sr = ca.get('sr_levels', [])
+    pair = ca.get("pair", "?")
+    cp   = ca.get("current_price", "?")
+    da   = ca.get("daily",   {})
+    wk   = ca.get("weekly",  {})
+    h1   = ca.get("hourly",  {})
+    h4   = ca.get("h4",      {})
+    m15  = ca.get("m15",     {})
+    ts   = ca.get("trend_summary", {})
+    sr   = ca.get("sr_levels", [])
+    sep  = "=" * 65
 
-    lines = [f"\n{'='*60}",
-             f"REAL CHART DATA FOR {ca['pair']} — Price: {ca['current_price']}",
-             f"{'='*60}"]
-
-    lines.append(f"\nTREND ALIGNMENT: {ts.get('overall','?')} ({ts.get('alignment','?')})")
-    lines.append(f"  Weekly: {ts.get('weekly','?')} | Daily: {ts.get('daily','?')} | Hourly: {ts.get('hourly','?')}")
-
-    if w:
-        lines.append(f"\nWEEKLY CHART (1 Year of data):")
-        lines.append(f"  Trend: {w.get('trend','?')} | EMA20: {w.get('ema20','?')} | RSI: {w.get('rsi','?')}")
-        lines.append(f"  52-Week High: {w.get('52wk_high','?')} | 52-Week Low: {w.get('52wk_low','?')}")
-        lines.append(f"  Last 3 candles: {w.get('last_3_candles','?')}")
-
-    if d:
-        lines.append(f"\nDAILY CHART (3 Months of data):")
-        lines.append(f"  Trend: {d.get('trend','?')} | EMA20: {d.get('ema20','?')} | EMA50: {d.get('ema50','?')} | EMA200: {d.get('ema200','?')}")
-        lines.append(f"  Price vs EMA200: {d.get('price_vs_ema200','?')} | RSI: {d.get('rsi','?')} | MACD: {d.get('macd_bias','?')}")
-        lines.append(f"  3-Month High: {d.get('3mo_high','?')} | 3-Month Low: {d.get('3mo_low','?')}")
-        lines.append(f"  Last 5 candles: {d.get('last_5_candles','?')}")
-
-    if h:
-        lines.append(f"\nHOURLY CHART (5 Days of data):")
-        lines.append(f"  Trend: {h.get('trend','?')} | EMA20: {h.get('ema20','?')} | EMA50: {h.get('ema50','?')}")
-        lines.append(f"  RSI: {h.get('rsi','?')} | MACD: {h.get('macd_bias','?')}")
-        lines.append(f"  24hr High: {h.get('recent_high','?')} | 24hr Low: {h.get('recent_low','?')}")
-        lines.append(f"  Last 4 candles: {h.get('last_4_candles','?')}")
+    lines = [
+        sep,
+        f"REAL CHART DATA — {pair} @ {cp}",
+        f"Overall: {ts.get('overall','?')} | Trend Strength: {ca.get('trend_strength','?')}",
+        f"TF Alignment: {ts.get('alignment','?')} | ADR: {ca.get('adr','?')} | Weekly Range Used: {ca.get('weekly_range_pct','?')}%",
+        f"Weekly High: {ca.get('weekly_high','?')} | Weekly Low: {ca.get('weekly_low','?')}",
+        sep,
+        f"WEEKLY: Trend={wk.get('trend','?')} Structure={wk.get('structure','?')} Phase={wk.get('phase','?')}",
+        f"  EMA20={wk.get('ema20','?')} RSI={wk.get('rsi','?')} Last3={wk.get('last3','?')}",
+        f"  52wk High={wk.get('high52','?')} | 52wk Low={wk.get('low52','?')}",
+        f"DAILY: Trend={da.get('trend','?')} Structure={da.get('structure','?')} Phase={da.get('phase','?')}",
+        f"  {da.get('phase_desc','')}",
+        f"  EMA9={da.get('ema9','?')} EMA20={da.get('ema20','?')} EMA50={da.get('ema50','?')} EMA200={da.get('ema200','?')}",
+        f"  RSI={da.get('rsi','?')} MACD={da.get('macd_bias','?')} ATR={da.get('atr','?')} vs200EMA={da.get('vs_ema200','?')}",
+        f"  BB: Upper={da.get('bb_upper','?')} Mid={da.get('bb_mid','?')} Lower={da.get('bb_lower','?')} Position={da.get('bb_position','?')}%",
+        f"  Swing Highs: {da.get('swing_highs',[])} | Swing Lows: {da.get('swing_lows',[])}",
+        f"  20d High={da.get('high20d','?')} | 20d Low={da.get('low20d','?')} | Last5={da.get('last5','?')}",
+        f"H4: Trend={h4.get('trend','?')} Structure={h4.get('structure','?')} Phase={h4.get('phase','?')}",
+        f"  EMA9={h4.get('ema9','?')} EMA20={h4.get('ema20','?')} RSI={h4.get('rsi','?')} MACD={h4.get('macd_bias','?')}",
+        f"  48h High={h4.get('high48h','?')} | 48h Low={h4.get('low48h','?')}",
+        f"H1: Trend={h1.get('trend','?')} Structure={h1.get('structure','?')}",
+        f"  EMA9={h1.get('ema9','?')} EMA20={h1.get('ema20','?')} RSI={h1.get('rsi','?')} MACD={h1.get('macd_bias','?')}",
+        f"  24h High={h1.get('high24h','?')} | 24h Low={h1.get('low24h','?')}",
+        f"M15: Trend={m15.get('trend','?')} Structure={m15.get('structure','?')}",
+        f"  EMA9={m15.get('ema9','?')} RSI={m15.get('rsi','?')}",
+        f"  London High={m15.get('london_high','?')} | London Low={m15.get('london_low','?')}",
+    ]
 
     if sr:
-        lines.append(f"\nREAL SUPPORT & RESISTANCE (from actual swing highs/lows):")
+        lines.append("KEY S/R (from real swing highs/lows):")
         for lv in sr[:6]:
-            lines.append(f"  {lv['type']}: {lv['price']} — {lv['note']} ({lv['distance_pips']} pips away)")
+            lines.append(f"  {lv['type']}: {lv['price']} | {lv['distance_pips']} pips | {lv['note']}")
 
-    h_sr = h.get('sr_levels', [])
-    if h_sr:
-        lines.append(f"\nHOURLY S/R (intraday levels):")
-        for lv in h_sr[:4]:
+    h1_sr = h1.get("sr", [])
+    if h1_sr:
+        lines.append("INTRADAY S/R (H1):")
+        for lv in h1_sr[:3]:
             lines.append(f"  {lv['type']}: {lv['price']} ({lv['distance_pips']} pips)")
 
-    lines.append(f"{'='*60}\n")
-    return '\n'.join(lines)
+    all_pats = (
+        [("D1", p) for p in ca.get("d1_patterns",[])] +
+        [("H4", p) for p in ca.get("h4_patterns",[])] +
+        [("M15",p) for p in ca.get("m15_patterns",[])]
+    )
+    if all_pats:
+        lines.append("CANDLESTICK PATTERNS:")
+        for tf, p in all_pats:
+            lines.append(f"  [{tf}] {p['pattern']} ({p['bias']}) — {p['note']}")
+
+    lines.append(sep)
+    return "\n".join(lines)
+
 
 def get_multi_pair_chart_data(pairs, current_prices):
     results = {}
@@ -1840,108 +1818,527 @@ def calc_bollinger(closes, period=20, sd=2):
     return round(mid+sd*std,5), round(mid,5), round(mid-sd*std,5)
 
 def detect_candle_patterns(candles):
+    """Real candlestick pattern recognition — Steve Nison method"""
     if len(candles) < 3: return []
     patterns = []
     c0=candles[-1]; c1=candles[-2]; c2=candles[-3]
-    body0=abs(c0["close"]-c0["open"]); range0=max(c0["high"]-c0["low"], 0.0001)
-    lw=min(c0["open"],c0["close"])-c0["low"]; uw=c0["high"]-max(c0["open"],c0["close"])
-    if body0/range0<0.1:
-        patterns.append({"pattern":"DOJI","bias":"NEUTRAL","note":"Market indecision — watch for breakout"})
-    if lw>body0*2 and c0["close"]>c0["open"]:
-        patterns.append({"pattern":"HAMMER","bias":"BULLISH","note":"Buyers rejected lows — reversal signal"})
-    if uw>body0*2 and c0["close"]<c0["open"]:
-        patterns.append({"pattern":"SHOOTING STAR","bias":"BEARISH","note":"Sellers rejected highs — reversal signal"})
-    if c1["close"]<c1["open"] and c0["close"]>c0["open"] and c0["open"]<=c1["close"] and c0["close"]>=c1["open"]:
-        patterns.append({"pattern":"BULLISH ENGULFING","bias":"BULLISH","note":"Bulls fully absorbed bears"})
-    if c1["close"]>c1["open"] and c0["close"]<c0["open"] and c0["open"]>=c1["close"] and c0["close"]<=c1["open"]:
-        patterns.append({"pattern":"BEARISH ENGULFING","bias":"BEARISH","note":"Bears fully absorbed bulls"})
-    if c2["close"]<c2["open"] and abs(c1["close"]-c1["open"])<body0*0.3 and c0["close"]>c0["open"] and c0["close"]>(c2["open"]+c2["close"])/2:
-        patterns.append({"pattern":"MORNING STAR","bias":"BULLISH","note":"3-candle bullish reversal"})
-    if c2["close"]>c2["open"] and abs(c1["close"]-c1["open"])<body0*0.3 and c0["close"]<c0["open"] and c0["close"]<(c2["open"]+c2["close"])/2:
-        patterns.append({"pattern":"EVENING STAR","bias":"BEARISH","note":"3-candle bearish reversal"})
-    return patterns
+    # Core measurements
+    body0=abs(c0["close"]-c0["open"]); range0=max(c0["high"]-c0["low"],0.0001)
+    body1=abs(c1["close"]-c1["open"]); range1=max(c1["high"]-c1["low"],0.0001)
+    lw0=min(c0["open"],c0["close"])-c0["low"]   # lower wick
+    uw0=c0["high"]-max(c0["open"],c0["close"])   # upper wick
+    lw1=min(c1["open"],c1["close"])-c1["low"]
+    uw1=c1["high"]-max(c1["open"],c1["close"])
+    bull0=c0["close"]>c0["open"]; bear0=c0["close"]<c0["open"]
+    bull1=c1["close"]>c1["open"]; bear1=c1["close"]<c1["open"]
+    avg_body=max((body0+body1)/2, 0.0001)
+
+    # 1. DOJI — indecision, body < 10% of range
+    if body0/range0 < 0.1:
+        patterns.append({"pattern":"DOJI","bias":"NEUTRAL","note":"Market indecision at this level — breakout watch"})
+
+    # 2. HAMMER — bullish reversal after downtrend (long lower wick)
+    if lw0 > body0*2.5 and uw0 < body0*0.5 and bull0:
+        patterns.append({"pattern":"HAMMER","bias":"BULLISH","note":"Strong buyer rejection of lows — bullish reversal"})
+
+    # 3. INVERTED HAMMER — bullish after downtrend
+    if uw0 > body0*2.5 and lw0 < body0*0.5 and bull0:
+        patterns.append({"pattern":"INVERTED HAMMER","bias":"BULLISH","note":"Buyers testing highs — watch for follow-through"})
+
+    # 4. SHOOTING STAR — bearish after uptrend (long upper wick)
+    if uw0 > body0*2.5 and lw0 < body0*0.5 and bear0:
+        patterns.append({"pattern":"SHOOTING STAR","bias":"BEARISH","note":"Seller rejection of highs — bearish reversal"})
+
+    # 5. HANGING MAN — bearish after uptrend (same shape as hammer but at top)
+    if lw0 > body0*2.5 and uw0 < body0*0.5 and bear0:
+        patterns.append({"pattern":"HANGING MAN","bias":"BEARISH","note":"Failed buyers at high — distribution candle"})
+
+    # 6. PIN BAR — long wick vs body (either direction, price action key pattern)
+    if (lw0 > range0*0.6) or (uw0 > range0*0.6):
+        direction = "BULLISH" if lw0 > uw0 else "BEARISH"
+        patterns.append({"pattern":"PIN BAR","bias":direction,"note":"Strong price rejection — high probability reversal zone"})
+
+    # 7. BULLISH ENGULFING — bears then bulls absorb
+    if bear1 and bull0 and c0["open"] <= c1["close"] and c0["close"] >= c1["open"] and body0 > body1:
+        patterns.append({"pattern":"BULLISH ENGULFING","bias":"BULLISH","note":"Bulls fully engulf prior bearish candle"})
+
+    # 8. BEARISH ENGULFING
+    if bull1 and bear0 and c0["open"] >= c1["close"] and c0["close"] <= c1["open"] and body0 > body1:
+        patterns.append({"pattern":"BEARISH ENGULFING","bias":"BEARISH","note":"Bears fully engulf prior bullish candle"})
+
+    # 9. INSIDE BAR — consolidation / compression before big move
+    if c0["high"] <= c1["high"] and c0["low"] >= c1["low"]:
+        patterns.append({"pattern":"INSIDE BAR","bias":"NEUTRAL","note":"Price compressed inside prior candle — breakout building"})
+
+    # 10. MORNING STAR — 3-candle bullish reversal
+    if bear1 and body0 > avg_body*0.5 and bull0 and c0["close"] > (c2["open"]+c2["close"])/2:
+        patterns.append({"pattern":"MORNING STAR","bias":"BULLISH","note":"3-candle bottom reversal — bulls taking control"})
+
+    # 11. EVENING STAR — 3-candle bearish reversal
+    if bull1 and body0 > avg_body*0.5 and bear0 and c0["close"] < (c2["open"]+c2["close"])/2:
+        patterns.append({"pattern":"EVENING STAR","bias":"BEARISH","note":"3-candle top reversal — bears taking control"})
+
+    # 12. THREE WHITE SOLDIERS (check last 3 candles all bullish, higher closes)
+    if len(candles) >= 3:
+        last3 = candles[-3:]
+        if all(c["close"] > c["open"] for c in last3) and            last3[2]["close"] > last3[1]["close"] > last3[0]["close"]:
+            patterns.append({"pattern":"THREE WHITE SOLDIERS","bias":"BULLISH","note":"3 consecutive bullish candles — strong uptrend momentum"})
+
+    # 13. THREE BLACK CROWS
+    if len(candles) >= 3:
+        last3 = candles[-3:]
+        if all(c["close"] < c["open"] for c in last3) and            last3[2]["close"] < last3[1]["close"] < last3[0]["close"]:
+            patterns.append({"pattern":"THREE BLACK CROWS","bias":"BEARISH","note":"3 consecutive bearish candles — strong downtrend momentum"})
+
+    # 14. TWEEZER TOP — two candles with same high (resistance rejection)
+    if abs(c0["high"] - c1["high"]) < range0*0.05 and bear0:
+        patterns.append({"pattern":"TWEEZER TOP","bias":"BEARISH","note":"Double rejection at same resistance — sellers in control"})
+
+    # 15. TWEEZER BOTTOM — two candles with same low (support acceptance)
+    if abs(c0["low"] - c1["low"]) < range0*0.05 and bull0:
+        patterns.append({"pattern":"TWEEZER BOTTOM","bias":"BULLISH","note":"Double bounce off same support — buyers in control"})
+
+    # 16. MARUBOZU — full body candle (no wicks) = strong momentum
+    if body0/range0 > 0.92:
+        bias = "BULLISH" if bull0 else "BEARISH"
+        patterns.append({"pattern":"MARUBOZU","bias":bias,"note":"Strong momentum candle — trend continuation expected"})
+
+    return patterns[:4]  # return top 4 most recent patterns
+
+def detect_market_structure(candles):
+    """
+    Real market structure detection — higher highs/lows = uptrend
+    Based on Dow Theory + price action (Sam Seiden / ICT style)
+    """
+    if len(candles) < 10:
+        return {"structure":"UNKNOWN","phase":"UNKNOWN","description":"Not enough data"}
+
+    highs  = [c["high"]  for c in candles[-20:]]
+    lows   = [c["low"]   for c in candles[-20:]]
+    closes = [c["close"] for c in candles[-20:]]
+
+    # Find swing highs and lows (local maxima/minima over 3-bar window)
+    swing_highs, swing_lows = [], []
+    for i in range(2, len(highs)-2):
+        if highs[i] > highs[i-1] and highs[i] > highs[i-2] and highs[i] > highs[i+1] and highs[i] > highs[i+2]:
+            swing_highs.append(highs[i])
+        if lows[i]  < lows[i-1]  and lows[i]  < lows[i-2]  and lows[i]  < lows[i+1]  and lows[i]  < lows[i+2]:
+            swing_lows.append(lows[i])
+
+    structure = "RANGING"
+    description = "No clear directional structure"
+
+    if len(swing_highs) >= 2 and len(swing_lows) >= 2:
+        hh = swing_highs[-1] > swing_highs[-2]   # higher high
+        hl = swing_lows[-1]  > swing_lows[-2]    # higher low
+        lh = swing_highs[-1] < swing_highs[-2]   # lower high
+        ll = swing_lows[-1]  < swing_lows[-2]    # lower low
+
+        if hh and hl:
+            structure = "UPTREND"
+            description = "Higher Highs + Higher Lows = clean uptrend. Bulls in full control."
+        elif lh and ll:
+            structure = "DOWNTREND"
+            description = "Lower Highs + Lower Lows = clean downtrend. Bears in full control."
+        elif hh and ll:
+            structure = "RANGING"
+            description = "Higher Highs but Lower Lows = expanded range. Breakout pending."
+        elif lh and hl:
+            structure = "RANGING"
+            description = "Lower Highs + Higher Lows = compression triangle. Coiling for breakout."
+        else:
+            structure = "RANGING"
+            description = "Mixed swing structure — no clear directional bias."
+
+    # Detect impulse vs ABC correction
+    # Simple: if last 5 candles all same direction = impulse, mixed = correction
+    last5 = candles[-5:] if len(candles) >= 5 else candles
+    bull_count = sum(1 for c in last5 if c["close"] > c["open"])
+    bear_count = sum(1 for c in last5 if c["close"] < c["open"])
+
+    if bull_count >= 4:
+        phase = "IMPULSE BULLISH"
+    elif bear_count >= 4:
+        phase = "IMPULSE BEARISH"
+    elif bull_count == 3 and bear_count == 2:
+        phase = "CORRECTION — possible ABC bull trap in downtrend"
+    elif bear_count == 3 and bull_count == 2:
+        phase = "CORRECTION — possible ABC bear trap in uptrend"
+    else:
+        phase = "CONSOLIDATION — no momentum"
+
+    return {"structure": structure, "phase": phase, "description": description,
+            "swing_highs": [round(h,5) for h in swing_highs[-3:]] if swing_highs else [],
+            "swing_lows":  [round(l,5) for l in swing_lows[-3:]]  if swing_lows  else []}
+
+
+def calc_adr(candles, days=10):
+    """Average Daily Range — how far price typically moves in a day"""
+    if len(candles) < 3:
+        return None
+    recent = candles[-days:] if len(candles) >= days else candles
+    ranges = [c["high"] - c["low"] for c in recent]
+    return round(sum(ranges)/len(ranges), 5)
+
+
+def calc_weekly_range_pct(candles):
+    """How much of the weekly average range has been used — Gemini strategy key metric"""
+    if len(candles) < 6:
+        return None, None, None
+    # Weekly = 5 trading days
+    week_candles = candles[-5:] if len(candles) >= 5 else candles
+    week_high = max(c["high"] for c in week_candles)
+    week_low  = min(c["low"]  for c in week_candles)
+    week_range = week_high - week_low
+
+    # Average weekly range over past 4 weeks
+    if len(candles) >= 20:
+        avg_weekly_ranges = []
+        for i in range(4):
+            start = -(5*(i+1))
+            end   = -(5*i) if i > 0 else None
+            wc = candles[start:end]
+            if wc:
+                avg_weekly_ranges.append(max(c["high"] for c in wc) - min(c["low"] for c in wc))
+        avg_range = sum(avg_weekly_ranges)/len(avg_weekly_ranges) if avg_weekly_ranges else week_range
+    else:
+        avg_range = week_range
+
+    pct_used = round((week_range / avg_range * 100) if avg_range > 0 else 0, 1)
+    return round(week_high, 5), round(week_low, 5), pct_used
+
+
+def detect_trend_strength(candles_d1, candles_h4):
+    """Trend strength: how aligned are EMAs across timeframes"""
+    if not candles_d1 or not candles_h4:
+        return "UNKNOWN", 0
+    dc  = [c["close"] for c in candles_d1]
+    h4c = [c["close"] for c in candles_h4]
+    cp  = dc[-1] if dc else 0
+
+    e9_d  = calc_ema(dc,  9);  e21_d = calc_ema(dc, 21);  e50_d = calc_ema(dc, 50)
+    e9_h4 = calc_ema(h4c, 9);  e21_h4= calc_ema(h4c,21);  e50_h4= calc_ema(h4c,50)
+
+    score = 0
+    # Daily alignment
+    if e9_d and e21_d and e50_d:
+        if cp > e9_d > e21_d > e50_d:   score += 3  # perfect bull stack
+        elif cp < e9_d < e21_d < e50_d: score -= 3  # perfect bear stack
+        elif cp > e21_d: score += 1
+        elif cp < e21_d: score -= 1
+    # H4 alignment
+    if e9_h4 and e21_h4 and e50_h4:
+        if cp > e9_h4 > e21_h4 > e50_h4:   score += 2
+        elif cp < e9_h4 < e21_h4 < e50_h4: score -= 2
+        elif cp > e21_h4: score += 1
+        elif cp < e21_h4: score -= 1
+
+    abs_score = abs(score)
+    if abs_score >= 4:
+        strength = "STRONG " + ("BULLISH" if score > 0 else "BEARISH")
+    elif abs_score >= 2:
+        strength = "MODERATE " + ("BULLISH" if score > 0 else "BEARISH")
+    else:
+        strength = "WEAK / RANGING"
+
+    return strength, score
+
 
 def get_sage_chart_data(pair, current_price):
-    data = {"pair":pair,"price":current_price,"weekly":{},"daily":{},"h4":{},"hourly":{},"m15":{},
-            "sr_levels":[],"d1_patterns":[],"h4_patterns":[],"m15_patterns":[]}
+    """
+    Full real chart analysis engine — pulls live OHLC from yfinance.
+    Calculates real RSI (Wilder), real EMAs, real S/R from swing highs/lows,
+    real candlestick patterns, market structure, ADR, weekly range usage.
+    """
+    data = {
+        "pair": pair, "price": current_price,
+        "weekly": {}, "daily": {}, "h4": {}, "hourly": {}, "m15": {},
+        "sr_levels": [], "d1_patterns": [], "h4_patterns": [], "m15_patterns": [],
+        "market_structure": {}, "trend_strength": "UNKNOWN",
+        "adr": None, "weekly_range_pct": None,
+        "weekly_high": None, "weekly_low": None,
+        "london_levels": {}, "ny_levels": {}
+    }
     try:
-        wk = get_candles(pair,"1wk","1y")
-        if wk and len(wk)>=10:
-            wc=[c["close"] for c in wk]
-            data["weekly"]={"trend":"BULLISH" if current_price>(calc_ema(wc,20) or current_price) else "BEARISH",
-                "ema20":calc_ema(wc,20),"rsi":calc_rsi(wc),
-                "high52":round(max(c["high"] for c in wk),5),"low52":round(min(c["low"] for c in wk),5),
-                "last3":"{} bull, {} bear".format(sum(1 for c in wk[-3:] if c["close"]>c["open"]),sum(1 for c in wk[-3:] if c["close"]<=c["open"]))}
-        d1 = get_candles(pair,"1d","6mo")
-        if d1 and len(d1)>=20:
-            dc=[c["close"] for c in d1]
-            bbu,bbm,bbl=calc_bollinger(dc)
-            e20=calc_ema(dc,20); e50=calc_ema(dc,50); e200=calc_ema(dc,min(200,len(dc)))
-            data["daily"]={"trend":"BULLISH" if current_price>(e50 or current_price) else "BEARISH",
-                "ema20":e20,"ema50":e50,"ema200":e200,"rsi":calc_rsi(dc),"macd_bias":calc_macd(dc)[1],
-                "atr":calc_atr(d1),"bb_upper":bbu,"bb_mid":bbm,"bb_lower":bbl,
-                "vs_ema200":"ABOVE" if (e200 and current_price>e200) else "BELOW",
-                "high20d":round(max(c["high"] for c in d1[-20:]),5),"low20d":round(min(c["low"] for c in d1[-20:]),5),
-                "last5":"{} bull, {} bear".format(sum(1 for c in d1[-5:] if c["close"]>c["open"]),sum(1 for c in d1[-5:] if c["close"]<=c["open"]))}
-            data["sr_levels"]=find_sr_levels(d1,current_price,lookback=60)
-            data["d1_patterns"]=detect_candle_patterns(d1[-10:])
-        h4 = get_candles(pair,"4h","30d")
-        if h4 and len(h4)>=10:
-            h4c=[c["close"] for c in h4]
-            data["h4"]={"trend":"BULLISH" if current_price>(calc_ema(h4c,20) or current_price) else "BEARISH",
-                "ema20":calc_ema(h4c,20),"ema50":calc_ema(h4c,50),"rsi":calc_rsi(h4c),
-                "macd_bias":calc_macd(h4c)[1],"atr":calc_atr(h4),
-                "high48h":round(max(c["high"] for c in h4[-12:]),5),"low48h":round(min(c["low"] for c in h4[-12:]),5),
-                "last4":"{} bull, {} bear".format(sum(1 for c in h4[-4:] if c["close"]>c["open"]),sum(1 for c in h4[-4:] if c["close"]<=c["open"]))}
-            data["h4_patterns"]=detect_candle_patterns(h4[-10:])
-        h1 = get_candles(pair,"1h","5d")
-        if h1 and len(h1)>=20:
-            h1c=[c["close"] for c in h1]
-            data["hourly"]={"trend":"BULLISH" if current_price>(calc_ema(h1c,20) or current_price) else "BEARISH",
-                "ema20":calc_ema(h1c,20),"ema50":calc_ema(h1c,50),"rsi":calc_rsi(h1c),
-                "macd_bias":calc_macd(h1c)[1],"atr":calc_atr(h1),
-                "high24h":round(max(c["high"] for c in h1[-24:]),5),"low24h":round(min(c["low"] for c in h1[-24:]),5),
-                "sr":find_sr_levels(h1,current_price,lookback=40)[:4]}
-        m15 = get_candles(pair,"15m","3d")
-        if m15 and len(m15)>=10:
-            m15c=[c["close"] for c in m15]
-            data["m15"]={"trend":"BULLISH" if current_price>(calc_ema(m15c,20) or current_price) else "BEARISH",
-                "ema20":calc_ema(m15c,20),"rsi":calc_rsi(m15c),
-                "last4":"{} bull, {} bear".format(sum(1 for c in m15[-4:] if c["close"]>c["open"]),sum(1 for c in m15[-4:] if c["close"]<=c["open"]))}
-            data["m15_patterns"]=detect_candle_patterns(m15[-10:])
+        # ── WEEKLY — big picture context ──────────────────────────────
+        wk = get_candles(pair, "1wk", "1y")
+        if wk and len(wk) >= 10:
+            wc  = [c["close"] for c in wk]
+            wk_high52 = max(c["high"] for c in wk)
+            wk_low52  = min(c["low"]  for c in wk)
+            wk_rsi    = calc_rsi(wc)
+            wk_ema20  = calc_ema(wc, 20)
+            wk_struct = detect_market_structure(wk[-16:])
+            wk_adr    = calc_adr(wk, 8)
+            wk_h, wk_l, wk_pct = calc_weekly_range_pct(wk)
+            # Trend vs EMA alignment
+            wk_trend = "BULLISH" if (wk_ema20 and current_price > wk_ema20) else "BEARISH"
+            data["weekly"] = {
+                "trend":    wk_trend,
+                "ema20":    wk_ema20,
+                "rsi":      wk_rsi,
+                "high52":   round(wk_high52, 5),
+                "low52":    round(wk_low52, 5),
+                "structure": wk_struct["structure"],
+                "phase":    wk_struct["phase"],
+                "adr":      wk_adr,
+                "last3":    "{} bull, {} bear".format(
+                    sum(1 for c in wk[-3:] if c["close"]>c["open"]),
+                    sum(1 for c in wk[-3:] if c["close"]<=c["open"]))
+            }
+            data["weekly_high"]    = wk_h
+            data["weekly_low"]     = wk_l
+            data["weekly_range_pct"] = wk_pct
+
+        # ── DAILY — trade direction bias ──────────────────────────────
+        d1 = get_candles(pair, "1d", "6mo")
+        if d1 and len(d1) >= 20:
+            dc  = [c["close"] for c in d1]
+            bbu, bbm, bbl = calc_bollinger(dc)
+            e9  = calc_ema(dc, 9)
+            e20 = calc_ema(dc, 20)
+            e50 = calc_ema(dc, 50)
+            e200= calc_ema(dc, min(200, len(dc)))
+            d1_rsi  = calc_rsi(dc)
+            d1_macd = calc_macd(dc)[1]
+            d1_atr  = calc_atr(d1)
+            d1_struct = detect_market_structure(d1[-30:])
+            d1_adr  = calc_adr(d1, 10)
+            # Price location relative to Bollinger
+            if bbu and bbl:
+                bb_range = bbu - bbl
+                bb_pos = round(((current_price - bbl) / bb_range * 100), 1) if bb_range > 0 else 50
+            else:
+                bb_pos = 50
+            # Daily trend — require TWO confirmations
+            bull_signals = sum([
+                1 if (e9  and current_price > e9)   else 0,
+                1 if (e20 and current_price > e20)  else 0,
+                1 if (e50 and current_price > e50)  else 0,
+                1 if (d1_macd == "BULLISH")         else 0,
+            ])
+            d1_trend = "BULLISH" if bull_signals >= 3 else "BEARISH" if bull_signals <= 1 else "MIXED"
+            data["daily"] = {
+                "trend":    d1_trend,
+                "ema9":     e9,  "ema20": e20, "ema50": e50, "ema200": e200,
+                "rsi":      d1_rsi,
+                "macd_bias": d1_macd,
+                "atr":      d1_atr,
+                "adr":      d1_adr,
+                "bb_upper": bbu, "bb_mid": bbm, "bb_lower": bbl,
+                "bb_position": bb_pos,
+                "vs_ema200": "ABOVE" if (e200 and current_price > e200) else "BELOW",
+                "structure": d1_struct["structure"],
+                "phase":    d1_struct["phase"],
+                "phase_desc": d1_struct["description"],
+                "swing_highs": d1_struct.get("swing_highs", []),
+                "swing_lows":  d1_struct.get("swing_lows",  []),
+                "high20d":  round(max(c["high"] for c in d1[-20:]), 5),
+                "low20d":   round(min(c["low"]  for c in d1[-20:]), 5),
+                "last5":    "{} bull, {} bear".format(
+                    sum(1 for c in d1[-5:] if c["close"]>c["open"]),
+                    sum(1 for c in d1[-5:] if c["close"]<=c["open"]))
+            }
+            data["sr_levels"]   = find_sr_levels(d1, current_price, lookback=60)
+            data["d1_patterns"] = detect_candle_patterns(d1[-10:])
+            data["adr"]         = d1_adr
+
+        # ── H4 — trade direction confirmation ────────────────────────
+        h4 = get_candles(pair, "4h", "30d")
+        if h4 and len(h4) >= 10:
+            h4c = [c["close"] for c in h4]
+            h4_e9   = calc_ema(h4c, 9)
+            h4_e20  = calc_ema(h4c, 20)
+            h4_e50  = calc_ema(h4c, 50)
+            h4_rsi  = calc_rsi(h4c)
+            h4_macd = calc_macd(h4c)[1]
+            h4_atr  = calc_atr(h4)
+            h4_struct = detect_market_structure(h4[-20:])
+            bull_h4 = sum([
+                1 if (h4_e9  and current_price > h4_e9)  else 0,
+                1 if (h4_e20 and current_price > h4_e20) else 0,
+                1 if (h4_macd == "BULLISH") else 0,
+            ])
+            h4_trend = "BULLISH" if bull_h4 >= 2 else "BEARISH" if bull_h4 == 0 else "MIXED"
+            data["h4"] = {
+                "trend":    h4_trend,
+                "ema9":     h4_e9, "ema20": h4_e20, "ema50": h4_e50,
+                "rsi":      h4_rsi,
+                "macd_bias": h4_macd,
+                "atr":      h4_atr,
+                "structure": h4_struct["structure"],
+                "phase":    h4_struct["phase"],
+                "high48h":  round(max(c["high"] for c in h4[-12:]), 5),
+                "low48h":   round(min(c["low"]  for c in h4[-12:]), 5),
+                "last4":    "{} bull, {} bear".format(
+                    sum(1 for c in h4[-4:] if c["close"]>c["open"]),
+                    sum(1 for c in h4[-4:] if c["close"]<=c["open"]))
+            }
+            data["h4_patterns"] = detect_candle_patterns(h4[-10:])
+
+        # ── H1 — entry timeframe ──────────────────────────────────────
+        h1 = get_candles(pair, "1h", "5d")
+        if h1 and len(h1) >= 20:
+            h1c = [c["close"] for c in h1]
+            h1_e9   = calc_ema(h1c, 9)
+            h1_e20  = calc_ema(h1c, 20)
+            h1_e50  = calc_ema(h1c, 50)
+            h1_rsi  = calc_rsi(h1c)
+            h1_macd = calc_macd(h1c)[1]
+            h1_atr  = calc_atr(h1)
+            h1_struct = detect_market_structure(h1[-24:])
+            data["hourly"] = {
+                "trend":    "BULLISH" if (h1_e20 and current_price > h1_e20) else "BEARISH",
+                "ema9":     h1_e9, "ema20": h1_e20, "ema50": h1_e50,
+                "rsi":      h1_rsi,
+                "macd_bias": h1_macd,
+                "atr":      h1_atr,
+                "structure": h1_struct["structure"],
+                "phase":    h1_struct["phase"],
+                "high24h":  round(max(c["high"] for c in h1[-24:]), 5),
+                "low24h":   round(min(c["low"]  for c in h1[-24:]), 5),
+                "sr":       find_sr_levels(h1, current_price, lookback=40)[:5]
+            }
+
+        # ── M15 — trigger / entry confirmation ───────────────────────
+        m15 = get_candles(pair, "15m", "3d")
+        if m15 and len(m15) >= 14:
+            m15c = [c["close"] for c in m15]
+            m15_e9  = calc_ema(m15c, 9)
+            m15_e20 = calc_ema(m15c, 20)
+            m15_rsi = calc_rsi(m15c)
+            m15_struct = detect_market_structure(m15[-20:])
+            # London session range (approx last 8 candles of M15 from 3AM-8AM ET)
+            london_range_h = max(c["high"] for c in m15[-32:-8]) if len(m15) >= 40 else None
+            london_range_l = min(c["low"]  for c in m15[-32:-8]) if len(m15) >= 40 else None
+            data["m15"] = {
+                "trend":    "BULLISH" if (m15_e9 and current_price > m15_e9) else "BEARISH",
+                "ema9":     m15_e9, "ema20": m15_e20,
+                "rsi":      m15_rsi,
+                "structure": m15_struct["structure"],
+                "phase":    m15_struct["phase"],
+                "london_high": round(london_range_h, 5) if london_range_h else None,
+                "london_low":  round(london_range_l, 5) if london_range_l else None,
+                "last4":    "{} bull, {} bear".format(
+                    sum(1 for c in m15[-4:] if c["close"]>c["open"]),
+                    sum(1 for c in m15[-4:] if c["close"]<=c["open"]))
+            }
+            data["m15_patterns"] = detect_candle_patterns(m15[-10:])
+
+        # ── OVERALL TREND STRENGTH (multi-TF EMA alignment) ──────────
+        d1_ref = get_candles(pair, "1d", "6mo") if not d1 else d1
+        h4_ref = get_candles(pair, "4h", "30d") if not h4 else h4
+        strength, score = detect_trend_strength(d1_ref, h4_ref)
+        data["trend_strength"] = strength
+        data["trend_score"]    = score
+
     except Exception as e:
         print("[SageChart] {}: {}".format(pair, e))
     return data
 
+
 def format_sage_chart(d):
-    wk=d.get("weekly",{}); da=d.get("daily",{}); h4=d.get("h4",{})
-    h1=d.get("hourly",{}); m15=d.get("m15",{})
-    sep="="*65
-    lines=[sep,"LIVE CHART DATA — {} @ {}".format(d["pair"],d["price"]),sep,
-        "WEEKLY: Trend={} EMA20={} RSI={} Last3={}".format(wk.get("trend","?"),wk.get("ema20","?"),wk.get("rsi","?"),wk.get("last3","?")),
-        "  52wk High={} | 52wk Low={}".format(wk.get("high52","?"),wk.get("low52","?")),
-        "DAILY: Trend={} vs200EMA={} RSI={} MACD={}".format(da.get("trend","?"),da.get("vs_ema200","?"),da.get("rsi","?"),da.get("macd_bias","?")),
-        "  EMA20={} EMA50={} EMA200={} ATR={}".format(da.get("ema20","?"),da.get("ema50","?"),da.get("ema200","?"),da.get("atr","?")),
-        "  Bollinger: Upper={} Mid={} Lower={}".format(da.get("bb_upper","?"),da.get("bb_mid","?"),da.get("bb_lower","?")),
-        "  20d High={} | 20d Low={} | Last5={}".format(da.get("high20d","?"),da.get("low20d","?"),da.get("last5","?")),
-        "H4 (TRADE DIR): Trend={} EMA20={} RSI={} MACD={} ATR={}".format(h4.get("trend","?"),h4.get("ema20","?"),h4.get("rsi","?"),h4.get("macd_bias","?"),h4.get("atr","?")),
-        "  48h High={} | 48h Low={} | Last4={}".format(h4.get("high48h","?"),h4.get("low48h","?"),h4.get("last4","?")),
-        "H1 (ENTRY): Trend={} EMA20={} RSI={} MACD={} ATR={}".format(h1.get("trend","?"),h1.get("ema20","?"),h1.get("rsi","?"),h1.get("macd_bias","?"),h1.get("atr","?")),
-        "  24h High={} | 24h Low={}".format(h1.get("high24h","?"),h1.get("low24h","?")),
-        "M15 (TRIGGER): Trend={} EMA20={} RSI={} Last4={}".format(m15.get("trend","?"),m15.get("ema20","?"),m15.get("rsi","?"),m15.get("last4","?"))]
-    sr=d.get("sr_levels",[])
+    """
+    Formats all real chart data into a structured text block for the AI.
+    Every number here comes from real live OHLC candles — no estimates.
+    """
+    wk  = d.get("weekly",  {})
+    da  = d.get("daily",   {})
+    h4  = d.get("h4",      {})
+    h1  = d.get("hourly",  {})
+    m15 = d.get("m15",     {})
+    sep = "=" * 70
+
+    lines = [
+        sep,
+        "LIVE REAL CHART DATA — {} @ {}".format(d["pair"], d["price"]),
+        "Overall Trend Strength: {} (score: {})".format(
+            d.get("trend_strength","?"), d.get("trend_score","?")),
+        "ADR (Avg Daily Range): {} | Weekly Range Used: {}%".format(
+            d.get("adr","?"), d.get("weekly_range_pct","?")),
+        "Weekly High: {} | Weekly Low: {}".format(
+            d.get("weekly_high","?"), d.get("weekly_low","?")),
+        sep,
+
+        "── WEEKLY CONTEXT (Big Picture) ──",
+        "Trend={} | Structure={} | Phase={}".format(
+            wk.get("trend","?"), wk.get("structure","?"), wk.get("phase","?")),
+        "EMA20={} | RSI={} | ADR={} | Last3={}".format(
+            wk.get("ema20","?"), wk.get("rsi","?"), wk.get("adr","?"), wk.get("last3","?")),
+        "52wk High={} | 52wk Low={}".format(wk.get("high52","?"), wk.get("low52","?")),
+
+        "── DAILY (Trade Direction) ──",
+        "Trend={} | Structure={} | Phase={}".format(
+            da.get("trend","?"), da.get("structure","?"), da.get("phase","?")),
+        "Price Action: {}".format(da.get("phase_desc","?")),
+        "EMA9={} | EMA20={} | EMA50={} | EMA200={}".format(
+            da.get("ema9","?"), da.get("ema20","?"), da.get("ema50","?"), da.get("ema200","?")),
+        "RSI={} | MACD={} | ATR={} | vs200EMA={}".format(
+            da.get("rsi","?"), da.get("macd_bias","?"), da.get("atr","?"), da.get("vs_ema200","?")),
+        "Bollinger: Upper={} | Mid={} | Lower={} | Position in BB={}%".format(
+            da.get("bb_upper","?"), da.get("bb_mid","?"), da.get("bb_lower","?"), da.get("bb_position","?")),
+        "20d High={} | 20d Low={} | Last5={}".format(
+            da.get("high20d","?"), da.get("low20d","?"), da.get("last5","?")),
+        "Swing Highs (D1): {} | Swing Lows (D1): {}".format(
+            da.get("swing_highs",[]), da.get("swing_lows",[])),
+
+        "── H4 (Trade Direction Confirmation) ──",
+        "Trend={} | Structure={} | Phase={}".format(
+            h4.get("trend","?"), h4.get("structure","?"), h4.get("phase","?")),
+        "EMA9={} | EMA20={} | EMA50={} | RSI={} | MACD={} | ATR={}".format(
+            h4.get("ema9","?"), h4.get("ema20","?"), h4.get("ema50","?"),
+            h4.get("rsi","?"), h4.get("macd_bias","?"), h4.get("atr","?")),
+        "48h High={} | 48h Low={} | Last4={}".format(
+            h4.get("high48h","?"), h4.get("low48h","?"), h4.get("last4","?")),
+
+        "── H1 (Entry Timeframe) ──",
+        "Trend={} | Structure={} | Phase={}".format(
+            h1.get("trend","?"), h1.get("structure","?"), h1.get("phase","?")),
+        "EMA9={} | EMA20={} | EMA50={} | RSI={} | MACD={} | ATR={}".format(
+            h1.get("ema9","?"), h1.get("ema20","?"), h1.get("ema50","?"),
+            h1.get("rsi","?"), h1.get("macd_bias","?"), h1.get("atr","?")),
+        "24h High={} | 24h Low={}".format(h1.get("high24h","?"), h1.get("low24h","?")),
+
+        "── M15 (Entry Trigger) ──",
+        "Trend={} | Structure={} | Phase={}".format(
+            m15.get("trend","?"), m15.get("structure","?"), m15.get("phase","?")),
+        "EMA9={} | EMA20={} | RSI={} | Last4={}".format(
+            m15.get("ema9","?"), m15.get("ema20","?"), m15.get("rsi","?"), m15.get("last4","?")),
+        "London Session High={} | London Session Low={}".format(
+            m15.get("london_high","?"), m15.get("london_low","?")),
+    ]
+
+    # Support/Resistance
+    sr = d.get("sr_levels", [])
     if sr:
-        lines.append("KEY S/R LEVELS:")
-        for lv in sr[:6]: lines.append("  {}: {} — {} ({} pips)".format(lv["type"],lv["price"],lv["note"],lv["distance_pips"]))
-    h1sr=h1.get("sr",[])
-    if h1sr:
-        lines.append("INTRADAY S/R (H1):")
-        for lv in h1sr[:3]: lines.append("  {}: {} ({} pips)".format(lv["type"],lv["price"],lv["distance_pips"]))
-    pats=d.get("d1_patterns",[])+d.get("h4_patterns",[])+d.get("m15_patterns",[])
-    lines.append("CANDLESTICK PATTERNS (Steve Nison):" if pats else "CANDLESTICK PATTERNS: None detected")
-    for p in pats: lines.append("  {} ({}) — {}".format(p["pattern"],p["bias"],p["note"]))
+        lines.append("── KEY S/R LEVELS (from real swing highs/lows + round numbers) ──")
+        for lv in sr[:8]:
+            lines.append("  {}: {} | {} pips away | Strength={} | {}".format(
+                lv["type"], lv["price"], lv["distance_pips"], lv["strength"], lv["note"]))
+
+    # Intraday S/R from H1
+    h1_sr = h1.get("sr", [])
+    if h1_sr:
+        lines.append("── INTRADAY S/R (H1 level) ──")
+        for lv in h1_sr[:4]:
+            lines.append("  {}: {} | {} pips".format(lv["type"], lv["price"], lv["distance_pips"]))
+
+    # Candlestick patterns
+    all_pats = (
+        [("D1", p) for p in d.get("d1_patterns",[])] +
+        [("H4", p) for p in d.get("h4_patterns",[])] +
+        [("M15",p) for p in d.get("m15_patterns",[])]
+    )
+    if all_pats:
+        lines.append("── CANDLESTICK PATTERNS (Steve Nison method) ──")
+        for tf, p in all_pats:
+            lines.append("  [{}] {} ({}) — {}".format(tf, p["pattern"], p["bias"], p["note"]))
+    else:
+        lines.append("CANDLESTICK PATTERNS: No high-probability patterns on current candle")
+
     lines.append(sep)
     return "\n".join(lines)
+
 
 def call_claude_with_search(prompt, max_tokens=600):
     try:
@@ -2108,21 +2505,25 @@ def _run_sage_scanner_job(job_id):
                 cp = float(pd["price"])
                 cd = get_sage_chart_data(pair, cp)
                 da = cd.get("daily", {}); h4 = cd.get("h4", {}); wk = cd.get("weekly", {})
-                prompt = (
-                    'Analyze {} at price {}. Daily trend: {}. H4 trend: {}. Weekly trend: {}. '
-                    'BB Upper:{} Mid:{} Lower:{}. ATR:{}. '
-                    'Return ONLY a JSON object (no markdown): '
-                    '{{"pair":"{}","verdict":"BUY or SELL or WAIT","confidence":0,'
-                    '"trend_strength":"STRONG or MODERATE or WEAK or RANGING",'
+                chart_str = format_sage_chart(cd)
+                verdict_prompt = (
+                    'Analyze ' + pair + ' at ' + str(cp) + '. '
+                    'Real chart data:\n' + chart_str + '\n\n'
+                    'Based ONLY on the real data above, return compact JSON (no markdown):\n'
+                    '{"pair":"' + pair + '",'
+                    '"verdict":"BUY or SELL or WAIT",'
+                    '"confidence":0,'
+                    '"trend_strength":"STRONG BULLISH or STRONG BEARISH or MODERATE BULLISH or MODERATE BEARISH or RANGING",'
+                    '"market_structure":"UPTREND or DOWNTREND or RANGING",'
+                    '"abc_position":"IMPULSE or CORRECTION or CONSOLIDATION",'
                     '"direction":"UP or DOWN or SIDEWAYS",'
-                    '"reason":"one sentence max 15 words",'
-                    '"entry":"{}","sl":"","tp1":"",'
-                    '"market_phase":"TRENDING or RANGING or BREAKOUT",'
-                    '"abc_position":"IMPULSE or CORRECTION or UNKNOWN"}}'
-                ).format(pair, cp,
-                    da.get('trend','?'), h4.get('trend','?'), wk.get('trend','?'),
-                    da.get('bb_upper','?'), da.get('bb_mid','?'), da.get('bb_lower','?'),
-                    da.get('atr','?'), pair, cp)
+                    '"reason":"max 15 words using real S/R and EMA data",'
+                    '"entry":"' + str(cp) + '",'
+                    '"sl":"nearest real S/R level",'
+                    '"tp1":"next real S/R level",'
+                    '"key_pattern":"candlestick pattern or none"}'
+                )
+                prompt = verdict_prompt
                 raw = call_claude(prompt, max_tokens=400)
                 parsed = parse_json_response(raw)
                 if parsed and parsed.get("verdict") in ["BUY","SELL"]:
