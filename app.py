@@ -1819,7 +1819,247 @@ def byakugan_poll(job_id):
     return jsonify({'status':job['status']})
 # ═══════════════════════════════════════════════════════════════
 # AI INFRASTRUCTURE SCANNER — paste at bottom of app.py
-# (before the "if __name__ == '__main__':" line)
+# (before the "
+
+# ═══════════════════════════════════════════════════════════════════
+# SAGE MODE — ULTIMATE SCANNER ENGINE
+# ═══════════════════════════════════════════════════════════════════
+
+def calc_atr(candles, period=14):
+    if len(candles) < period + 1: return None
+    trs = []
+    for i in range(1, len(candles)):
+        h=candles[i]["high"]; l=candles[i]["low"]; pc=candles[i-1]["close"]
+        trs.append(max(h-l, abs(h-pc), abs(l-pc)))
+    return round(sum(trs[-period:])/period, 5)
+
+def calc_bollinger(closes, period=20, sd=2):
+    if len(closes) < period: return None, None, None
+    recent = closes[-period:]; mid = sum(recent)/period
+    std = (sum((x-mid)**2 for x in recent)/period)**0.5
+    return round(mid+sd*std,5), round(mid,5), round(mid-sd*std,5)
+
+def detect_candle_patterns(candles):
+    if len(candles) < 3: return []
+    patterns = []
+    c0=candles[-1]; c1=candles[-2]; c2=candles[-3]
+    body0=abs(c0["close"]-c0["open"]); range0=max(c0["high"]-c0["low"], 0.0001)
+    lw=min(c0["open"],c0["close"])-c0["low"]; uw=c0["high"]-max(c0["open"],c0["close"])
+    if body0/range0<0.1:
+        patterns.append({"pattern":"DOJI","bias":"NEUTRAL","note":"Market indecision — watch for breakout"})
+    if lw>body0*2 and c0["close"]>c0["open"]:
+        patterns.append({"pattern":"HAMMER","bias":"BULLISH","note":"Buyers rejected lows — reversal signal"})
+    if uw>body0*2 and c0["close"]<c0["open"]:
+        patterns.append({"pattern":"SHOOTING STAR","bias":"BEARISH","note":"Sellers rejected highs — reversal signal"})
+    if c1["close"]<c1["open"] and c0["close"]>c0["open"] and c0["open"]<=c1["close"] and c0["close"]>=c1["open"]:
+        patterns.append({"pattern":"BULLISH ENGULFING","bias":"BULLISH","note":"Bulls fully absorbed bears"})
+    if c1["close"]>c1["open"] and c0["close"]<c0["open"] and c0["open"]>=c1["close"] and c0["close"]<=c1["open"]:
+        patterns.append({"pattern":"BEARISH ENGULFING","bias":"BEARISH","note":"Bears fully absorbed bulls"})
+    if c2["close"]<c2["open"] and abs(c1["close"]-c1["open"])<body0*0.3 and c0["close"]>c0["open"] and c0["close"]>(c2["open"]+c2["close"])/2:
+        patterns.append({"pattern":"MORNING STAR","bias":"BULLISH","note":"3-candle bullish reversal"})
+    if c2["close"]>c2["open"] and abs(c1["close"]-c1["open"])<body0*0.3 and c0["close"]<c0["open"] and c0["close"]<(c2["open"]+c2["close"])/2:
+        patterns.append({"pattern":"EVENING STAR","bias":"BEARISH","note":"3-candle bearish reversal"})
+    return patterns
+
+def get_sage_chart_data(pair, current_price):
+    data = {"pair":pair,"price":current_price,"weekly":{},"daily":{},"h4":{},"hourly":{},"m15":{},
+            "sr_levels":[],"d1_patterns":[],"h4_patterns":[],"m15_patterns":[]}
+    try:
+        wk = get_candles(pair,"1wk","1y")
+        if wk and len(wk)>=10:
+            wc=[c["close"] for c in wk]
+            data["weekly"]={"trend":"BULLISH" if current_price>(calc_ema(wc,20) or current_price) else "BEARISH",
+                "ema20":calc_ema(wc,20),"rsi":calc_rsi(wc),
+                "high52":round(max(c["high"] for c in wk),5),"low52":round(min(c["low"] for c in wk),5),
+                "last3":"{} bull, {} bear".format(sum(1 for c in wk[-3:] if c["close"]>c["open"]),sum(1 for c in wk[-3:] if c["close"]<=c["open"]))}
+        d1 = get_candles(pair,"1d","6mo")
+        if d1 and len(d1)>=20:
+            dc=[c["close"] for c in d1]
+            bbu,bbm,bbl=calc_bollinger(dc)
+            e20=calc_ema(dc,20); e50=calc_ema(dc,50); e200=calc_ema(dc,min(200,len(dc)))
+            data["daily"]={"trend":"BULLISH" if current_price>(e50 or current_price) else "BEARISH",
+                "ema20":e20,"ema50":e50,"ema200":e200,"rsi":calc_rsi(dc),"macd_bias":calc_macd(dc)[1],
+                "atr":calc_atr(d1),"bb_upper":bbu,"bb_mid":bbm,"bb_lower":bbl,
+                "vs_ema200":"ABOVE" if (e200 and current_price>e200) else "BELOW",
+                "high20d":round(max(c["high"] for c in d1[-20:]),5),"low20d":round(min(c["low"] for c in d1[-20:]),5),
+                "last5":"{} bull, {} bear".format(sum(1 for c in d1[-5:] if c["close"]>c["open"]),sum(1 for c in d1[-5:] if c["close"]<=c["open"]))}
+            data["sr_levels"]=find_sr_levels(d1,current_price,lookback=60)
+            data["d1_patterns"]=detect_candle_patterns(d1[-10:])
+        h4 = get_candles(pair,"4h","30d")
+        if h4 and len(h4)>=10:
+            h4c=[c["close"] for c in h4]
+            data["h4"]={"trend":"BULLISH" if current_price>(calc_ema(h4c,20) or current_price) else "BEARISH",
+                "ema20":calc_ema(h4c,20),"ema50":calc_ema(h4c,50),"rsi":calc_rsi(h4c),
+                "macd_bias":calc_macd(h4c)[1],"atr":calc_atr(h4),
+                "high48h":round(max(c["high"] for c in h4[-12:]),5),"low48h":round(min(c["low"] for c in h4[-12:]),5),
+                "last4":"{} bull, {} bear".format(sum(1 for c in h4[-4:] if c["close"]>c["open"]),sum(1 for c in h4[-4:] if c["close"]<=c["open"]))}
+            data["h4_patterns"]=detect_candle_patterns(h4[-10:])
+        h1 = get_candles(pair,"1h","5d")
+        if h1 and len(h1)>=20:
+            h1c=[c["close"] for c in h1]
+            data["hourly"]={"trend":"BULLISH" if current_price>(calc_ema(h1c,20) or current_price) else "BEARISH",
+                "ema20":calc_ema(h1c,20),"ema50":calc_ema(h1c,50),"rsi":calc_rsi(h1c),
+                "macd_bias":calc_macd(h1c)[1],"atr":calc_atr(h1),
+                "high24h":round(max(c["high"] for c in h1[-24:]),5),"low24h":round(min(c["low"] for c in h1[-24:]),5),
+                "sr":find_sr_levels(h1,current_price,lookback=40)[:4]}
+        m15 = get_candles(pair,"15m","3d")
+        if m15 and len(m15)>=10:
+            m15c=[c["close"] for c in m15]
+            data["m15"]={"trend":"BULLISH" if current_price>(calc_ema(m15c,20) or current_price) else "BEARISH",
+                "ema20":calc_ema(m15c,20),"rsi":calc_rsi(m15c),
+                "last4":"{} bull, {} bear".format(sum(1 for c in m15[-4:] if c["close"]>c["open"]),sum(1 for c in m15[-4:] if c["close"]<=c["open"]))}
+            data["m15_patterns"]=detect_candle_patterns(m15[-10:])
+    except Exception as e:
+        print("[SageChart] {}: {}".format(pair, e))
+    return data
+
+def format_sage_chart(d):
+    wk=d.get("weekly",{}); da=d.get("daily",{}); h4=d.get("h4",{})
+    h1=d.get("hourly",{}); m15=d.get("m15",{})
+    sep="="*65
+    lines=[sep,"LIVE CHART DATA — {} @ {}".format(d["pair"],d["price"]),sep,
+        "WEEKLY: Trend={} EMA20={} RSI={} Last3={}".format(wk.get("trend","?"),wk.get("ema20","?"),wk.get("rsi","?"),wk.get("last3","?")),
+        "  52wk High={} | 52wk Low={}".format(wk.get("high52","?"),wk.get("low52","?")),
+        "DAILY: Trend={} vs200EMA={} RSI={} MACD={}".format(da.get("trend","?"),da.get("vs_ema200","?"),da.get("rsi","?"),da.get("macd_bias","?")),
+        "  EMA20={} EMA50={} EMA200={} ATR={}".format(da.get("ema20","?"),da.get("ema50","?"),da.get("ema200","?"),da.get("atr","?")),
+        "  Bollinger: Upper={} Mid={} Lower={}".format(da.get("bb_upper","?"),da.get("bb_mid","?"),da.get("bb_lower","?")),
+        "  20d High={} | 20d Low={} | Last5={}".format(da.get("high20d","?"),da.get("low20d","?"),da.get("last5","?")),
+        "H4 (TRADE DIR): Trend={} EMA20={} RSI={} MACD={} ATR={}".format(h4.get("trend","?"),h4.get("ema20","?"),h4.get("rsi","?"),h4.get("macd_bias","?"),h4.get("atr","?")),
+        "  48h High={} | 48h Low={} | Last4={}".format(h4.get("high48h","?"),h4.get("low48h","?"),h4.get("last4","?")),
+        "H1 (ENTRY): Trend={} EMA20={} RSI={} MACD={} ATR={}".format(h1.get("trend","?"),h1.get("ema20","?"),h1.get("rsi","?"),h1.get("macd_bias","?"),h1.get("atr","?")),
+        "  24h High={} | 24h Low={}".format(h1.get("high24h","?"),h1.get("low24h","?")),
+        "M15 (TRIGGER): Trend={} EMA20={} RSI={} Last4={}".format(m15.get("trend","?"),m15.get("ema20","?"),m15.get("rsi","?"),m15.get("last4","?"))]
+    sr=d.get("sr_levels",[])
+    if sr:
+        lines.append("KEY S/R LEVELS:")
+        for lv in sr[:6]: lines.append("  {}: {} — {} ({} pips)".format(lv["type"],lv["price"],lv["note"],lv["distance_pips"]))
+    h1sr=h1.get("sr",[])
+    if h1sr:
+        lines.append("INTRADAY S/R (H1):")
+        for lv in h1sr[:3]: lines.append("  {}: {} ({} pips)".format(lv["type"],lv["price"],lv["distance_pips"]))
+    pats=d.get("d1_patterns",[])+d.get("h4_patterns",[])+d.get("m15_patterns",[])
+    lines.append("CANDLESTICK PATTERNS (Steve Nison):" if pats else "CANDLESTICK PATTERNS: None detected")
+    for p in pats: lines.append("  {} ({}) — {}".format(p["pattern"],p["bias"],p["note"]))
+    lines.append(sep)
+    return "\n".join(lines)
+
+def call_claude_with_search(prompt, max_tokens=600):
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        msg = client.messages.create(model="claude-sonnet-4-5", max_tokens=max_tokens,
+            tools=[{"type":"web_search_20250305","name":"web_search"}],
+            messages=[{"role":"user","content":prompt}])
+        return "".join(b.text for b in msg.content if hasattr(b,"text") and b.type=="text").strip() or "No news available."
+    except Exception as e:
+        print("[SageSearch] {}".format(e)); return "News search unavailable."
+
+_sage_jobs = {}
+
+def _run_sage_job(job_id, pair, mode):
+    try:
+        _sage_jobs[job_id]={"status":"running","step":"Fetching live price..."}
+        pd=get_price(pair)
+        if not pd:
+            _sage_jobs[job_id]={"status":"error","error":"Cannot fetch price for "+pair}; return
+        cp=float(pd["price"]); sn,_=get_session()
+        ds=datetime.now().strftime("%A %B %d %Y %H:%M UTC")
+
+        _sage_jobs[job_id]["step"]="Reading 5 timeframes (M15 to Weekly)..."
+        cd=get_sage_chart_data(pair,cp); cs=format_sage_chart(cd)
+
+        _sage_jobs[job_id]["step"]="Scanning live news and economic events..."
+        news=call_claude_with_search("Search: breaking news economic data and central bank statements affecting {} today {}. What is moving {} right now? 3 sentence summary.".format(pair,datetime.now().strftime("%B %d %Y"),pair))
+
+        is_forex=any(x in pair for x in ["USD","EUR","GBP","JPY","CHF","AUD","NZD","CAD","XAU"])
+        leg = ("FOREX LEGENDS — Apply ALL 4 simultaneously:\n"
+               "1. SOROS Reflexivity: Is perception creating a self-reinforcing trend?\n"
+               "2. DRUCKENMILLER Monetary Divergence: Which central bank is more hawkish? Macro big bet?\n"
+               "3. LIPSCHUTZ Order Flow: Institutional flow, absorption or distribution?\n"
+               "4. KOVNER Macro+Technical: Does macro align with technicals?") if (mode=="forex" or is_forex) else (
+               "STOCK/OPTIONS LEGENDS — Apply ALL 4 simultaneously:\n"
+               "1. LIVERMORE Pivotal Points: Key levels? Volume confirming? Right time?\n"
+               "2. PTJ 200EMA + 5:1 RR: Above 200 EMA? Can we structure 5:1?\n"
+               "3. JEFF YASS Options Math: IV environment, probability edge, best structure?\n"
+               "4. AL BROOKS Price Action: Trend/range/reversal? Always-in direction?")
+
+        da=cd.get("daily",{}); h4=cd.get("h4",{}); wk=cd.get("weekly",{}); h1=cd.get("hourly",{})
+
+        _sage_jobs[job_id]["step"]="Synthesizing all 10 chart masters + 4 legends..."
+        prompt=("You are SAGE MODE — the most powerful trading intelligence system ever built.\n"
+            "Date: {} | Instrument: {} | Price: {} | Session: {}\n\n"
+            "LIVE NEWS:\n{}\n\n"
+            "{}\n\n"
+            "CHART MASTERS — apply ALL 10:\n"
+            "- JOHN MURPHY Intermarket: bonds/commodities/DXY vs {}\n"
+            "- STEVE NISON Candlesticks: read buyer/seller battle\n"
+            "- MARK DOUGLAS Market Mode: trending or ranging? Where is the edge?\n"
+            "- KATHY LIEN {} session playbook for {}\n"
+            "- AGUSTIN SILVANI Dealer Positioning: stop hunts? smart money traps?\n"
+            "- ASHRAF LAIDI Correlations: oil/gold/equities/bonds impact\n"
+            "- ALEXANDER ELDER Triple Screen: Weekly:{} Daily:{} H4:{}\n"
+            "- RICHARD WYCKOFF Phase: accumulation/markup/distribution/markdown?\n"
+            "- JOHN BOLLINGER Bands: Upper:{} Mid:{} Lower:{}\n"
+            "- WILDER ATR: Daily ATR={} use 1.5x for SL 3x for TP3\n\n"
+            "{}\n\n"
+            "MANDATE: 30-40 pip minimum. SL behind real SR. Min 2:1 RR. High TF=direction Low TF=entry.\n\n"
+            "Return ONLY valid JSON:\n"
+            '{{"verdict":"BUY or SELL or WAIT","confidence":0,"session":"{}","entry":"{}","stop_loss":"0","sl_pips":0,'
+            '"tp1":"0","tp1_pips":0,"tp2":"0","tp2_pips":0,"tp3":"0","tp3_pips":0,"rr_ratio":"0:1",'
+            '"timeframe_alignment":{{"weekly":"?","daily":"?","h4":"?","h1":"?","m15":"?"}},'
+            '"legend_consensus":{{"soros":"","druckenmiller":"","lipschutz":"","kovner":""}},'
+            '"chart_masters":{{"murphy":"","nison":"","douglas":"","kathy_lien":"","silvani":"","laidi":"","elder":"","wyckoff":"","bollinger":"","wilder":""}},'
+            '"key_levels":{{"nearest_support":"","nearest_resistance":"","stop_zone":""}},'
+            '"candlestick_signal":"","news_impact":"","geopolitical_risk":"","sage_says":"","invalidation":""}}'
+        ).format(ds,pair,cp,sn,news,leg,pair,sn,pair,
+                 wk.get("trend","?"),da.get("trend","?"),h4.get("trend","?"),
+                 da.get("bb_upper","?"),da.get("bb_mid","?"),da.get("bb_lower","?"),
+                 da.get("atr","?"),cs,sn,cp)
+
+        raw=call_claude(prompt,max_tokens=4000)
+        result=parse_json_response(raw)
+        result.update({"pair":pair,"price":cp,"mode":mode,"analyzed_at":datetime.now().strftime("%H:%M UTC")})
+        _sage_jobs[job_id]={"status":"done","result":result}
+    except Exception as e:
+        import traceback; print("[SageMode] {}".format(traceback.format_exc()))
+        _sage_jobs[job_id]={"status":"error","error":str(e)}
+
+@app.route("/sage-mode")
+@login_required
+@byakugan_required
+def sage_mode_page():
+    return render_template("sage.html")
+
+@app.route("/api/sage-start", methods=["POST"])
+@login_required
+@byakugan_required
+def sage_start():
+    try:
+        data=request.get_json() or {}
+        pair=data.get("pair","EUR/USD").upper().strip()
+        mode=data.get("mode","forex")
+        import uuid as _uuid
+        job_id=str(_uuid.uuid4())[:8]
+        _sage_jobs[job_id]={"status":"starting","step":"Initializing Sage Mode..."}
+        threading.Thread(target=_run_sage_job,args=(job_id,pair,mode),daemon=True).start()
+        return jsonify({"job_id":job_id,"status":"starting"})
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
+
+@app.route("/api/sage-poll/<job_id>", methods=["GET"])
+@login_required
+def sage_poll(job_id):
+    job=_sage_jobs.get(job_id)
+    if not job: return jsonify({"status":"error","error":"Job not found"}),404
+    if job["status"]=="done":
+        result=dict(job["result"]); result["status"]="done"
+        _sage_jobs.pop(job_id,None); return jsonify(result)
+    if job["status"]=="error":
+        err=job.get("error","Unknown"); _sage_jobs.pop(job_id,None)
+        return jsonify({"status":"error","error":err}),500
+    return jsonify({"status":job["status"],"step":job.get("step","Processing...")})
+
+
+if __name__ == '__main__':" line)
 # ═══════════════════════════════════════════════════════════════
 
 AI_INFRA_UNIVERSE = {
