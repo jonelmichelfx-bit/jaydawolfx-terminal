@@ -2059,9 +2059,6 @@ def sage_poll(job_id):
     return jsonify({"status":job["status"],"step":job.get("step","Processing...")})
 
 
-if __name__ == '__main__':" line)
-# ═══════════════════════════════════════════════════════════════
-
 AI_INFRA_UNIVERSE = {
     'ALL': [
         'MRVL','INTC','SMCI','CRDO',
