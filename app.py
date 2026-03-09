@@ -2109,20 +2109,20 @@ def _run_sage_scanner_job(job_id):
                 cd = get_sage_chart_data(pair, cp)
                 da = cd.get("daily", {}); h4 = cd.get("h4", {}); wk = cd.get("weekly", {})
                 prompt = (
-                    "Analyze {} at price {}. Daily trend: {}. H4 trend: {}. Weekly trend: {}. "
-                    "BB Upper:{} Mid:{} Lower:{}. ATR:{}. "
-                    "In ONE JSON object answer: "
-                    "{{"pair":"{}","verdict":"BUY or SELL or WAIT","confidence":0-100,"
-                    ""trend_strength":"STRONG or MODERATE or WEAK or RANGING","
-                    ""direction":"UP or DOWN or SIDEWAYS","
-                    ""reason":"one sentence max 15 words","
-                    ""entry":"{}","sl":"","tp1":"","
-                    ""market_phase":"TRENDING or RANGING or BREAKOUT","
-                    ""abc_position":"IMPULSE or CORRECTION or UNKNOWN"}}"
+                    'Analyze {} at price {}. Daily trend: {}. H4 trend: {}. Weekly trend: {}. '
+                    'BB Upper:{} Mid:{} Lower:{}. ATR:{}. '
+                    'Return ONLY a JSON object (no markdown): '
+                    '{{"pair":"{}","verdict":"BUY or SELL or WAIT","confidence":0,'
+                    '"trend_strength":"STRONG or MODERATE or WEAK or RANGING",'
+                    '"direction":"UP or DOWN or SIDEWAYS",'
+                    '"reason":"one sentence max 15 words",'
+                    '"entry":"{}","sl":"","tp1":"",'
+                    '"market_phase":"TRENDING or RANGING or BREAKOUT",'
+                    '"abc_position":"IMPULSE or CORRECTION or UNKNOWN"}}'
                 ).format(pair, cp,
-                    da.get("trend","?"), h4.get("trend","?"), wk.get("trend","?"),
-                    da.get("bb_upper","?"), da.get("bb_mid","?"), da.get("bb_lower","?"),
-                    da.get("atr","?"), pair, cp)
+                    da.get('trend','?'), h4.get('trend','?'), wk.get('trend','?'),
+                    da.get('bb_upper','?'), da.get('bb_mid','?'), da.get('bb_lower','?'),
+                    da.get('atr','?'), pair, cp)
                 raw = call_claude(prompt, max_tokens=400)
                 parsed = parse_json_response(raw)
                 if parsed and parsed.get("verdict") in ["BUY","SELL"]:
