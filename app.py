@@ -84,7 +84,7 @@ def server_time():
 app.register_blueprint(auth_bp)
 from payments import payments_bp
 app.register_blueprint(payments_bp)
-from scanner import scanner_bp
+from scanner import scanner_bp, score_stock, get_market_regime
 app.register_blueprint(scanner_bp)
 from forex import forex_bp
 app.register_blueprint(forex_bp)
@@ -867,43 +867,110 @@ def forex_analyze():
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+# ─── Async job runners for heavy forex scans ────────────────────────────────
+_forex_scan_jobs = {}
+
+def _run_forex_scan_job(job_id, scan_type):
+    """Background job for scenarios/daily/weekly — prevents Render 30s timeout crash"""
+    try:
+        _forex_scan_jobs[job_id] = {'status': 'running', 'step': 'Fetching live prices...'}
+        date_str = datetime.now().strftime('%A, %B %d, %Y')
+        session_name, _ = get_session()
+
+        if scan_type == 'scenarios':
+            scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY']
+        elif scan_type == 'daily':
+            scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','USD/CHF']
+        else:  # weekly
+            scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD']
+
+        prices = get_prices_parallel(scan_pairs)
+        news = get_news()
+        _forex_scan_jobs[job_id]['step'] = 'Analyzing 5 timeframes per pair...'
+        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
+        prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v.get('percent_change',0):+.2f}%)" for p,v in prices.items()])
+        news_str = '\n'.join([f"- {n['title']}" for n in news[:5]]) or "- Markets await key economic data"
+        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
+        _forex_scan_jobs[job_id]['step'] = 'Wolf AI synthesizing analysis...'
+
+        if scan_type == 'scenarios':
+            prompt = f"""You are Wolf AI — professional forex trader. Today: {date_str}. Session: {session_name}.
+LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}\n{chart_ctx}
+Using the REAL chart data above (actual EMA, RSI, MACD, swing S/R levels), find the 7 BEST trades. Only include pairs where 4+ timeframes align. Use the EXACT S/R levels from the chart data above. Give BOTH buy AND sell scenario for each trade.
+Respond ONLY in valid JSON (no markdown, no backticks):
+{{"week":"{date_str}","session":"{session_name}","market_theme":"string","dxy_direction":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","trades":[{{"rank":1,"pair":"EUR/USD","live_price":"1.0380","overall_bias":"BEARISH","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"aligned_count":5,"confidence":82,"primary_direction":"SELL","thesis":"3-4 sentence thesis using real chart data","key_resistance":"1.0400","key_support":"1.0340","buy_scenario":{{"trigger":"string","entry":"1.0410","stop_loss":"1.0380","tp1":"1.0450","tp2":"1.0500","tp3":"1.0550","probability":30}},"sell_scenario":{{"trigger":"string","entry":"1.0360","stop_loss":"1.0390","tp1":"1.0320","tp2":"1.0280","tp3":"1.0240","probability":70}},"best_session":"LONDON","key_news_this_week":"string","invalidation":"string"}}]}}"""
+            max_tok = 5000
+        elif scan_type == 'daily':
+            prompt = f"""You are Wolf AI — professional intraday forex trader. Today: {date_str}. Session: {session_name}.
+LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}\n{chart_ctx}
+Using the REAL hourly chart data above (actual EMA, RSI, MACD, real S/R levels from swing highs/lows), find the 3 BEST day trades for today's session. Use EXACT price levels from the chart data.
+Respond ONLY in valid JSON (no markdown):
+{{"date":"{date_str}","session":"{session_name}","dxy_bias":"BULLISH or BEARISH","risk_environment":"RISK-ON or RISK-OFF","picks":[{{"rank":1,"pair":"EUR/USD","direction":"SELL","entry":"1.0390","stop_loss":"1.0420","tp1":"1.0350","tp2":"1.0310","tp3":"1.0270","rr_ratio":"1:2.5","confidence":85,"sharingan_score":5,"thesis":"2-3 sentence thesis using real chart data","confluences":["Price below EMA200 daily","RSI 42 bearish","Hourly resistance at 1.0400"],"best_window":"London Open 3-5AM EST","key_news":"NFP Friday","invalidation":"Break above 1.0430","buy_scenario":"string","sell_scenario":"string"}}]}}"""
+            max_tok = 4000
+        else:  # weekly
+            prompt = f"""You are Wolf AI — professional swing trader. Today: {date_str}.
+LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}\n{chart_ctx}
+Using the REAL weekly and daily chart data above (actual EMA, RSI, 52-week range, real S/R levels), find the 3 BEST swing trades for this week (2-5 day holds). Use EXACT levels from real chart data.
+Respond ONLY in valid JSON (no markdown):
+{{"week":"{date_str}","weekly_theme":"Main macro theme","dxy_outlook":"BULLISH or BEARISH","central_bank_focus":"Key CB event this week","picks":[{{"rank":1,"pair":"GBP/USD","direction":"SELL","entry_zone":"1.2630-1.2650","stop_loss":"1.2700","tp1":"1.2570","tp2":"1.2500","tp3":"1.2420","rr_ratio":"1:2.8","confidence":80,"sharingan_score":4,"hold_days":"3-4","fundamental":"string","technical":"string using real EMA/RSI data","confluences":["Weekly bearish","Daily below EMA200","RSI 45 bearish"],"key_events":"BOE minutes","key_risk":"Surprise hawkish BOE","buy_scenario":"string","sell_scenario":"string"}}]}}"""
+            max_tok = 4000
+
+        result = parse_json_response(call_claude(prompt, max_tok))
+        _forex_scan_jobs[job_id] = {'status': 'done', 'result': result}
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        _forex_scan_jobs[job_id] = {'status': 'error', 'error': str(e)}
+
+@app.route('/api/forex-scan-start', methods=['POST'])
+@login_required
+def forex_scan_start():
+    """Start forex scan as background job — returns job_id immediately"""
+    try:
+        data = request.get_json() or {}
+        scan_type = data.get('type', 'scenarios')  # scenarios, daily, weekly
+        job_id = str(uuid.uuid4())[:8]
+        _forex_scan_jobs[job_id] = {'status': 'starting'}
+        threading.Thread(target=_run_forex_scan_job, args=(job_id, scan_type), daemon=True).start()
+        return jsonify({'job_id': job_id, 'status': 'starting'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/forex-scan-poll/<job_id>', methods=['GET'])
+@login_required
+def forex_scan_poll(job_id):
+    """Poll forex scan job"""
+    job = _forex_scan_jobs.get(job_id)
+    if not job: return jsonify({'status': 'error', 'error': 'Job not found'}), 404
+    if job['status'] == 'done':
+        result = dict(job.get('result', {})); result['status'] = 'done'
+        _forex_scan_jobs.pop(job_id, None); return jsonify(result)
+    if job['status'] == 'error':
+        err = job.get('error', 'Unknown'); _forex_scan_jobs.pop(job_id, None)
+        return jsonify({'status': 'error', 'error': err}), 500
+    return jsonify({'status': job['status'], 'step': job.get('step', 'Processing...')})
+
 @app.route('/api/forex-scenarios', methods=['POST'])
 @login_required
 def forex_scenarios():
+    """Legacy sync endpoint — now redirects to async for Render timeout prevention"""
     try:
-        date_str = datetime.now().strftime('%A, %B %d, %Y')
-        session_name, _ = get_session()
-        scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY']
-        prices = get_prices_parallel(scan_pairs)
-        news = get_news()
-
-        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
-
-        prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p,v in prices.items()])
-        news_str = '\n'.join([f"- {n['title']}" for n in news[:5]]) or "- Markets await key economic data"
-
-        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
-
-        prompt = f"""You are Wolf AI — professional forex trader. Today: {date_str}. Session: {session_name}.
-
-LIVE PRICES:
-{prices_str}
-
-NEWS:
-{news_str}
-
-{chart_ctx}
-
-Using the REAL chart data above (actual EMA, RSI, MACD, swing S/R levels), find the 7 BEST trades.
-Only include pairs where 4+ timeframes align. Use the EXACT S/R levels from the chart data above.
-Give BOTH buy AND sell scenario for each trade.
-
-Respond ONLY in valid JSON (no markdown, no backticks):
-{{"week":"{date_str}","session":"{session_name}","market_theme":"string","dxy_direction":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","trades":[{{"rank":1,"pair":"EUR/USD","live_price":"1.0380","overall_bias":"BEARISH","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"aligned_count":5,"confidence":82,"primary_direction":"SELL","thesis":"3-4 sentence thesis using real chart data","key_resistance":"1.0400","key_support":"1.0340","buy_scenario":{{"trigger":"string","entry":"1.0410","stop_loss":"1.0380","tp1":"1.0450","tp2":"1.0500","tp3":"1.0550","probability":30}},"sell_scenario":{{"trigger":"string","entry":"1.0360","stop_loss":"1.0390","tp1":"1.0320","tp2":"1.0280","tp3":"1.0240","probability":70}},"best_session":"LONDON","key_news_this_week":"string","invalidation":"string"}}]}}"""
-
-        result = parse_json_response(call_claude(prompt, 5000))
-        return jsonify(result)
-    except json.JSONDecodeError as e: return jsonify({'error': f'AI returned invalid JSON: {str(e)}'}), 500
+        job_id = str(uuid.uuid4())[:8]
+        _forex_scan_jobs[job_id] = {'status': 'starting'}
+        threading.Thread(target=_run_forex_scan_job, args=(job_id, 'scenarios'), daemon=True).start()
+        # Wait up to 25s (under Render 30s limit) for result
+        for _ in range(25):
+            time.sleep(1)
+            job = _forex_scan_jobs.get(job_id, {})
+            if job.get('status') == 'done':
+                result = dict(job.get('result', {}))
+                _forex_scan_jobs.pop(job_id, None)
+                return jsonify(result)
+            if job.get('status') == 'error':
+                err = job.get('error', 'Unknown')
+                _forex_scan_jobs.pop(job_id, None)
+                return jsonify({'error': err}), 500
+        # Timeout — return job_id so client can poll
+        return jsonify({'job_id': job_id, 'status': 'running', 'step': 'Processing... use /api/forex-scan-poll/' + job_id})
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -911,38 +978,22 @@ Respond ONLY in valid JSON (no markdown, no backticks):
 @app.route('/api/forex-daily-picks', methods=['POST'])
 @login_required
 def forex_daily_picks():
+    """Async wrapper — prevents Render 30s timeout"""
     try:
-        date_str = datetime.now().strftime('%A, %B %d, %Y')
-        session_name, _ = get_session()
-        scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','USD/CHF']
-        prices = get_prices_parallel(scan_pairs)
-        news = get_news()
-
-        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
-
-        prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p,v in prices.items()])
-        news_str = '\n'.join([f"- {n['title']}" for n in news[:4]]) or "- Monitor key levels"
-        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
-
-        prompt = f"""You are Wolf AI — professional intraday forex trader. Today: {date_str}. Session: {session_name}.
-
-LIVE PRICES:
-{prices_str}
-
-NEWS:
-{news_str}
-
-{chart_ctx}
-
-Using the REAL hourly chart data above (actual EMA, RSI, MACD, real S/R levels from swing highs/lows),
-find the 3 BEST day trades for today's session. Use EXACT price levels from the chart data.
-
-Respond ONLY in valid JSON (no markdown):
-{{"date":"{date_str}","session":"{session_name}","dxy_bias":"BULLISH or BEARISH","risk_environment":"RISK-ON or RISK-OFF","picks":[{{"rank":1,"pair":"EUR/USD","direction":"SELL","entry":"1.0390","stop_loss":"1.0420","tp1":"1.0350","tp2":"1.0310","tp3":"1.0270","rr_ratio":"1:2.5","confidence":85,"sharingan_score":5,"thesis":"2-3 sentence thesis using real chart data","confluences":["Price below EMA200 daily","RSI 42 bearish","Hourly resistance at 1.0400"],"best_window":"London Open 3-5AM EST","key_news":"NFP Friday","invalidation":"Break above 1.0430","buy_scenario":"string","sell_scenario":"string"}}]}}"""
-
-        result = parse_json_response(call_claude(prompt, 4000))
-        return jsonify(result)
-    except json.JSONDecodeError as e: return jsonify({'error': f'AI returned invalid JSON: {str(e)}'}), 500
+        job_id = str(uuid.uuid4())[:8]
+        _forex_scan_jobs[job_id] = {'status': 'starting'}
+        threading.Thread(target=_run_forex_scan_job, args=(job_id, 'daily'), daemon=True).start()
+        for _ in range(25):
+            time.sleep(1)
+            job = _forex_scan_jobs.get(job_id, {})
+            if job.get('status') == 'done':
+                result = dict(job.get('result', {}))
+                _forex_scan_jobs.pop(job_id, None)
+                return jsonify(result)
+            if job.get('status') == 'error':
+                err = job.get('error', 'Unknown'); _forex_scan_jobs.pop(job_id, None)
+                return jsonify({'error': err}), 500
+        return jsonify({'job_id': job_id, 'status': 'running'})
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -950,38 +1001,22 @@ Respond ONLY in valid JSON (no markdown):
 @app.route('/api/forex-weekly-picks', methods=['POST'])
 @login_required
 def forex_weekly_picks():
+    """Async wrapper — prevents Render 30s timeout"""
     try:
-        date_str = datetime.now().strftime('%A, %B %d, %Y')
-        session_name, _ = get_session()
-        scan_pairs = ['EUR/USD','GBP/USD','USD/JPY','XAU/USD','AUD/USD','USD/CAD','GBP/JPY','EUR/JPY','NZD/USD']
-        prices = get_prices_parallel(scan_pairs)
-        news = get_news()
-
-        chart_data = get_multi_pair_chart_data(scan_pairs, prices)
-
-        prices_str = '\n'.join([f"{p}: {v['price']} (H:{v['high']} L:{v['low']} {v['percent_change']:+.2f}%)" for p,v in prices.items()])
-        news_str = '\n'.join([f"- {n['title']}" for n in news[:4]]) or "- Monitor macro events"
-        chart_ctx = '\n'.join([format_chart_analysis_for_prompt(chart_data[p]) for p in scan_pairs if p in chart_data])
-
-        prompt = f"""You are Wolf AI — professional swing trader. Today: {date_str}.
-
-LIVE PRICES:
-{prices_str}
-
-NEWS:
-{news_str}
-
-{chart_ctx}
-
-Using the REAL weekly and daily chart data above (actual EMA, RSI, 52-week range, real S/R levels),
-find the 3 BEST swing trades for this week (2-5 day holds). Use EXACT levels from real chart data.
-
-Respond ONLY in valid JSON (no markdown):
-{{"week":"{date_str}","weekly_theme":"Main macro theme","dxy_outlook":"BULLISH or BEARISH","central_bank_focus":"Key CB event this week","picks":[{{"rank":1,"pair":"GBP/USD","direction":"SELL","entry_zone":"1.2630-1.2650","stop_loss":"1.2700","tp1":"1.2570","tp2":"1.2500","tp3":"1.2420","rr_ratio":"1:2.8","confidence":80,"sharingan_score":4,"hold_days":"3-4","fundamental":"string","technical":"string using real EMA/RSI data","confluences":["Weekly bearish","Daily below EMA200","RSI 45 bearish"],"key_events":"BOE minutes","key_risk":"Surprise hawkish BOE","buy_scenario":"string","sell_scenario":"string"}}]}}"""
-
-        result = parse_json_response(call_claude(prompt, 4000))
-        return jsonify(result)
-    except json.JSONDecodeError as e: return jsonify({'error': f'AI returned invalid JSON: {str(e)}'}), 500
+        job_id = str(uuid.uuid4())[:8]
+        _forex_scan_jobs[job_id] = {'status': 'starting'}
+        threading.Thread(target=_run_forex_scan_job, args=(job_id, 'weekly'), daemon=True).start()
+        for _ in range(25):
+            time.sleep(1)
+            job = _forex_scan_jobs.get(job_id, {})
+            if job.get('status') == 'done':
+                result = dict(job.get('result', {}))
+                _forex_scan_jobs.pop(job_id, None)
+                return jsonify(result)
+            if job.get('status') == 'error':
+                err = job.get('error', 'Unknown'); _forex_scan_jobs.pop(job_id, None)
+                return jsonify({'error': err}), 500
+        return jsonify({'job_id': job_id, 'status': 'running'})
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500

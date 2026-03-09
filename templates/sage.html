@@ -802,7 +802,7 @@ function renderScannerResults(data){
     const bg  = v === 'BUY' ? 'rgba(0,255,153,0.04)' : v === 'SELL' ? 'rgba(255,51,85,0.04)' : 'rgba(10,20,32,0.4)';
     const borderClr = v === 'BUY' ? 'rgba(0,255,153,0.3)' : v === 'SELL' ? 'rgba(255,51,85,0.2)' : 'rgba(30,48,64,0.5)';
     const clickable = (v === 'BUY' || v === 'SELL') ? 'cursor:pointer;' : '';
-    const clickFn  = (v === 'BUY' || v === 'SELL') ? 'onclick="setPair('' + p.pair + '');document.getElementById('resultCard').classList.remove('visible')"' : '';
+    const clickFn  = (v === 'BUY' || v === 'SELL') ? `onclick="setPair('${p.pair}');document.getElementById('resultCard').classList.remove('visible')"` : '';
     return '<div style="background:' + bg + ';border:1px solid ' + borderClr + ';border-radius:6px;padding:10px;' + clickable + '" ' + clickFn + '>' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
         '<span style="font-size:12px;font-weight:bold;color:var(--text);">' + p.pair + '</span>' +
@@ -822,7 +822,7 @@ function renderScannerResults(data){
     document.getElementById('topPicksBox').style.display = 'block';
     document.getElementById('topPicksList').innerHTML = top.map(p => {
       const clr = p.verdict === 'BUY' ? 'var(--green)' : 'var(--red)';
-      return '<button onclick="setPair('' + p.pair + '');document.getElementById('resultCard').classList.remove('visible')" ' +
+      return `<button onclick="setPair('${p.pair}');document.getElementById('resultCard').classList.remove('visible')" ` +
         'style="padding:8px 16px;background:transparent;border:1px solid ' + clr + ';color:' + clr + ';cursor:pointer;border-radius:3px;font-family:var(--mono);font-size:12px;">' +
         p.pair + ' ' + p.verdict + ' (' + (p.confidence||0) + '%)</button>';
     }).join('');
