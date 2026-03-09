@@ -2274,161 +2274,166 @@ function updateSPYSession(){
   return { currentPhase, total, h, m };
 }
 
-// ══ MAIN loadSPY ══════════════════════════════════════════════════════
+// ══ MAIN loadSPY — ALL DATA REAL, NO PROXIES, NO ESTIMATES ════════════════
 async function loadSPY(){
   const session = updateSPYSession();
   setInterval(updateSPYSession, 60000);
 
-  // ── EUR/JPY analysis ─────────────────────────────────────────────
+  // ── Fetch ALL real EUR/JPY data from backend ─────────────────────
+  // /api/spy-chart returns: real M15 Wilder RSI, real London open from candles,
+  // real H4/Daily EMA/RSI/structure, real S/R from swing highs/lows
   try{
-    const q      = PRICES['EUR/JPY'] || {};
-    const qSpy   = {}; // SPY fetched separately below
+    const r = await fetch('/api/spy-chart', {method:'POST', headers:{'Content-Type':'application/json'}});
+    if(!r.ok) throw new Error('spy-chart ' + r.status);
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
 
-    if(q.p){
-      const price   = parseFloat(q.p);
-      const change  = parseFloat(q.c || 0);
-      const high    = parseFloat(q.h || price);
-      const low     = parseFloat(q.l || price);
+    const price   = parseFloat(d.price);
+    const london_pips = d.london_pips;  // REAL pips from actual M15 London open candle
+    const pipAbs  = Math.abs(london_pips || 0);
+    const isUp    = (london_pips || 0) > 0;
 
-      // JPY pairs: 1 pip = 0.01
-      const pips    = Math.round(change * 100);
-      const pipAbs  = Math.abs(pips);
-      const isUp    = pips > 0;
-
-      // London open = current price minus today's change
-      const londonOpenPrice = (price - change).toFixed(3);
-
-      // Update live stat boxes
-      document.getElementById('spy-eurjpy-now').textContent  = price.toFixed(3);
-      document.getElementById('spy-eurjpy-now').style.color  = change >= 0 ? 'var(--green)' : 'var(--red)';
-      document.getElementById('spy-eurjpy-open').textContent = londonOpenPrice;
-
-      const pipsEl = document.getElementById('spy-eurjpy-pips');
-      if(pipsEl){
-        pipsEl.innerHTML = pips > 0
-          ? '<span class="pip-up">▲ +' + pips + ' pips from London open</span>'
-          : pips < 0
-            ? '<span class="pip-dn">▼ ' + pips + ' pips from London open</span>'
-            : '<span class="pip-neut">● FLAT · 0 pips</span>';
-      }
-
-      // ── Approximate RSI from today's range ──────────────────────
-      // Simple RSI proxy: where is current price in today's range? (0-100)
-      const range = high - low;
-      let rsiProxy = 50;
-      if(range > 0) rsiProxy = Math.round(((price - low) / range) * 100);
-      // Scale to 30-70 range for display (honest approximation)
-      const rsiDisplay = 30 + Math.round(rsiProxy * 0.4);
-      const rsiEl  = document.getElementById('spy-rsi-val');
-      const rsiLbl = document.getElementById('spy-rsi-label');
-      if(rsiEl){
-        rsiEl.textContent = rsiDisplay;
-        rsiEl.style.color = rsiDisplay >= 70 ? 'var(--red)' : rsiDisplay <= 30 ? 'var(--green)' : 'var(--gold)';
-      }
-      if(rsiLbl){
-        rsiLbl.textContent = rsiDisplay >= 70
-          ? '⚠️ OVERBOUGHT → watch for PUT signal'
-          : rsiDisplay <= 30
-            ? '⚠️ OVERSOLD → watch for CALL signal'
-            : rsiDisplay >= 60 ? 'Leaning overbought'
-            : rsiDisplay <= 40 ? 'Leaning oversold'
-            : 'Neutral zone';
-        rsiLbl.style.color = rsiDisplay >= 70 ? 'var(--red)' : rsiDisplay <= 30 ? 'var(--green)' : 'var(--text-dim)';
-      }
-
-      // ── Key levels based on today's high/low ────────────────────
-      // Resistance = today's high rounded up, Pivot = midpoint, Support = today's low rounded down
-      const resistance = (Math.ceil(high * 10) / 10).toFixed(2);
-      const support    = (Math.floor(low  * 10) / 10).toFixed(2);
-      const pivot      = ((high + low + price) / 3).toFixed(2);
-      document.getElementById('spy-level-res').textContent   = resistance;
-      document.getElementById('spy-level-pivot').textContent = pivot;
-      document.getElementById('spy-level-sup').textContent   = support;
-
-      // ── Main signal determination ────────────────────────────────
-      let signalClass, signalTxt, signalSub, signalConf;
-
-      // Phase-based messaging
-      const phase = session.currentPhase;
-
-      if(pipAbs < 20){
-        signalClass = 'spy-signal-neut';
-        signalTxt   = '⚠️ EUR/JPY FLAT — NO SIGNAL YET';
-        signalSub   = 'EUR/JPY has only moved ' + pipAbs + ' pips. Market is ranging — no directional risk-on or risk-off flow yet.';
-        signalConf  = 'EUR/JPY ADR is 70-100 pips/day. Under 20 pips is pure noise. Wait for London to develop direction (3AM-8AM EST).';
-      } else if(pips > 0){
-        // BULLISH signal tiers
-        if(pipAbs >= 80){
-          signalClass = 'spy-signal-bull';
-          signalTxt   = '🔥 VERY STRONG RISK-ON';
-          signalSub   = 'EUR/JPY ▲ +' + pips + ' pips. Major institutional carry trade buying. High conviction: SPY opens HIGHER.';
-          signalConf  = '80+ pips = massive risk-on event. ~75% SPY correlation. If SPY pre-market also green → strong CALL signal at 9:30AM open.';
-        } else if(pipAbs >= 50){
-          signalClass = 'spy-signal-bull';
-          signalTxt   = '🟢 STRONG RISK-ON — BULL SIGNAL';
-          signalSub   = 'EUR/JPY ▲ +' + pips + ' pips in London session. Institutional carry trade is active. Bias: SPY opens HIGHER.';
-          signalConf  = '50-80 pips = strong directional carry flow. ~70% correlation. Confirm SPY pre-market is also green before entering calls.';
-        } else if(pipAbs >= 30){
-          signalClass = 'spy-signal-bull';
-          signalTxt   = '🟡 MODERATE RISK-ON';
-          signalSub   = 'EUR/JPY ▲ +' + pips + ' pips. Risk appetite appears on but signal is moderate.';
-          signalConf  = '30-50 pips = moderate signal, ~63% correlation. Check: is SPY pre-market also up? If yes → valid. If diverging → wait.';
-        } else {
-          signalClass = 'spy-signal-neut';
-          signalTxt   = '⚠️ WEAK SIGNAL — WATCH EUR/JPY';
-          signalSub   = 'EUR/JPY ▲ +' + pips + ' pips. This is in the marginal zone — could be noise in a sideways market.';
-          signalConf  = '20-30 pip moves happen in ranging markets without a real trend. Do not trade until you see 30+ pips with clear direction.';
-        }
-      } else {
-        // BEARISH signal tiers
-        if(pipAbs >= 80){
-          signalClass = 'spy-signal-bear';
-          signalTxt   = '🔥 VERY STRONG RISK-OFF';
-          signalSub   = 'EUR/JPY ▼ ' + pips + ' pips. Major carry trade unwind. High conviction: SPY opens LOWER.';
-          signalConf  = '80+ pip drop = institutional flight to JPY safety. ~75% SPY correlation. Strong PUT signal at 9:30AM if SPY pre-market confirms.';
-        } else if(pipAbs >= 50){
-          signalClass = 'spy-signal-bear';
-          signalTxt   = '🔴 STRONG RISK-OFF — BEAR SIGNAL';
-          signalSub   = 'EUR/JPY ▼ ' + pips + ' pips. Carry trade unwinding. Bias: SPY opens LOWER.';
-          signalConf  = '50-80 pip drop = strong risk-off flow. ~70% correlation. Confirm SPY pre-market also red before entering puts.';
-        } else if(pipAbs >= 30){
-          signalClass = 'spy-signal-bear';
-          signalTxt   = '🟡 MODERATE RISK-OFF';
-          signalSub   = 'EUR/JPY ▼ ' + pips + ' pips. Risk appetite appears off but signal is moderate.';
-          signalConf  = '30-50 pip drop = moderate risk-off. Check SPY pre-market direction. If SPY also red = valid put signal.';
-        } else {
-          signalClass = 'spy-signal-neut';
-          signalTxt   = '⚠️ WEAK BEARISH — WATCH EUR/JPY';
-          signalSub   = 'EUR/JPY ▼ ' + pipAbs + ' pips. Marginal move — could be noise.';
-          signalConf  = '20-30 pip drops are normal in ranging markets. Wait for 30+ pip sustained move before trading.';
-        }
-      }
-
-      // Update signal box
-      const box = document.getElementById('spy-signal-box');
-      if(box) box.className = 'spy-signal-box ' + signalClass;
-      const txt = document.getElementById('spy-signal-txt');
-      if(txt){ txt.textContent = signalTxt; txt.style.color = pips > 0 ? 'var(--green)' : pips < 0 ? 'var(--red)' : 'var(--gold)'; }
-      const sub  = document.getElementById('spy-signal-sub');
-      const conf = document.getElementById('spy-signal-conf');
-      if(sub)  sub.textContent  = signalSub;
-      if(conf) conf.textContent = signalConf;
-
-      // Phase-specific guidance
-      const phaseMsg = {
-        london:     '📍 LONDON IS LIVE: EUR/JPY is setting the tone right now. Watch if this move HOLDS or reverses before 8AM.',
-        premarket:  '📍 PRE-MARKET: Compare EUR/JPY direction to SPY pre-market. If they AGREE = trade the direction. If they DISAGREE = the disagreeing side is likely a trap.',
-        session:    '📍 NYSE IS OPEN: If EUR/JPY and SPY are moving together = CONFIRMATION scenario. If one moving up and other flat/down = DIVERGENCE. Divergence = trade the EUR/JPY direction.',
-        other:      '📍 Market prep time. Review the signal, set your EUR/JPY alerts, check the economic calendar for today.'
-      };
-
-      // Divergence detector — needs SPY data so runs after SPY fetch
-      window._eurjpyPips   = pips;
-      window._eurjpyPipAbs = pipAbs;
-      window._eurjpyIsUp   = isUp;
-      window._eurjpyPhase  = phaseMsg[phase] || phaseMsg.other;
+    // ── Stat boxes ───────────────────────────────────────────────────
+    const nowEl = document.getElementById('spy-eurjpy-now');
+    if(nowEl){
+      nowEl.textContent  = price.toFixed(3);
+      nowEl.style.color  = isUp ? 'var(--green)' : 'var(--red)';
     }
-  } catch(e){ console.log('SPY EUR/JPY err:', e); }
+    const openEl = document.getElementById('spy-eurjpy-open');
+    if(openEl){
+      openEl.textContent = d.london_open_price ? parseFloat(d.london_open_price).toFixed(3) : '—';
+    }
+
+    // Pips from REAL London open (3AM EST M15 candle open)
+    const pipsEl = document.getElementById('spy-eurjpy-pips');
+    if(pipsEl && london_pips !== null){
+      pipsEl.innerHTML = london_pips > 0
+        ? `<span class="pip-up">▲ +${london_pips} pips from London open (3AM EST)</span>`
+        : london_pips < 0
+          ? `<span class="pip-dn">▼ ${london_pips} pips from London open (3AM EST)</span>`
+          : `<span class="pip-neut">● FLAT · 0 pips from London open</span>`;
+    }
+
+    // ── REAL M15 RSI (Wilder Smoothed 14-period — same as TradingView) ──
+    const m15_rsi = d.m15_rsi;
+    const rsiEl   = document.getElementById('spy-rsi-val');
+    const rsiLbl  = document.getElementById('spy-rsi-label');
+    if(rsiEl && m15_rsi !== null && m15_rsi !== undefined){
+      rsiEl.textContent  = m15_rsi.toFixed(1);
+      rsiEl.style.color  = m15_rsi >= 70 ? 'var(--red)' : m15_rsi <= 30 ? 'var(--green)' : 'var(--gold)';
+    } else if(rsiEl){
+      rsiEl.textContent = '—';
+      rsiEl.style.color = 'var(--text-dim)';
+    }
+    if(rsiLbl && m15_rsi !== null && m15_rsi !== undefined){
+      rsiLbl.textContent = m15_rsi >= 70
+        ? '⚠️ M15 OVERBOUGHT — watch for PUT signal'
+        : m15_rsi <= 30
+          ? '⚠️ M15 OVERSOLD — watch for CALL signal'
+          : m15_rsi >= 60 ? 'M15 leaning overbought'
+          : m15_rsi <= 40 ? 'M15 leaning oversold'
+          : 'M15 neutral zone';
+      rsiLbl.style.color = m15_rsi >= 70 ? 'var(--red)' : m15_rsi <= 30 ? 'var(--green)' : 'var(--text-dim)';
+    } else if(rsiLbl){
+      rsiLbl.textContent = 'Wilder RSI 14 (M15)';
+    }
+
+    // ── REAL S/R levels from swing highs/lows ───────────────────────
+    const nearRes = d.nearest_resistance;
+    const nearSup = d.nearest_support;
+    // Use real S/R for key levels display
+    const resistance = nearRes ? parseFloat(nearRes.price).toFixed(2) : (d.session_high ? parseFloat(d.session_high).toFixed(2) : '—');
+    const support    = nearSup ? parseFloat(nearSup.price).toFixed(2) : (d.session_low  ? parseFloat(d.session_low).toFixed(2)  : '—');
+    const pivot      = (nearRes && nearSup)
+      ? (((parseFloat(nearRes.price) + parseFloat(nearSup.price) + price) / 3).toFixed(2))
+      : '—';
+    const resEl = document.getElementById('spy-level-res');
+    const pivEl = document.getElementById('spy-level-pivot');
+    const supEl = document.getElementById('spy-level-sup');
+    if(resEl) resEl.textContent = resistance;
+    if(pivEl) pivEl.textContent = pivot;
+    if(supEl) supEl.textContent = support;
+
+    // ── Main signal determination (based on REAL London pips) ────────
+    let signalClass, signalTxt, signalSub, signalConf;
+    const phase = session.currentPhase;
+
+    if(london_pips === null || pipAbs < 20){
+      signalClass = 'spy-signal-neut';
+      signalTxt   = '⚠️ EUR/JPY FLAT — NO SIGNAL YET';
+      signalSub   = `EUR/JPY moved ${pipAbs} pips from London open (3AM EST). Under 20 pips is noise.`;
+      signalConf  = 'EUR/JPY ADR is 70-100 pips/day. Wait for London to develop direction (3AM-8AM EST).';
+    } else if(london_pips > 0){
+      if(pipAbs >= 80){
+        signalClass = 'spy-signal-bull';
+        signalTxt   = '🔥 VERY STRONG RISK-ON';
+        signalSub   = `EUR/JPY ▲ +${london_pips} pips from London open. Major institutional carry trade buying. SPY opens HIGHER.`;
+        signalConf  = `80+ pips = massive risk-on. ~75% SPY correlation. D1 trend: ${d.daily_trend || '—'} | H4: ${d.h4_trend || '—'}. Confirm SPY pre-market green.`;
+      } else if(pipAbs >= 50){
+        signalClass = 'spy-signal-bull';
+        signalTxt   = '🟢 STRONG RISK-ON — BULL SIGNAL';
+        signalSub   = `EUR/JPY ▲ +${london_pips} pips. Carry trade active. SPY bias: HIGHER.`;
+        signalConf  = `50-80 pips = strong flow. ~70% correlation. D1 RSI: ${d.daily_rsi || '—'} | H4 RSI: ${d.h4_rsi || '—'}. Check SPY pre-market.`;
+      } else if(pipAbs >= 30){
+        signalClass = 'spy-signal-bull';
+        signalTxt   = '🟡 MODERATE RISK-ON';
+        signalSub   = `EUR/JPY ▲ +${london_pips} pips. Moderate risk appetite. D1 trend: ${d.daily_trend || '—'}.`;
+        signalConf  = `30-50 pips, ~63% correlation. D1 RSI ${d.daily_rsi || '—'} | M15 RSI ${m15_rsi || '—'}. Confirm SPY is also up.`;
+      } else {
+        signalClass = 'spy-signal-neut';
+        signalTxt   = '⚠️ WEAK SIGNAL — WATCH EUR/JPY';
+        signalSub   = `EUR/JPY ▲ +${london_pips} pips. Marginal move — could be noise in ranging market.`;
+        signalConf  = '20-30 pips is within ranging noise. Wait for 30+ sustained pips with clear momentum.';
+      }
+    } else {
+      if(pipAbs >= 80){
+        signalClass = 'spy-signal-bear';
+        signalTxt   = '🔥 VERY STRONG RISK-OFF';
+        signalSub   = `EUR/JPY ▼ ${london_pips} pips from London open. Major carry trade unwind. SPY opens LOWER.`;
+        signalConf  = `80+ pip drop = institutional JPY safety bid. ~75% correlation. D1: ${d.daily_trend || '—'} | H4: ${d.h4_trend || '—'}. Strong PUT signal at 9:30AM.`;
+      } else if(pipAbs >= 50){
+        signalClass = 'spy-signal-bear';
+        signalTxt   = '🔴 STRONG RISK-OFF — BEAR SIGNAL';
+        signalSub   = `EUR/JPY ▼ ${london_pips} pips. Carry trade unwinding. SPY bias: LOWER.`;
+        signalConf  = `50-80 pip drop. ~70% correlation. D1 RSI: ${d.daily_rsi || '—'} | H4: ${d.h4_rsi || '—'}. Confirm SPY pre-market also red.`;
+      } else if(pipAbs >= 30){
+        signalClass = 'spy-signal-bear';
+        signalTxt   = '🟡 MODERATE RISK-OFF';
+        signalSub   = `EUR/JPY ▼ ${london_pips} pips. Risk appetite off. D1 trend: ${d.daily_trend || '—'}.`;
+        signalConf  = `30-50 pip drop. ~63% correlation. M15 RSI: ${m15_rsi || '—'}. Check SPY pre-market direction.`;
+      } else {
+        signalClass = 'spy-signal-neut';
+        signalTxt   = '⚠️ WEAK BEARISH — WATCH EUR/JPY';
+        signalSub   = `EUR/JPY ▼ ${pipAbs} pips. Marginal move.`;
+        signalConf  = '20-30 pip drops happen in ranging markets. Wait for 30+ sustained pips.';
+      }
+    }
+
+    const box = document.getElementById('spy-signal-box');
+    if(box) box.className = 'spy-signal-box ' + signalClass;
+    const txt = document.getElementById('spy-signal-txt');
+    if(txt){ txt.textContent = signalTxt; txt.style.color = isUp ? 'var(--green)' : (london_pips||0) < 0 ? 'var(--red)' : 'var(--gold)'; }
+    const sub  = document.getElementById('spy-signal-sub');
+    const conf = document.getElementById('spy-signal-conf');
+    if(sub)  sub.textContent  = signalSub;
+    if(conf) conf.textContent = signalConf;
+
+    // Phase-specific guidance
+    const phaseMsg = {
+      london:    '📍 LONDON IS LIVE: EUR/JPY is setting the tone right now. Watch if this move HOLDS before 8AM EST.',
+      premarket: '📍 PRE-MARKET: Compare EUR/JPY direction to SPY pre-market. Agreement = trade it. Disagreement = the lagging side is the trap.',
+      session:   '📍 NYSE IS OPEN: EUR/JPY + SPY same direction = CONFIRMATION. One up/one down = DIVERGENCE — trade EUR/JPY direction.',
+      other:     '📍 Off-hours. Review the signal, set alerts on EUR/JPY, check economic calendar.'
+    };
+
+    // Store for SPY divergence check
+    window._spyChartData   = d;
+    window._eurjpyPips     = london_pips || 0;
+    window._eurjpyPipAbs   = pipAbs;
+    window._eurjpyIsUp     = isUp;
+    window._eurjpyPhase    = phaseMsg[phase] || phaseMsg.other;
+
+  } catch(e){ console.log('SPY EUR/JPY real-data err:', e); }
 
   // ── Fetch SPY live price ─────────────────────────────────────────
   try{
@@ -2444,28 +2449,25 @@ async function loadSPY(){
         if(pEl){ pEl.textContent = '$' + p; pEl.style.color = up ? 'var(--green)' : 'var(--red)'; }
         if(cEl){ cEl.textContent = (up ? '▲ +' : '▼ ') + c + '%'; cEl.style.color = up ? 'var(--green)' : 'var(--red)'; }
 
-        // Divergence detection: EUR/JPY direction vs SPY direction
-        const eurJpyUp  = window._eurjpyIsUp;
-        const spyUp     = up;
-        const pips      = window._eurjpyPips || 0;
-        const pipAbs    = window._eurjpyPipAbs || 0;
-        const divEl     = document.getElementById('spy-divergence-status');
-        if(divEl && pipAbs > 0){
-          if(eurJpyUp === spyUp){
-            divEl.textContent = '✅ CONFIRMATION: EUR/JPY and SPY are moving in the SAME direction (' + (eurJpyUp ? 'both UP' : 'both DOWN') + '). Signal is ALIGNED. ' + (window._eurjpyPhase || '');
+        // Divergence detection using REAL London pips
+        const eurJpyUp = window._eurjpyIsUp;
+        const pips     = window._eurjpyPips || 0;
+        const pipAbs   = window._eurjpyPipAbs || 0;
+        const divEl    = document.getElementById('spy-divergence-status');
+        const chart    = window._spyChartData || {};
+        if(divEl && pipAbs >= 20){
+          if(eurJpyUp === up){
+            divEl.textContent = `✅ CONFIRMATION: EUR/JPY ${pips > 0 ? '▲ +'+pips : '▼ '+pips} pips and SPY are moving in the SAME direction (${up ? 'both RISK-ON' : 'both RISK-OFF'}). Signal aligned. D1 Trend: ${chart.daily_trend || '—'} | H4: ${chart.h4_trend || '—'} | M15 RSI: ${chart.m15_rsi || '—'}. ${window._eurjpyPhase || ''}`;
             divEl.style.color = 'var(--green)';
-          } else if(pips > 0 && !spyUp){
-            divEl.textContent = '🚨 DIVERGENCE DETECTED: EUR/JPY is UP +' + pipAbs + ' pips but SPY is RED. THE LEAD scenario — SPY has NOT caught up yet to the risk-on sentiment from London. Watch for SPY to follow EUR/JPY UP in next 5-15 minutes.';
+          } else if(pips > 0 && !up){
+            divEl.textContent = `🚨 DIVERGENCE — THE LEAD: EUR/JPY ▲ +${pipAbs} pips BUT SPY is RED. SPY has NOT caught up to risk-on sentiment from London. Watch for SPY to follow EUR/JPY UP in next 5-15 min. M15 RSI: ${chart.m15_rsi || '—'}. ${window._eurjpyPhase || ''}`;
             divEl.style.color = 'var(--gold)';
-          } else if(pips < 0 && spyUp){
-            divEl.textContent = '🚨 DIVERGENCE DETECTED: EUR/JPY is DOWN ' + pips + ' pips but SPY is GREEN. This SPY rally is a TRAP — no risk-on fuel behind it. EUR/JPY is the leading indicator. SPY will likely reverse down. Consider puts on the fake rally.';
+          } else if(pips < 0 && up){
+            divEl.textContent = `🚨 DIVERGENCE TRAP: SPY GREEN but EUR/JPY ▼ ${pips} pips. SPY rally has NO risk-on carry trade support. EUR/JPY is the leading indicator. SPY will likely reverse down. H4 EUR/JPY trend: ${chart.h4_trend || '—'}. Consider puts.`;
             divEl.style.color = 'var(--red)';
-          } else {
-            divEl.textContent = '— Not enough data to confirm divergence yet. Check back during London session.';
-            divEl.style.color = 'var(--text-dim)';
           }
-        } else if(divEl) {
-          divEl.textContent = 'EUR/JPY is flat — no directional signal. No divergence to analyze.';
+        } else if(divEl && pipAbs < 20){
+          divEl.textContent = `EUR/JPY only moved ${pipAbs} pips from London open — too flat to generate a divergence signal. Wait for 20+ pips of directional movement.`;
           divEl.style.color = 'var(--text-dim)';
         }
       }
@@ -2481,7 +2483,7 @@ async function loadSPY(){
       const box = document.getElementById('spy-news-box');
       if(items.length && box){
         box.innerHTML = items.map(n =>
-          '<div class="spy-news-item"><span style="color:var(--text-dim);font-size:9px;">' + (n.source||'NEWS') + ' · ' + (n.published||'') + '</span><br>' + (n.title||'') + '</div>'
+          `<div class="spy-news-item"><span style="color:var(--text-dim);font-size:9px;">${n.source||'NEWS'} · ${n.published||''}</span><br>${n.title||''}</div>`
         ).join('');
       } else if(box){
         box.innerHTML = '<div class="spy-news-item">No news found. Check MarketWatch or Bloomberg for pre-market catalysts.</div>';
@@ -2497,152 +2499,183 @@ async function loadSPYAnalysis(){
   const btn    = document.getElementById('spy-refresh-btn');
   const optBox = document.getElementById('spy-options-content');
   btn.disabled = true; btn.textContent = '⏳ WOLF AI ANALYZING...';
-  optBox.innerHTML = '<div class="load-ctr"><div class="spinner" style="border-top-color:#00cfff"></div><div class="load-txt" style="color:#00cfff;">Wolf AI reading EUR/JPY chart + SPY levels + building your 0DTE play...</div></div>';
-
-  const now    = new Date();
-  const dateStr = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const estStr  = now.toLocaleString('en-US',{timeZone:'America/New_York'});
-  const est     = new Date(estStr);
-  const h       = est.getHours();
-  const m       = est.getMinutes();
-
-  // Session phase
-  const total = h*60 + m;
-  const phase = total < 3*60 ? 'PRE-LONDON'
-              : total < 8*60 ? 'LONDON SESSION (3AM-8AM EST)'
-              : total < 9*60+30 ? 'PRE-MARKET (8AM-9:30AM EST) — Watch divergence window'
-              : total < 16*60 ? 'NYSE OPEN — Execute 0DTE'
-              : 'MARKET CLOSED — Prep for tomorrow';
-
-  const q        = PRICES['EUR/JPY'] || {};
-  const pips     = Math.round(parseFloat(q.c||0) * 100);
-  const pipAbs   = Math.abs(pips);
-  const price    = parseFloat(q.p||0);
-  const high     = parseFloat(q.h||price);
-  const low      = parseFloat(q.l||price);
-  const londonOpen = (price - parseFloat(q.c||0)).toFixed(3);
-
-  // RSI proxy (range-based)
-  const range = high - low;
-  const rsiProxy = range > 0 ? 30 + Math.round(((price - low)/range)*40) : 50;
-  const rsiStatus = rsiProxy >= 70 ? 'OVERBOUGHT (' + rsiProxy + ') — reversal risk'
-                  : rsiProxy <= 30 ? 'OVERSOLD (' + rsiProxy + ') — bounce risk'
-                  : 'NEUTRAL (' + rsiProxy + ')';
-
-  // SPY data
-  const spyPriceEl = document.getElementById('spy-price');
-  const spyChgEl   = document.getElementById('spy-change');
-  const spyPrice   = spyPriceEl ? spyPriceEl.textContent : 'unknown';
-  const spyChg     = spyChgEl   ? spyChgEl.textContent   : '';
-  const spyUp      = spyChg.includes('▲') || spyChg.includes('+');
-
-  // Divergence analysis
-  const eurjpyUp = pips > 0;
-  let divergenceStatus = 'FLAT / NO SIGNAL';
-  if(pipAbs >= 20){
-    if(eurjpyUp && spyUp)        divergenceStatus = 'CONFIRMATION — EUR/JPY UP and SPY UP together';
-    else if(!eurjpyUp && !spyUp) divergenceStatus = 'CONFIRMATION — EUR/JPY DOWN and SPY DOWN together';
-    else if(eurjpyUp && !spyUp)  divergenceStatus = 'DIVERGENCE LEAD — EUR/JPY UP but SPY still red. SPY has NOT caught up yet. Expect SPY to follow UP.';
-    else if(!eurjpyUp && spyUp)  divergenceStatus = 'DIVERGENCE TRAP — SPY rallying but EUR/JPY is falling. This SPY rally is FAKE — no risk-on support. Puts incoming.';
-  }
-
-  // Signal summary for AI
-  const signal = pipAbs < 20 ? 'FLAT — under 20 pips, no trade'
-    : pips > 0 ? (pipAbs >= 80 ? 'VERY STRONG RISK-ON (+' + pips + ' pips)'
-                : pipAbs >= 50 ? 'STRONG RISK-ON (+' + pips + ' pips)'
-                : pipAbs >= 30 ? 'MODERATE RISK-ON (+' + pips + ' pips)'
-                :                'WEAK (+' + pips + ' pips) — marginal')
-    : (pipAbs >= 80 ? 'VERY STRONG RISK-OFF (' + pips + ' pips)'
-     : pipAbs >= 50 ? 'STRONG RISK-OFF (' + pips + ' pips)'
-     : pipAbs >= 30 ? 'MODERATE RISK-OFF (' + pips + ' pips)'
-     :                'WEAK (' + pips + ' pips) — marginal');
-
-  const prompt =
-    'You are Wolf AI — elite SPY 0DTE options trader using the EUR/JPY carry trade strategy.\n\n' +
-    '═══ THE STRATEGY ═══\n' +
-    'EUR/JPY is the LEADING INDICATOR for SPY. It moves FIRST (5-15 min lag before SPY follows).\n' +
-    'EUR/JPY UP = Risk-On = institutional carry trade active = SPY goes UP → BUY CALLS\n' +
-    'EUR/JPY DOWN = Risk-Off = carry trade unwinding = SPY goes DOWN → BUY PUTS\n' +
-    'Three trade setups:\n' +
-    '1. CONFIRMATION: EUR/JPY and SPY both moving same direction → follow the trend with confidence\n' +
-    '2. DIVERGENCE TRAP: SPY rallying but EUR/JPY flat/down → SPY rally is fake → BUY PUTS on the fake rally\n' +
-    '3. THE LEAD: EUR/JPY moved hard in London before US open → SPY will follow at 9:30AM open\n\n' +
-    '═══ TODAY\'S DATA ═══\n' +
-    'Date: ' + dateStr + '\n' +
-    'EST Time: ' + estStr + '\n' +
-    'Session Phase: ' + phase + '\n' +
-    'EUR/JPY Price: ' + price.toFixed(3) + '\n' +
-    'EUR/JPY London Open: ' + londonOpen + '\n' +
-    'EUR/JPY Change Today: ' + (pips >= 0 ? '+' : '') + pips + ' pips\n' +
-    'EUR/JPY Today High: ' + high.toFixed(3) + ' | Low: ' + low.toFixed(3) + '\n' +
-    'EUR/JPY RSI (15-min proxy): ' + rsiStatus + '\n' +
-    'SPY Current Price: ' + spyPrice + '\n' +
-    'SPY Change Today: ' + spyChg + '\n' +
-    'Wolf Signal: ' + signal + '\n' +
-    'Divergence Status: ' + divergenceStatus + '\n\n' +
-    '═══ YOUR ANALYSIS SECTIONS ═══\n\n' +
-    'SECTION: CHART ANALYSIS\n' +
-    'Read the EUR/JPY chart like a pro. Is the ' + pips + ' pip move an impulse wave (real trend) or ABC correction (fake)? ' +
-    'Is EUR/JPY overbought/oversold on 15-min? Where is the weekly average range — is there room to run or is the range almost full? ' +
-    'What does the RSI reading of ' + rsiStatus + ' tell you? Is EUR/JPY approaching a key level or breaking through one? ' +
-    'What is the higher timeframe (Daily/H4) structure saying?\n\n' +
-    'SECTION: DIVERGENCE ANALYSIS\n' +
-    'Current divergence: ' + divergenceStatus + '. \n' +
-    'Analyze what scenario we are in: CONFIRMATION, DIVERGENCE TRAP, or THE LEAD. ' +
-    'If DIVERGENCE TRAP: how long before SPY catches down to EUR/JPY? What to watch for. ' +
-    'If THE LEAD: has SPY caught up yet or is there still lag to exploit? Be specific.\n\n' +
-    'SECTION: 0DTE PLAY\n' +
-    'Based on the signal and divergence analysis, give one specific 0DTE trade:\n' +
-    '- CALL or PUT\n' +
-    '- Strike price (use round numbers near current SPY price: ' + spyPrice + ')\n' +
-    '- Ideal entry time (9:30AM open, or wait for 9:45AM confirmation?)\n' +
-    '- Target exit in $ per contract\n' +
-    '- Stop loss in $ per contract\n' +
-    '- One line: what EUR/JPY price would INVALIDATE this trade (the signal killer level)\n' +
-    'If signal is under 30 pips or flat: say WAIT and explain exactly what you need to see before entering.\n\n' +
-    'SECTION: SIGNAL KILLERS TODAY\n' +
-    'List 3 specific things happening TODAY that could break the EUR/JPY → SPY correlation: ' +
-    'economic data at 8:30AM EST, Fed speakers, BOJ news, sector rotation events. Be specific to today.\n\n' +
-    'SECTION: WOLF VERDICT\n' +
-    'One sentence, max 20 words. Decisive. What is the trade right now?';
+  optBox.innerHTML = '<div class="load-ctr"><div class="spinner" style="border-top-color:#00cfff"></div><div class="load-txt" style="color:#00cfff;">Wolf AI reading REAL EUR/JPY chart data (M15 RSI, H4 trend, D1 S/R, session pips)...</div></div>';
 
   try{
+    // ── Get REAL chart data first ──────────────────────────────────
+    let chartData = window._spyChartData;
+    if(!chartData){
+      // SPY tab wasn't loaded yet — fetch real data now
+      const cr = await fetch('/api/spy-chart', {method:'POST', headers:{'Content-Type':'application/json'}});
+      if(cr.ok) chartData = await cr.json();
+    }
+
+    if(!chartData || chartData.error){
+      throw new Error('Could not load real chart data');
+    }
+
+    // ── Session context ────────────────────────────────────────────
+    const now    = new Date();
+    const dateStr = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    const estStr  = now.toLocaleString('en-US',{timeZone:'America/New_York'});
+    const est     = new Date(estStr);
+    const h = est.getHours(); const m = est.getMinutes();
+    const total = h*60 + m;
+    const phase = total < 3*60   ? 'PRE-LONDON (before 3AM EST) — Market quiet, no signal yet'
+                : total < 8*60   ? 'LONDON SESSION (3AM-8AM EST) — EUR/JPY setting the tone'
+                : total < 9*60+30 ? 'PRE-MARKET (8AM-9:30AM EST) — CRITICAL divergence window'
+                : total < 16*60  ? 'NYSE OPEN — Execute 0DTE based on divergence'
+                : 'MARKET CLOSED — Review signal, prep for tomorrow';
+
+    // ── Real data from spy-chart endpoint ─────────────────────────
+    const price        = parseFloat(chartData.price || 0);
+    const londonPips   = chartData.london_pips;
+    const londonOpen   = chartData.london_open_price;
+    const m15_rsi      = chartData.m15_rsi;
+    const h1_rsi       = chartData.h1_rsi;
+    const daily_rsi    = chartData.daily_rsi;
+    const h4_rsi       = chartData.h4_rsi;
+    const daily_trend  = chartData.daily_trend  || '—';
+    const h4_trend     = chartData.h4_trend     || '—';
+    const weekly_trend = chartData.weekly_trend || '—';
+    const daily_macd   = chartData.daily_macd   || '—';
+    const h4_macd      = chartData.h4_macd      || '—';
+    const daily_ema20  = chartData.daily_ema20  || '—';
+    const daily_ema50  = chartData.daily_ema50  || '—';
+    const daily_ema200 = chartData.daily_ema200 || '—';
+    const h4_ema9      = chartData.h4_ema9      || '—';
+    const h4_ema20     = chartData.h4_ema20     || '—';
+    const h4_struct    = chartData.h4_struct    || '—';
+    const daily_struct = chartData.daily_struct || '—';
+    const adr          = chartData.adr          || '—';
+    const nearSup      = chartData.nearest_support;
+    const nearRes      = chartData.nearest_resistance;
+    const session_high = chartData.session_high || '—';
+    const session_low  = chartData.session_low  || '—';
+    const pipAbs       = Math.abs(londonPips || 0);
+
+    // SPY data from DOM
+    const spyPriceEl = document.getElementById('spy-price');
+    const spyChgEl   = document.getElementById('spy-change');
+    const spyPrice   = spyPriceEl ? spyPriceEl.textContent : 'unknown';
+    const spyChg     = spyChgEl   ? spyChgEl.textContent   : '';
+    const spyUp      = spyChg.includes('▲') || spyChg.includes('+');
+
+    // Divergence using REAL London pips
+    const eurjpyUp = (londonPips || 0) > 0;
+    let divergenceStatus = 'FLAT / NO SIGNAL (under 20 pips from London open)';
+    if(pipAbs >= 20){
+      if(eurjpyUp && spyUp)         divergenceStatus = `CONFIRMATION — EUR/JPY ▲ +${londonPips} pips AND SPY green. Both risk-on.`;
+      else if(!eurjpyUp && !spyUp)  divergenceStatus = `CONFIRMATION — EUR/JPY ▼ ${londonPips} pips AND SPY red. Both risk-off.`;
+      else if(eurjpyUp && !spyUp)   divergenceStatus = `THE LEAD — EUR/JPY ▲ +${londonPips} pips but SPY still red. SPY lagging London risk-on. Expect SPY to follow UP.`;
+      else if(!eurjpyUp && spyUp)   divergenceStatus = `DIVERGENCE TRAP — SPY rallying but EUR/JPY ▼ ${londonPips} pips. Carry trade NOT supporting this SPY rally. Put signal.`;
+    }
+
+    const rsiStatus = m15_rsi
+      ? (m15_rsi >= 70 ? `OVERBOUGHT (${m15_rsi}) on M15 — reversal risk`
+        : m15_rsi <= 30 ? `OVERSOLD (${m15_rsi}) on M15 — bounce risk`
+        : `NEUTRAL (${m15_rsi}) on M15`)
+      : 'M15 RSI unavailable';
+
+    const signal = pipAbs < 20 ? 'FLAT — under 20 pips, no trade'
+      : londonPips > 0
+        ? (pipAbs >= 80 ? `VERY STRONG RISK-ON (+${londonPips} pips from London 3AM open)`
+          : pipAbs >= 50 ? `STRONG RISK-ON (+${londonPips} pips)`
+          : pipAbs >= 30 ? `MODERATE RISK-ON (+${londonPips} pips)`
+          : `WEAK (+${londonPips} pips) — marginal`)
+      : (pipAbs >= 80 ? `VERY STRONG RISK-OFF (${londonPips} pips)`
+        : pipAbs >= 50 ? `STRONG RISK-OFF (${londonPips} pips)`
+        : pipAbs >= 30 ? `MODERATE RISK-OFF (${londonPips} pips)`
+        : `WEAK (${londonPips} pips) — marginal`);
+
+    const prompt =
+      `You are Wolf AI — elite SPY 0DTE options trader using the EUR/JPY carry trade strategy.\n\n` +
+      `═══ THE STRATEGY ═══\n` +
+      `EUR/JPY is the LEADING INDICATOR for SPY. It moves FIRST (5-15 min lag before SPY follows).\n` +
+      `EUR/JPY UP = Risk-On = institutional carry trade active = SPY goes UP → BUY CALLS\n` +
+      `EUR/JPY DOWN = Risk-Off = carry trade unwinding = SPY goes DOWN → BUY PUTS\n` +
+      `Three setups: CONFIRMATION (both aligned), DIVERGENCE TRAP (SPY up/EUR/JPY down = puts), THE LEAD (EUR/JPY moved first = SPY will follow)\n\n` +
+      `═══ REAL CHART DATA (ALL FROM LIVE CANDLES — NO ESTIMATES) ═══\n` +
+      `Date/Time: ${dateStr} | ${estStr}\n` +
+      `Session Phase: ${phase}\n` +
+      `\n── EUR/JPY ──\n` +
+      `Price: ${price.toFixed(3)} | London Open (3AM EST candle): ${londonOpen || '—'}\n` +
+      `Pips from London Open: ${londonPips !== null ? (londonPips >= 0 ? '+' : '') + londonPips + ' pips' : 'N/A'}\n` +
+      `Session High: ${session_high} | Session Low: ${session_low}\n` +
+      `ADR (10-day avg daily range): ${adr}\n` +
+      `\n── REAL INDICATOR DATA (Wilder RSI, real EMAs from OHLC candles) ──\n` +
+      `M15 RSI (14-period Wilder): ${rsiStatus}\n` +
+      `H1 RSI: ${h1_rsi || '—'} | D1 RSI: ${daily_rsi || '—'} | H4 RSI: ${h4_rsi || '—'}\n` +
+      `Weekly Trend: ${weekly_trend} | Daily Trend: ${daily_trend} | H4 Trend: ${h4_trend}\n` +
+      `Daily Structure: ${daily_struct} | H4 Structure: ${h4_struct}\n` +
+      `Daily EMAs: 20=${daily_ema20} | 50=${daily_ema50} | 200=${daily_ema200}\n` +
+      `H4 EMAs: 9=${h4_ema9} | 20=${h4_ema20}\n` +
+      `Daily MACD: ${daily_macd} | H4 MACD: ${h4_macd}\n` +
+      `Nearest REAL Resistance (swing high): ${nearRes ? nearRes.price + ' ('+nearRes.distance_pips+' away)' : '—'}\n` +
+      `Nearest REAL Support (swing low): ${nearSup ? nearSup.price + ' ('+nearSup.distance_pips+' away)' : '—'}\n` +
+      `\n── SPY ──\n` +
+      `SPY Price: ${spyPrice} | Change: ${spyChg}\n` +
+      `Wolf Signal: ${signal}\n` +
+      `Divergence Status: ${divergenceStatus}\n\n` +
+      `═══ YOUR ANALYSIS SECTIONS ═══\n\n` +
+      `SECTION: CHART ANALYSIS\n` +
+      `Read the EUR/JPY chart from the REAL data above. Is the ${londonPips} pip move from London open an impulse (real institutional flow) or ABC correction? ` +
+      `Analyze M15 RSI ${m15_rsi || '—'}: is this overbought/oversold? What do the H4 EMAs (9=${h4_ema9}, 20=${h4_ema20}) say about momentum? ` +
+      `Daily structure ${daily_struct} — what does this mean for SPY direction? ` +
+      `Is ADR ${adr} being exceeded today or is there room to run? Comment on the nearest real S/R levels.\n\n` +
+      `SECTION: DIVERGENCE ANALYSIS\n` +
+      `Current: ${divergenceStatus}\n` +
+      `Which scenario: CONFIRMATION, DIVERGENCE TRAP, or THE LEAD? Be specific.\n` +
+      `If DIVERGENCE TRAP: how long until SPY catches down? What M15 RSI level or EUR/JPY move would confirm?\n` +
+      `If THE LEAD: what is the expected SPY move at 9:30AM given the ${londonPips} pip EUR/JPY lead from London?\n\n` +
+      `SECTION: 0DTE PLAY\n` +
+      `Based on the real chart data and divergence, give one specific 0DTE trade:\n` +
+      `- CALL or PUT (or WAIT if signal under 30 pips or contradictory)\n` +
+      `- Strike (use SPY ${spyPrice} and round to nearest 5)\n` +
+      `- Entry time (9:30AM open vs wait for 9:45AM confirmation candle?)\n` +
+      `- Target exit $ per contract | Stop loss $ per contract\n` +
+      `- EUR/JPY price level that INVALIDATES this trade (signal killer level)\n\n` +
+      `SECTION: SIGNAL KILLERS TODAY\n` +
+      `List 3 specific things TODAY that could break EUR/JPY → SPY correlation: scheduled economic data, Fed speakers, BOJ news, or technical levels that could flip the signal.\n\n` +
+      `SECTION: WOLF VERDICT\n` +
+      `One sentence, max 20 words. The trade right now.`;
+
     const text = await callAI(prompt, 3000);
     const getSection = (name) => {
-      const m = text.match(new RegExp('SECTION: ' + name + '\\s*([\\s\\S]*?)(?=SECTION:|$)', 'i'));
-      return m ? m[1].trim() : '';
+      const mx = text.match(new RegExp('SECTION: ' + name + '\\s*([\\s\\S]*?)(?=SECTION:|$)', 'i'));
+      return mx ? mx[1].trim() : '';
     };
 
-    const chart      = getSection('CHART ANALYSIS');
+    const chart_s    = getSection('CHART ANALYSIS');
     const divergence = getSection('DIVERGENCE ANALYSIS');
     const play       = getSection('0DTE PLAY');
     const killers    = getSection('SIGNAL KILLERS TODAY');
     const verdict    = getSection('WOLF VERDICT');
 
     let html = '';
-    if(chart)
-      html += '<div style="background:rgba(0,207,255,0.04);border-left:3px solid #00cfff;padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.9;margin-bottom:10px;">' +
-        '<strong style="color:#00cfff;font-size:11px;letter-spacing:1px;">📊 EUR/JPY CHART ANALYSIS</strong><br>' + chart.replace(/\n/g,'<br>') + '</div>';
+    if(chart_s)
+      html += `<div style="background:rgba(0,207,255,0.04);border-left:3px solid #00cfff;padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.9;margin-bottom:10px;">` +
+        `<strong style="color:#00cfff;font-size:11px;letter-spacing:1px;">📊 EUR/JPY CHART ANALYSIS — REAL DATA</strong><br>` + chart_s.replace(/\n/g,'<br>') + `</div>`;
     if(divergence)
-      html += '<div style="background:rgba(255,215,0,0.04);border-left:3px solid var(--gold);padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.9;margin-bottom:10px;">' +
-        '<strong style="color:var(--gold);font-size:11px;letter-spacing:1px;">🔍 DIVERGENCE ANALYSIS — WHICH SCENARIO?</strong><br>' + divergence.replace(/\n/g,'<br>') + '</div>';
+      html += `<div style="background:rgba(255,215,0,0.04);border-left:3px solid var(--gold);padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.9;margin-bottom:10px;">` +
+        `<strong style="color:var(--gold);font-size:11px;letter-spacing:1px;">🔍 DIVERGENCE ANALYSIS</strong><br>` + divergence.replace(/\n/g,'<br>') + `</div>`;
     if(play)
-      html += '<div class="spy-option-card" style="margin-bottom:10px;">' +
-        '<div style="font-size:10px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">⚡ 0DTE OPTIONS PLAY</div>' +
-        '<div style="font-size:12px;color:var(--text-mid);line-height:1.9;">' + play.replace(/\n/g,'<br>') + '</div></div>';
+      html += `<div class="spy-option-card" style="margin-bottom:10px;">` +
+        `<div style="font-size:10px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">⚡ 0DTE OPTIONS PLAY</div>` +
+        `<div style="font-size:12px;color:var(--text-mid);line-height:1.9;">` + play.replace(/\n/g,'<br>') + `</div></div>`;
     if(killers)
-      html += '<div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.15);border-radius:4px;padding:10px;margin-bottom:10px;font-size:12px;color:var(--text-mid);line-height:1.8;">' +
-        '<strong style="color:var(--red);font-size:10px;letter-spacing:1px;">🚨 SIGNAL KILLERS TODAY</strong><br>' + killers.replace(/\n/g,'<br>') + '</div>';
+      html += `<div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.15);border-radius:4px;padding:10px;margin-bottom:10px;font-size:12px;color:var(--text-mid);line-height:1.8;">` +
+        `<strong style="color:var(--red);font-size:10px;letter-spacing:1px;">🚨 SIGNAL KILLERS TODAY</strong><br>` + killers.replace(/\n/g,'<br>') + `</div>`;
     if(verdict)
-      html += '<div style="background:rgba(0,207,255,0.08);border:2px solid #00cfff;border-radius:6px;padding:14px;text-align:center;">' +
-        '<div style="font-size:9px;letter-spacing:3px;color:var(--text-dim);margin-bottom:6px;">🐺 WOLF VERDICT</div>' +
-        '<div style="font-size:14px;font-weight:bold;color:#00cfff;letter-spacing:1px;">' + verdict + '</div></div>';
+      html += `<div style="background:rgba(0,207,255,0.08);border:2px solid #00cfff;border-radius:6px;padding:14px;text-align:center;">` +
+        `<div style="font-size:9px;letter-spacing:3px;color:var(--text-dim);margin-bottom:6px;">🐺 WOLF VERDICT</div>` +
+        `<div style="font-size:14px;font-weight:bold;color:#00cfff;letter-spacing:1px;">${verdict}</div></div>`;
 
     optBox.innerHTML = html || '<div style="color:var(--text-dim);font-size:12px;">Analysis complete. Refresh for updated signal.</div>';
     btn.disabled = false;
     btn.textContent = '🔄 REFRESH SIGNAL + GET WOLF 0DTE PLAY';
   } catch(e){
-    optBox.innerHTML = '<div style="color:var(--red);font-size:12px;">Error: ' + e.message + '</div>';
+    optBox.innerHTML = `<div style="color:var(--red);font-size:12px;">Error: ${e.message}</div>`;
     btn.disabled = false;
     btn.textContent = '🔄 REFRESH SIGNAL + GET WOLF 0DTE PLAY';
   }

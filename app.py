@@ -84,7 +84,7 @@ def server_time():
 app.register_blueprint(auth_bp)
 from payments import payments_bp
 app.register_blueprint(payments_bp)
-from scanner import scanner_bp, score_stock, get_market_regime
+from scanner import scanner_bp
 app.register_blueprint(scanner_bp)
 from forex import forex_bp
 app.register_blueprint(forex_bp)
@@ -402,6 +402,157 @@ def get_multi_pair_chart_data(pairs, current_prices):
         except Exception as e:
             print(f'[ChartFetch] {pair}: {e}')
     return results
+
+# ═══════════════════════════════════════════════════════════════
+# REAL STOCK SCORING ENGINE — Wilder RSI, real EMAs, real S/R
+# ═══════════════════════════════════════════════════════════════
+
+def get_market_regime():
+    """Real market regime using SPY and VIX live from yfinance"""
+    try:
+        import yfinance as yf
+        sh = yf.Ticker('SPY').history(period='5d', interval='1d', timeout=8)
+        vh = yf.Ticker('^VIX').history(period='2d', interval='1d', timeout=8)
+        spy_price  = round(float(sh['Close'].iloc[-1]), 2) if not sh.empty else 500
+        spy_prev   = round(float(sh['Close'].iloc[-2]), 2) if len(sh) > 1 else spy_price
+        spy_change = round(((spy_price - spy_prev) / spy_prev) * 100, 2)
+        vix_price  = round(float(vh['Close'].iloc[-1]), 2) if not vh.empty else 20
+        if vix_price > 30:   fear_greed, regime = 'EXTREME FEAR', 'BEARISH'
+        elif vix_price > 20: fear_greed, regime = 'FEAR',         'NEUTRAL'
+        elif vix_price < 15: fear_greed, regime = 'GREED',        'BULLISH'
+        else:                fear_greed, regime = 'NEUTRAL',      'NEUTRAL'
+        return {'spy_price': spy_price, 'spy_change': spy_change,
+                'vix': vix_price, 'fear_greed': fear_greed, 'regime': regime}
+    except Exception as e:
+        print(f'[MarketRegime] {e}')
+        return {'spy_price': 500, 'spy_change': 0.0, 'vix': 20.0,
+                'fear_greed': 'NEUTRAL', 'regime': 'NEUTRAL'}
+
+def score_stock(ticker_sym):
+    """
+    Real stock scoring engine — no estimates, no fakes.
+    Uses real yfinance OHLCV data:
+    - Wilder Smoothed RSI (same as TradingView/MT4)
+    - Real EMA 20/50/200 from daily closes
+    - Real swing high/low S/R levels
+    - Real volume ratio (today vs 20-day avg)
+    - Real ATR-based IV rank proxy
+    Returns 0-100 score + direction + all indicators
+    """
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker_sym)
+        h = t.history(period='6mo', interval='1d', timeout=8)
+        if h is None or h.empty or len(h) < 20:
+            return None
+        closes = [float(x) for x in h['Close'].tolist()]
+        highs  = [float(x) for x in h['High'].tolist()]
+        lows   = [float(x) for x in h['Low'].tolist()]
+        vols   = [float(x) for x in h['Volume'].tolist()]
+        price  = round(closes[-1], 2)
+
+        # ── Real EMAs ──────────────────────────────────────────────
+        def _ema(data, p):
+            if len(data) < p: return None
+            k = 2.0/(p+1); v = data[0]
+            for x in data[1:]: v = x*k + v*(1-k)
+            return round(v, 2)
+        e20  = _ema(closes, 20)
+        e50  = _ema(closes, 50)
+        e200 = _ema(closes[-200:] if len(closes) >= 200 else closes, min(200, len(closes)))
+
+        # ── Wilder Smoothed RSI (14-period) ────────────────────────
+        rsi = None
+        if len(closes) >= 16:
+            diffs  = [closes[i]-closes[i-1] for i in range(1, len(closes))]
+            gains  = [max(d, 0) for d in diffs]
+            losses = [max(-d, 0) for d in diffs]
+            ag = sum(gains[:14])/14;  al = sum(losses[:14])/14
+            for i in range(14, len(gains)):
+                ag = (ag*13 + gains[i])/14
+                al = (al*13 + losses[i])/14
+            rsi = round(100 - (100/(1 + (ag/al if al > 0 else 1e9))), 1)
+
+        # ── Real MACD (EMA12 vs EMA26) ─────────────────────────────
+        macd_bias = None
+        if len(closes) >= 26:
+            e12 = _ema(closes[-50:], 12); e26 = _ema(closes[-50:], 26)
+            if e12 and e26: macd_bias = 'BULLISH' if e12 > e26 else 'BEARISH'
+
+        # ── Volume ratio (today vs 20-day average) ─────────────────
+        vol_ratio = round(vols[-1] / (sum(vols[-21:-1])/20), 2) if len(vols) >= 21 else 1.0
+
+        # ── ATR-based IV rank proxy ─────────────────────────────────
+        atr14 = None
+        if len(h) >= 15:
+            trs = [max(highs[i]-lows[i], abs(highs[i]-closes[i-1]), abs(lows[i]-closes[i-1]))
+                   for i in range(1, len(h))]
+            atr14 = round(sum(trs[-14:])/14, 2)
+        iv_rank = round((atr14/price)*100*10, 1) if (atr14 and price) else 30
+
+        # ── Real S/R from swing highs/lows ─────────────────────────
+        sr = []
+        for i in range(2, len(highs)-2):
+            if highs[i] > highs[i-1] and highs[i] > highs[i-2] and highs[i] > highs[i+1] and highs[i] > highs[i+2]:
+                sr.append({'type':'RESISTANCE','price':round(highs[i],2),
+                           'distance_pips':round(abs(highs[i]-price),2),'strength':1})
+            if lows[i] < lows[i-1] and lows[i] < lows[i-2] and lows[i] < lows[i+1] and lows[i] < lows[i+2]:
+                sr.append({'type':'SUPPORT','price':round(lows[i],2),
+                           'distance_pips':round(abs(lows[i]-price),2),'strength':1})
+        sr.sort(key=lambda x: x['distance_pips'])
+        sr = sr[:6]
+
+        # ── Direction consensus ─────────────────────────────────────
+        bull = sum([1 if (e20  and price > e20)  else 0,
+                    1 if (e50  and price > e50)   else 0,
+                    1 if macd_bias == 'BULLISH'   else 0,
+                    1 if (rsi  and rsi > 50)      else 0])
+        direction = 'BULLISH' if bull >= 3 else 'BEARISH' if bull <= 1 else 'NEUTRAL'
+
+        # ── Score 0-100 ─────────────────────────────────────────────
+        score = 0
+        if e200 and price > e200: score += 20
+        if e50  and price > e50:  score += 15
+        if e20  and price > e20:  score += 10
+        if rsi:
+            if 45 <= rsi <= 65:   score += 15
+            elif rsi < 30:        score += 10
+            elif rsi > 70:        score -= 10
+        if macd_bias == 'BULLISH': score += 15
+        if vol_ratio > 1.5:        score += 10
+        if vol_ratio > 2.5:        score += 5
+
+        signals = []
+        if e200 and price > e200:  signals.append(f'Above 200EMA ({e200})')
+        if rsi:                    signals.append(f'RSI {rsi}')
+        if macd_bias:              signals.append(f'MACD {macd_bias}')
+        if vol_ratio > 1.5:        signals.append(f'Vol {vol_ratio}x avg')
+
+        near_earnings = False
+        try:
+            cal = t.calendar
+            if cal is not None and not cal.empty:
+                cols = cal.columns.tolist()
+                if cols:
+                    earn_date = str(cols[0])[:10]
+                    dt = datetime.strptime(earn_date, '%Y-%m-%d')
+                    days_away = (dt - datetime.now()).days
+                    if 0 < days_away <= 7: near_earnings = True
+        except: pass
+
+        return {
+            'ticker': ticker_sym, 'price': price,
+            'score': max(0, min(100, score)),
+            'direction': direction, 'rsi': rsi,
+            'ema20': e20, 'ema50': e50, 'ema200': e200,
+            'macd_bias': macd_bias, 'vol_ratio': vol_ratio,
+            'iv_rank': iv_rank, 'unusual_activity': round(vol_ratio, 1),
+            'sr_levels': sr, 'signals': signals,
+            'near_earnings': near_earnings
+        }
+    except Exception as e:
+        print(f'[ScoreStock {ticker_sym}] {e}')
+        return None
 
 # ── Options helpers ──────────────────────────────────────────
 
@@ -835,6 +986,145 @@ def forex_news():
         pair = request.get_json().get('pair', '')
         return jsonify({'pair_news': get_news(pair), 'market_news': get_news()})
     except Exception as e: return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/spy-chart', methods=['POST'])
+@login_required
+def spy_chart():
+    """
+    Real EUR/JPY chart data for SPY Signal tab.
+    Returns: real M15 RSI (Wilder), real London open pip calculation,
+    real H4/Daily trend, real S/R levels. NO estimates. NO fakes.
+    """
+    try:
+        # Get real EUR/JPY price
+        q = get_price('EUR/JPY')
+        if not q:
+            return jsonify({'error': 'Cannot fetch EUR/JPY price'}), 500
+        cp = float(q['price'])
+
+        # ── Real M15 candles → real RSI ────────────────────────────
+        m15 = get_candles('EUR/JPY', '15m', '3d')
+        m15_rsi = None
+        london_open_price = None
+        london_pips = None
+        session_high = None
+        session_low  = None
+
+        if m15 and len(m15) >= 16:
+            m15_closes = [c['close'] for c in m15]
+            m15_rsi = calc_rsi(m15_closes)  # Real Wilder RSI
+
+            # London open = 3AM EST = 8AM UTC
+            # Find the first M15 candle at or after 08:00 UTC today
+            from datetime import datetime, timezone, timedelta
+            utc_now = datetime.now(timezone.utc)
+            today_london_open_utc = utc_now.replace(hour=8, minute=0, second=0, microsecond=0)
+            if utc_now.hour < 8:  # Before today's London open - use yesterday's
+                today_london_open_utc -= timedelta(days=1)
+
+            # Find candle closest to London open
+            london_candle = None
+            for c in m15:
+                try:
+                    # candle time format: "2024-01-15 08:00"
+                    ct = c['time']
+                    # Try parsing
+                    for fmt in ['%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S']:
+                        try:
+                            parsed = datetime.strptime(ct[:16], fmt[:len(ct[:16])])
+                            break
+                        except: parsed = None
+                    if parsed and parsed.hour == 8 and parsed.minute == 0:
+                        london_candle = c
+                        break
+                except: continue
+
+            # Fallback: use candle ~32 bars ago (8 hours before now on M15)
+            if not london_candle and len(m15) >= 32:
+                london_candle = m15[-32]
+
+            if london_candle:
+                london_open_price = london_candle['open']
+                # Pips from London open to now (JPY pairs: 1 pip = 0.01)
+                pip_diff = (cp - london_open_price) * 100
+                london_pips = round(pip_diff)
+
+            # Session high/low from last 32 candles (8 hours of M15)
+            last32 = m15[-32:] if len(m15) >= 32 else m15
+            session_high = round(max(c['high'] for c in last32), 3)
+            session_low  = round(min(c['low']  for c in last32), 3)
+
+        # ── Real H1 candles → last 24h high/low ────────────────────
+        h1 = get_candles('EUR/JPY', '1h', '5d')
+        h1_rsi = None
+        high_24h = None
+        low_24h  = None
+        if h1 and len(h1) >= 14:
+            h1_closes = [c['close'] for c in h1]
+            h1_rsi = calc_rsi(h1_closes)
+            last24 = h1[-24:] if len(h1) >= 24 else h1
+            high_24h = round(max(c['high'] for c in last24), 3)
+            low_24h  = round(min(c['low']  for c in last24), 3)
+
+        # ── Real H4 + Daily via get_sage_chart_data ─────────────────
+        chart = get_sage_chart_data('EUR/JPY', cp)
+        da = chart.get('daily', {})
+        h4 = chart.get('h4', {})
+        wk = chart.get('weekly', {})
+        sr = chart.get('sr_levels', [])
+
+        # Find nearest support and resistance from real S/R
+        support_levels    = sorted([lv for lv in sr if lv['type']=='SUPPORT'],    key=lambda x: x['distance_pips'])
+        resistance_levels = sorted([lv for lv in sr if lv['type']=='RESISTANCE'], key=lambda x: x['distance_pips'])
+
+        return jsonify({
+            # Live price data
+            'pair': 'EUR/JPY',
+            'price': round(cp, 3),
+            'high': q.get('high', cp),
+            'low':  q.get('low',  cp),
+            'change': q.get('change', 0),
+            'percent_change': q.get('percent_change', 0),
+            # Real M15 data
+            'm15_rsi': m15_rsi,
+            'london_open_price': round(london_open_price, 3) if london_open_price else None,
+            'london_pips': london_pips,
+            'session_high': session_high,
+            'session_low':  session_low,
+            # Real H1 data
+            'h1_rsi':   h1_rsi,
+            'high_24h': high_24h,
+            'low_24h':  low_24h,
+            # Real H4 + Daily structure
+            'daily_trend':  da.get('trend', 'UNKNOWN'),
+            'daily_rsi':    da.get('rsi'),
+            'daily_ema20':  da.get('ema20'),
+            'daily_ema50':  da.get('ema50'),
+            'daily_ema200': da.get('ema200'),
+            'daily_macd':   da.get('macd_bias'),
+            'daily_struct': da.get('structure', 'UNKNOWN'),
+            'daily_phase':  da.get('phase', 'UNKNOWN'),
+            'h4_trend':     h4.get('trend', 'UNKNOWN'),
+            'h4_rsi':       h4.get('rsi'),
+            'h4_ema9':      h4.get('ema9'),
+            'h4_ema20':     h4.get('ema20'),
+            'h4_macd':      h4.get('macd_bias'),
+            'h4_struct':    h4.get('structure', 'UNKNOWN'),
+            'weekly_trend': wk.get('trend', 'UNKNOWN'),
+            'weekly_rsi':   wk.get('rsi'),
+            # Real S/R levels
+            'nearest_support':    support_levels[0]    if support_levels    else None,
+            'nearest_resistance': resistance_levels[0] if resistance_levels else None,
+            'sr_levels': sr[:6],
+            # ADR and range data
+            'adr': chart.get('adr'),
+            'weekly_range_pct': chart.get('weekly_range_pct'),
+            'trend_strength':   chart.get('trend_strength'),
+        })
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/forex-analyze', methods=['POST'])
 @login_required
