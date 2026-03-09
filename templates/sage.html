@@ -276,6 +276,24 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   </div>
 
   <!-- INPUT -->
+  <!-- MULTI-PAIR SCANNER SECTION -->
+  <div class="input-section" style="margin-bottom:16px;">
+    <div class="input-label" style="color:var(--cyan);">🔍 WOLF MULTI-PAIR SCANNER — Find The Trending Setups</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;">Scan 10 pairs simultaneously. Wolf AI identifies which pairs are <strong style="color:var(--green);">TRENDING</strong> vs ranging sideways. Click any result to run full Sage analysis.</div>
+    <button class="scan-btn" id="scanAllBtn" onclick="startScanner()" style="width:100%;background:linear-gradient(135deg,rgba(51,221,255,0.15),rgba(10,20,32,0));border-color:var(--cyan);color:var(--cyan);margin-bottom:12px;">🔍 SCAN ALL 10 PAIRS — FIND ME THE TRENDS</button>
+    <div id="scannerResults" style="display:none;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--cyan);margin-bottom:10px;" id="scannerTime">SCAN RESULTS</div>
+      <div id="scannerGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;"></div>
+      <div id="topPicksBox" style="background:rgba(0,255,153,0.04);border:1px solid rgba(0,255,153,0.2);border-radius:6px;padding:12px;margin-bottom:4px;display:none;">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--green);margin-bottom:8px;">🏆 TOP TRENDING PICKS — CLICK TO ANALYZE</div>
+        <div id="topPicksList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+    </div>
+    <div id="scannerLoading" style="display:none;text-align:center;padding:20px;">
+      <div style="font-size:12px;color:var(--cyan);letter-spacing:2px;" id="scannerStep">SCANNING...</div>
+    </div>
+  </div>
+
   <div class="input-section">
     <div class="input-label">🔮 SELECT INSTRUMENT TO ANALYZE</div>
     <div class="pair-row">
@@ -384,6 +402,43 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       <div class="kl-card sup"><div class="kl-label">NEAREST SUPPORT</div><div class="kl-price" id="klSup">—</div></div>
       <div class="kl-card res"><div class="kl-label">NEAREST RESISTANCE</div><div class="kl-price" id="klRes">—</div></div>
       <div class="kl-card stop"><div class="kl-label">STOP ZONE</div><div class="kl-price" id="klStop">—</div></div>
+    </div>
+
+    <!-- MARKET STRUCTURE — NEW SECTION -->
+    <div class="info-block" style="margin-bottom:20px;background:rgba(255,165,0,0.03);border:1px solid rgba(255,165,0,0.2);border-radius:6px;padding:16px;">
+      <div class="section-title" style="color:var(--orange);">🗺️ MARKET STRUCTURE — WHERE ARE WE? (Prevents wrong-direction trades)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:4px;padding:10px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;">MARKET PHASE</div>
+          <div style="font-size:13px;font-weight:bold;" id="msPhase">—</div>
+        </div>
+        <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:4px;padding:10px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;">ABC / WAVE POSITION</div>
+          <div style="font-size:13px;font-weight:bold;" id="msABC">—</div>
+        </div>
+        <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:4px;padding:10px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;">PRICE LOCATION</div>
+          <div style="font-size:13px;font-weight:bold;" id="msLocation">—</div>
+        </div>
+        <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:4px;padding:10px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;">TREND STRENGTH</div>
+          <div style="font-size:13px;font-weight:bold;" id="msTrend">—</div>
+        </div>
+      </div>
+      <div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:4px;padding:10px;margin-bottom:8px;">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;">HIGHER TIMEFRAME CONTEXT</div>
+        <div style="font-size:12px;color:var(--text-mid);line-height:1.6;" id="msHTF">—</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:rgba(255,51,85,0.05);border:1px solid rgba(255,51,85,0.2);border-radius:4px;padding:8px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--red);margin-bottom:4px;">RESISTANCE ABOVE</div>
+          <div style="font-size:12px;color:var(--text-mid);" id="msSrAbove">—</div>
+        </div>
+        <div style="background:rgba(0,255,153,0.04);border:1px solid rgba(0,255,153,0.2);border-radius:4px;padding:8px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--green);margin-bottom:4px;">SUPPORT BELOW</div>
+          <div style="font-size:12px;color:var(--text-mid);" id="msSrBelow">—</div>
+        </div>
+      </div>
     </div>
 
     <!-- LEGEND CONSENSUS -->
@@ -628,6 +683,39 @@ function renderResult(d){
   document.getElementById('candleSignal').textContent = d.candlestick_signal|| '—';
   document.getElementById('invalidation').textContent = d.invalidation    || '—';
 
+  // Market structure
+  const ms = d.market_structure || {};
+  const msPhaseEl = document.getElementById('msPhase');
+  const msABCEl   = document.getElementById('msABC');
+  const msLocEl   = document.getElementById('msLocation');
+  const msTrEl    = document.getElementById('msTrend');
+  const msHTFEl   = document.getElementById('msHTF');
+  const msSrAEl   = document.getElementById('msSrAbove');
+  const msSrBEl   = document.getElementById('msSrBelow');
+  if(msPhaseEl){
+    const phase = ms.phase || '—';
+    msPhaseEl.textContent = phase;
+    msPhaseEl.style.color = phase.includes('TREND') ? 'var(--green)' : phase.includes('RANG') ? 'var(--gold)' : phase.includes('BREAK') ? 'var(--cyan)' : 'var(--red)';
+  }
+  if(msABCEl){
+    const abc = ms.abc_position || '—';
+    msABCEl.textContent = abc;
+    msABCEl.style.color = abc.includes('IMPULSE') ? 'var(--green)' : abc.includes('CORRECT') ? 'var(--red)' : 'var(--gold)';
+  }
+  if(msLocEl){
+    const loc = ms.price_location || '—';
+    msLocEl.textContent = loc;
+    msLocEl.style.color = loc.includes('RESIST') ? 'var(--red)' : loc.includes('SUPPORT') ? 'var(--green)' : loc.includes('BREAK') ? 'var(--cyan)' : 'var(--gold)';
+  }
+  if(msTrEl){
+    const tr = ms.trend_strength || '—';
+    msTrEl.textContent = tr;
+    msTrEl.style.color = tr.includes('STRONG') ? 'var(--green)' : tr.includes('MODERATE') ? 'var(--cyan)' : tr.includes('RANG') || tr.includes('CHOP') ? 'var(--red)' : 'var(--gold)';
+  }
+  if(msHTFEl) msHTFEl.textContent = ms.higher_tf_context || '—';
+  if(msSrAEl) msSrAEl.textContent = ms.sr_above || '—';
+  if(msSrBEl) msSrBEl.textContent = ms.sr_below || '—';
+
   // Footer
   document.getElementById('rfPair').textContent    = d.pair     || '—';
   document.getElementById('rfPrice').textContent   = d.price    || '—';
@@ -636,6 +724,109 @@ function renderResult(d){
 
   document.getElementById('resultCard').classList.add('visible');
   document.getElementById('resultCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ══ MULTI-PAIR SCANNER ═══════════════════════════════════
+let _scannerJobId = null;
+let _scannerPoll  = null;
+
+async function startScanner(){
+  const btn = document.getElementById('scanAllBtn');
+  const loading = document.getElementById('scannerLoading');
+  const results = document.getElementById('scannerResults');
+  btn.disabled = true;
+  btn.textContent = '⏳ SCANNING 10 PAIRS...';
+  loading.style.display = 'block';
+  results.style.display = 'none';
+
+  try{
+    const resp = await fetch('/api/sage-scanner',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data = await resp.json();
+    if(data.job_id){
+      _scannerJobId = data.job_id;
+      _scannerPoll = setInterval(pollScanner, 2000);
+    } else {
+      btn.disabled = false;
+      btn.textContent = '🔍 SCAN ALL 10 PAIRS — FIND ME THE TRENDS';
+      loading.style.display = 'none';
+    }
+  } catch(e){
+    btn.disabled = false;
+    btn.textContent = '🔍 SCAN ALL 10 PAIRS — FIND ME THE TRENDS';
+    loading.style.display = 'none';
+  }
+}
+
+async function pollScanner(){
+  if(!_scannerJobId) return;
+  try{
+    const resp = await fetch('/api/sage-scanner-poll/' + _scannerJobId);
+    const data = await resp.json();
+    if(data.step){
+      const stepEl = document.getElementById('scannerStep');
+      if(stepEl) stepEl.textContent = data.step;
+    }
+    if(data.status === 'done'){
+      clearInterval(_scannerPoll);
+      renderScannerResults(data);
+    } else if(data.status === 'error'){
+      clearInterval(_scannerPoll);
+      const btn = document.getElementById('scanAllBtn');
+      btn.disabled = false;
+      btn.textContent = '🔍 SCAN ALL 10 PAIRS — FIND ME THE TRENDS';
+      document.getElementById('scannerLoading').style.display = 'none';
+    }
+  } catch(e){ /* continue polling */ }
+}
+
+function renderScannerResults(data){
+  const btn = document.getElementById('scanAllBtn');
+  btn.disabled = false;
+  btn.textContent = '🔄 RE-SCAN ALL 10 PAIRS';
+  document.getElementById('scannerLoading').style.display = 'none';
+  document.getElementById('scannerResults').style.display = 'block';
+
+  const timeEl = document.getElementById('scannerTime');
+  if(timeEl) timeEl.textContent = 'SCAN RESULTS · ' + (data.scanned_at || '');
+
+  const grid = document.getElementById('scannerGrid');
+  const pairs = data.pairs || [];
+  grid.innerHTML = pairs.map(p => {
+    const v = p.verdict || 'WAIT';
+    const conf = p.confidence || 0;
+    const strength = p.trend_strength || 'UNKNOWN';
+    const reason = p.reason || '';
+    const phase = p.market_phase || '';
+    const abc = p.abc_position || '';
+    const clr = v === 'BUY' ? 'var(--green)' : v === 'SELL' ? 'var(--red)' : 'var(--text-dim)';
+    const bg  = v === 'BUY' ? 'rgba(0,255,153,0.04)' : v === 'SELL' ? 'rgba(255,51,85,0.04)' : 'rgba(10,20,32,0.4)';
+    const borderClr = v === 'BUY' ? 'rgba(0,255,153,0.3)' : v === 'SELL' ? 'rgba(255,51,85,0.2)' : 'rgba(30,48,64,0.5)';
+    const clickable = (v === 'BUY' || v === 'SELL') ? 'cursor:pointer;' : '';
+    const clickFn  = (v === 'BUY' || v === 'SELL') ? 'onclick="setPair('' + p.pair + '');document.getElementById('resultCard').classList.remove('visible')"' : '';
+    return '<div style="background:' + bg + ';border:1px solid ' + borderClr + ';border-radius:6px;padding:10px;' + clickable + '" ' + clickFn + '>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+        '<span style="font-size:12px;font-weight:bold;color:var(--text);">' + p.pair + '</span>' +
+        '<span style="font-size:13px;font-weight:bold;color:' + clr + ';">' + v + '</span>' +
+      '</div>' +
+      '<div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;">' + strength + (phase ? ' · ' + phase : '') + '</div>' +
+      (abc ? '<div style="font-size:10px;color:' + (abc.includes('IMPULSE') ? 'var(--green)' : 'var(--gold)') + ';margin-bottom:2px;">' + abc + '</div>' : '') +
+      (conf > 0 ? '<div style="font-size:10px;color:' + clr + ';font-weight:bold;">' + conf + '% confidence</div>' : '') +
+      (reason ? '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic;">' + reason + '</div>' : '') +
+      ((v === 'BUY' || v === 'SELL') ? '<div style="font-size:9px;letter-spacing:1px;color:var(--sage);margin-top:4px;">TAP TO ANALYZE ▶</div>' : '') +
+    '</div>';
+  }).join('');
+
+  // Top picks
+  const top = data.top_picks || [];
+  if(top.length > 0){
+    document.getElementById('topPicksBox').style.display = 'block';
+    document.getElementById('topPicksList').innerHTML = top.map(p => {
+      const clr = p.verdict === 'BUY' ? 'var(--green)' : 'var(--red)';
+      return '<button onclick="setPair('' + p.pair + '');document.getElementById('resultCard').classList.remove('visible')" ' +
+        'style="padding:8px 16px;background:transparent;border:1px solid ' + clr + ';color:' + clr + ';cursor:pointer;border-radius:3px;font-family:var(--mono);font-size:12px;">' +
+        p.pair + ' ' + p.verdict + ' (' + (p.confidence||0) + '%)</button>';
+    }).join('');
+  }
 }
 </script>
 </body>

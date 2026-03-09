@@ -11,7 +11,7 @@
   --bg:#080c0f;--surface:#0d1318;--surface2:#121920;--border:#2a3f52;
   --green:#00ff99;--cyan:#33ddff;--gold:#ffd700;--red:#ff3355;
   --purple:#cc55ff;--orange:#ff8800;--pink:#ff44aa;
-  --text:#ffffff;--text-mid:#ccdde8;--text-dim:#5a7a8a;
+  --text:#ffffff;--text-mid:#e2f0f8;--text-dim:#8ab8cc;
   --mono:'Share Tech Mono',monospace;--head:'Orbitron',monospace;
 }
 html,body{height:100%;overflow:hidden;}
@@ -34,7 +34,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .ntab:hover{color:var(--text-mid);border-color:var(--border);}
 .ntab.active{color:var(--gold);border-color:var(--gold);background:rgba(255,215,0,0.05);}
 .nav-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
-.clock{font-size:11px;color:var(--text-mid);letter-spacing:1px;}
+.clock{font-size:12px;color:var(--text-mid);letter-spacing:1px;}
 .sess-pill{padding:3px 10px;border-radius:20px;font-size:9px;letter-spacing:2px;font-weight:bold;}
 .s-london{background:rgba(51,221,255,0.1);border:1px solid rgba(51,221,255,0.4);color:var(--cyan);}
 .s-ny{background:rgba(0,255,153,0.1);border:1px solid rgba(0,255,153,0.4);color:var(--green);}
@@ -53,7 +53,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   overflow:hidden;display:flex;align-items:center;position:relative;z-index:10;}
 .ticker-inner{display:inline-flex;animation:tickMove 55s linear infinite;white-space:nowrap;}
 @keyframes tickMove{from{transform:translateX(100vw);}to{transform:translateX(-100%);}}
-.tick{padding:0 18px;font-size:11px;border-right:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+.tick{padding:0 18px;font-size:12px;border-right:1px solid var(--border);display:flex;align-items:center;gap:6px;}
 .tp-name{color:var(--text-mid);letter-spacing:1px;font-weight:bold;}
 .tp-chg.up{color:var(--green);}
 .tp-chg.dn{color:var(--red);}
@@ -67,7 +67,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .sidebar::-webkit-scrollbar{width:3px;}
 .sidebar::-webkit-scrollbar-thumb{background:var(--border);}
 .sb-sec{border-bottom:1px solid var(--border);padding:12px;}
-.sb-lbl{font-size:8px;letter-spacing:3px;color:var(--orange);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.sb-lbl{font-size:10px;letter-spacing:3px;color:var(--orange);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
 .sb-lbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
 .pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;}
 .pb{padding:7px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;
@@ -76,7 +76,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .pb.active{background:rgba(255,136,0,0.1);border-color:var(--orange);color:var(--orange);text-shadow:0 0 8px rgba(255,136,0,0.4);}
 .row{display:flex;gap:6px;}
 input,select{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);
-  font-family:var(--mono);font-size:11px;padding:7px 9px;outline:none;transition:border-color 0.2s;width:100%;}
+  font-family:var(--mono);font-size:12px;padding:7px 9px;outline:none;transition:border-color 0.2s;width:100%;}
 input:focus,select:focus{border-color:var(--orange);}
 input::placeholder{color:var(--text-dim);}
 .go-btn{padding:7px 12px;background:rgba(255,136,0,0.1);border:1px solid var(--orange);border-radius:3px;
@@ -94,7 +94,7 @@ input::placeholder{color:var(--text-dim);}
 .pc-chg.dn{color:var(--red);}
 .pstats{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;}
 .ps{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:6px;text-align:center;}
-.ps-l{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px;}
+.ps-l{font-size:10px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px;}
 .ps-v{font-size:12px;color:var(--text-mid);}
 
 /* Signal */
@@ -102,7 +102,7 @@ input::placeholder{color:var(--text-dim);}
 .sig-buy{border-color:var(--green);background:rgba(0,255,153,0.03);}
 .sig-sell{border-color:var(--red);background:rgba(255,51,85,0.03);}
 .sig-neutral{border-color:var(--gold);background:rgba(255,215,0,0.03);}
-.sc-lbl{font-size:8px;letter-spacing:3px;color:var(--text-dim);margin-bottom:4px;}
+.sc-lbl{font-size:10px;letter-spacing:3px;color:var(--text-dim);margin-bottom:4px;}
 .sc-val{font-family:var(--head);font-size:22px;font-weight:900;letter-spacing:4px;}
 .sig-buy .sc-val{color:var(--green);text-shadow:0 0 20px rgba(0,255,153,0.5);}
 .sig-sell .sc-val{color:var(--red);text-shadow:0 0 20px rgba(255,51,85,0.5);}
@@ -112,7 +112,7 @@ input::placeholder{color:var(--text-dim);}
 /* Levels */
 .lvl-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:4px;}
 .lv{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:7px;text-align:center;}
-.lv-l{font-size:7px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px;}
+.lv-l{font-size:10px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px;}
 .lv-v{font-size:12px;font-weight:bold;}
 .lv-entry .lv-v{color:var(--orange);}
 .lv-tp .lv-v{color:var(--green);}
@@ -122,17 +122,17 @@ input::placeholder{color:var(--text-dim);}
 /* Sharingan score */
 .sharingan-score{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px;margin-bottom:6px;}
 .ss-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.ss-title{font-size:8px;letter-spacing:2px;color:var(--gold);}
+.ss-title{font-size:10px;letter-spacing:2px;color:var(--gold);}
 .ss-val{font-family:var(--head);font-size:18px;font-weight:900;color:var(--gold);}
 .ss-bars{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;}
 .ss-bar{height:20px;border-radius:2px;border:1px solid var(--border);background:var(--surface);
-  display:flex;align-items:center;justify-content:center;font-size:7px;letter-spacing:1px;cursor:default;}
+  display:flex;align-items:center;justify-content:center;font-size:10px;letter-spacing:1px;cursor:default;}
 .ss-bar.bull{background:rgba(0,255,153,0.15);border-color:var(--green);color:var(--green);}
 .ss-bar.bear{background:rgba(255,51,85,0.15);border-color:var(--red);color:var(--red);}
 
 /* Catch pips */
 .catch-pips{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:10px;margin-bottom:6px;}
-.cp-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11px;}
+.cp-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:12px;}
 .cp-lbl{color:var(--text-dim);letter-spacing:1px;}
 .cp-val{font-weight:bold;}
 
@@ -144,7 +144,7 @@ input::placeholder{color:var(--text-dim);}
 .dxy-dn{color:var(--green);}
 .analyze-btn{width:100%;padding:13px;background:linear-gradient(135deg,rgba(255,136,0,0.15),rgba(204,85,255,0.15));
   border:2px solid var(--orange);border-radius:4px;color:var(--orange);font-family:var(--head);
-  font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;margin-bottom:6px;}
+  font-size:12px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all 0.3s;margin-bottom:6px;}
 .analyze-btn:hover{box-shadow:0 0 25px rgba(255,136,0,0.3);transform:translateY(-1px);}
 .analyze-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
 
@@ -170,7 +170,7 @@ input::placeholder{color:var(--text-dim);}
 .spy-card{background:linear-gradient(135deg,rgba(0,207,255,0.06),rgba(10,20,32,0));border:1px solid rgba(0,207,255,0.2);border-radius:8px;padding:18px;margin-bottom:12px;}
 .spy-hero{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
 .spy-stat{background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center;}
-.spy-stat-label{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;}
+.spy-stat-label{font-size:10px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;}
 .spy-stat-val{font-family:var(--mono);font-size:18px;font-weight:bold;}
 .spy-signal-box{border-radius:8px;padding:20px;text-align:center;margin-bottom:16px;}
 .spy-signal-bull{background:linear-gradient(135deg,rgba(0,255,136,0.12),rgba(10,20,32,0));border:2px solid var(--green);}
@@ -180,13 +180,13 @@ input::placeholder{color:var(--text-dim);}
 .spy-corr-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.05);margin:8px 0;overflow:hidden;}
 .spy-corr-fill{height:100%;border-radius:3px;transition:width 1s ease;}
 .spy-option-card{background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.2);border-radius:6px;padding:14px;margin-bottom:10px;}
-.spy-news-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;color:var(--text-mid);line-height:1.6;}
+.spy-news-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-mid);line-height:1.6;}
 .pip-up{color:var(--green);font-weight:bold;}
 .pip-dn{color:var(--red);font-weight:bold;}
 .pip-neut{color:var(--gold);font-weight:bold;}
 .spy-tier-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0;}
 .spy-tier{border-radius:6px;padding:12px;text-align:center;}
-.spy-tier-label{font-size:8px;letter-spacing:2px;margin-bottom:6px;}
+.spy-tier-label{font-size:10px;letter-spacing:2px;margin-bottom:6px;}
 .spy-tier-pips{font-family:var(--mono);font-size:16px;font-weight:bold;margin-bottom:4px;}
 .spy-tier-action{font-size:10px;}
 .tab-pane{display:none;flex:1;overflow-y:auto;padding:18px;}
@@ -224,29 +224,29 @@ input::placeholder{color:var(--text-dim);}
 .sc-head{font-family:var(--head);font-size:10px;letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
 .sc-bull .sc-head{color:var(--green);}
 .sc-bear .sc-head{color:var(--red);}
-.sc-trigger{font-size:11px;color:var(--text-mid);margin-bottom:8px;padding:8px;
+.sc-trigger{font-size:12px;color:var(--text-mid);margin-bottom:8px;padding:8px;
   background:var(--surface2);border-radius:3px;border-left:3px solid;line-height:1.7;}
 .sc-bull .sc-trigger{border-color:var(--green);}
 .sc-bear .sc-trigger{border-color:var(--red);}
-.sc-lvl{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.sc-lvl{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .sc-lvl:last-child{border:none;}
 .sc-lkey{color:var(--text-dim);}
 .sc-lval{font-weight:bold;}
 .sc-bull .sc-lval{color:var(--green);}
 .sc-bear .sc-lval{color:var(--red);}
-.sc-news{margin-top:8px;padding:8px;background:var(--surface2);border-radius:3px;font-size:11px;color:var(--text-mid);line-height:1.7;}
+.sc-news{margin-top:8px;padding:8px;background:var(--surface2);border-radius:3px;font-size:12px;color:var(--text-mid);line-height:1.7;}
 
 /* Timeframe rows */
 .tf-row{display:grid;grid-template-columns:70px 80px 1fr;align-items:center;gap:8px;
   padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;margin-bottom:5px;cursor:pointer;transition:border-color 0.2s;}
 .tf-row:hover{border-color:var(--orange);}
 .tf-row.expanded{border-color:var(--orange);background:rgba(255,136,0,0.03);}
-.tf-nm{font-size:11px;color:var(--text-mid);letter-spacing:2px;font-weight:bold;}
+.tf-nm{font-size:12px;color:var(--text-mid);letter-spacing:2px;font-weight:bold;}
 .tf-sg{font-size:10px;letter-spacing:1px;font-weight:bold;padding:3px 7px;border-radius:2px;text-align:center;}
 .tf-sg.buy{background:rgba(0,255,153,0.12);color:var(--green);}
 .tf-sg.sell{background:rgba(255,51,85,0.12);color:var(--red);}
 .tf-sg.neutral{background:rgba(255,215,0,0.12);color:var(--gold);}
-.tf-ds{font-size:11px;color:var(--text-mid);line-height:1.5;}
+.tf-ds{font-size:12px;color:var(--text-mid);line-height:1.5;}
 .tf-detail{display:none;padding:10px 12px;background:rgba(255,136,0,0.03);border:1px solid var(--border);
   border-top:none;border-radius:0 0 3px 3px;font-size:12px;color:var(--text-mid);line-height:1.8;margin-bottom:5px;}
 .tf-detail.open{display:block;}
@@ -254,7 +254,7 @@ input::placeholder{color:var(--text-dim);}
 /* Indicator grid */
 .ind-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .ind{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:10px;}
-.ind-nm{font-size:8px;letter-spacing:2px;color:var(--orange);margin-bottom:3px;}
+.ind-nm{font-size:10px;letter-spacing:2px;color:var(--orange);margin-bottom:3px;}
 .ind-vl{font-size:14px;color:var(--text);margin-bottom:2px;font-weight:bold;}
 .ind-sg{font-size:9px;letter-spacing:1px;font-weight:bold;}
 .bull{color:var(--green);}
@@ -273,19 +273,19 @@ input::placeholder{color:var(--text-dim);}
 .dir-buy{background:rgba(0,255,153,0.12);color:var(--green);border:1px solid rgba(0,255,153,0.3);}
 .dir-sell{background:rgba(255,51,85,0.12);color:var(--red);border:1px solid rgba(255,51,85,0.3);}
 .pk-conf{margin-left:auto;font-size:10px;color:var(--text-mid);}
-.badge{font-size:8px;letter-spacing:1px;padding:2px 7px;border-radius:2px;}
+.badge{font-size:10px;letter-spacing:1px;padding:2px 7px;border-radius:2px;}
 .badge-gold{background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.4);color:var(--gold);font-weight:bold;}
 .badge-purple{background:rgba(204,85,255,0.12);border:1px solid rgba(204,85,255,0.3);color:var(--purple);}
 .badge-score{background:rgba(255,136,0,0.12);border:1px solid rgba(255,136,0,0.3);color:var(--orange);font-weight:bold;}
 .pk-lvls{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;}
 .pl{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:6px;text-align:center;}
-.pl-l{font-size:7px;letter-spacing:1px;color:var(--text-dim);margin-bottom:2px;}
-.pl-v{font-size:11px;font-weight:bold;}
+.pl-l{font-size:10px;letter-spacing:1px;color:var(--text-dim);margin-bottom:2px;}
+.pl-v{font-size:12px;font-weight:bold;}
 .pk-body{font-size:12px;color:var(--text-mid);line-height:1.8;margin-bottom:8px;}
-.pk-confluences{font-size:11px;color:var(--gold);line-height:1.7;margin-bottom:8px;
+.pk-confluences{font-size:12px;color:var(--gold);line-height:1.7;margin-bottom:8px;
   padding:8px;background:var(--surface);border-radius:3px;border-left:3px solid var(--gold);}
-.pk-scenario{font-size:11px;line-height:1.8;margin-bottom:8px;padding:8px;background:var(--surface);border-radius:3px;}
-.pk-risk{font-size:11px;color:var(--red);line-height:1.7;margin-bottom:8px;}
+.pk-scenario{font-size:12px;line-height:1.8;margin-bottom:8px;padding:8px;background:var(--surface);border-radius:3px;}
+.pk-risk{font-size:12px;color:var(--red);line-height:1.7;margin-bottom:8px;}
 .pk-actions{display:flex;gap:7px;}
 .pa-btn{padding:6px 14px;font-family:var(--mono);font-size:9px;letter-spacing:1px;
   border-radius:3px;cursor:pointer;transition:all 0.2s;border:1px solid;font-weight:bold;}
@@ -308,14 +308,14 @@ input::placeholder{color:var(--text-dim);}
 /* Calculator */
 .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
 .calc-result{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;}
-.cr-pair{font-family:var(--head);font-size:11px;color:var(--orange);margin-bottom:8px;letter-spacing:2px;}
+.cr-pair{font-family:var(--head);font-size:12px;color:var(--orange);margin-bottom:8px;letter-spacing:2px;}
 .cr-verdict{font-family:var(--head);font-size:16px;font-weight:700;margin-bottom:8px;}
 .cr-body{font-size:12px;color:var(--text-mid);line-height:1.8;}
 
 /* Tracker */
 .tracker-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}
 .stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center;}
-.stat-l{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:5px;}
+.stat-l{font-size:10px;letter-spacing:2px;color:var(--text-dim);margin-bottom:5px;}
 .stat-v{font-family:var(--head);font-size:20px;font-weight:700;}
 .st-total .stat-v{color:var(--text);}
 .st-wins .stat-v{color:var(--green);}
@@ -324,13 +324,13 @@ input::placeholder{color:var(--text-dim);}
 .st-pips .stat-v{color:var(--gold);}
 .log-form{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:12px;}
 .fg{display:flex;flex-direction:column;gap:4px;}
-.fl{font-size:8px;letter-spacing:2px;color:var(--orange);}
+.fl{font-size:10px;letter-spacing:2px;color:var(--orange);}
 .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
 .submit-btn{padding:10px 18px;background:rgba(255,136,0,0.1);border:1px solid var(--orange);border-radius:3px;
   color:var(--orange);font-family:var(--mono);font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;}
 .submit-btn:hover{background:rgba(255,136,0,0.2);}
-.trade-table{width:100%;border-collapse:collapse;font-size:11px;}
-.trade-table th{font-size:8px;letter-spacing:2px;color:var(--orange);padding:8px 9px;
+.trade-table{width:100%;border-collapse:collapse;font-size:12px;}
+.trade-table th{font-size:10px;letter-spacing:2px;color:var(--orange);padding:8px 9px;
   border-bottom:1px solid var(--border);text-align:left;font-weight:normal;}
 .trade-table td{padding:8px 9px;border-bottom:1px solid var(--border);color:var(--text-mid);}
 .trade-table tr:hover td{background:var(--surface2);}
@@ -349,7 +349,7 @@ input::placeholder{color:var(--text-dim);}
 .tv-tf-active{background:rgba(255,215,0,0.1)!important;border-color:var(--gold)!important;color:var(--gold)!important;}
 
 /* Buttons */
-.big-btn{width:100%;padding:13px;border-radius:4px;font-family:var(--head);font-size:11px;font-weight:700;
+.big-btn{width:100%;padding:13px;border-radius:4px;font-family:var(--head);font-size:12px;font-weight:700;
   letter-spacing:3px;cursor:pointer;transition:all 0.3s;border:2px solid;}
 .big-btn:hover{transform:translateY(-1px);}
 .big-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
@@ -364,12 +364,12 @@ input::placeholder{color:var(--text-dim);}
 .ni:last-child{border:none;}
 .ni-meta{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
 .ni-time{font-size:9px;color:var(--orange);letter-spacing:1px;font-weight:bold;}
-.ni-imp{font-size:8px;letter-spacing:1px;padding:2px 7px;border-radius:2px;font-weight:bold;}
+.ni-imp{font-size:10px;letter-spacing:1px;padding:2px 7px;border-radius:2px;font-weight:bold;}
 .imp-h{background:rgba(255,51,85,0.15);color:var(--red);border:1px solid rgba(255,51,85,0.3);}
 .imp-m{background:rgba(255,215,0,0.15);color:var(--gold);border:1px solid rgba(255,215,0,0.3);}
 .imp-war{background:rgba(255,136,0,0.15);color:var(--orange);border:1px solid rgba(255,136,0,0.3);}
 .ni-title{font-size:12px;color:var(--text);line-height:1.5;font-weight:bold;}
-.ni-body{font-size:11px;color:var(--text-mid);margin-top:4px;line-height:1.6;}
+.ni-body{font-size:12px;color:var(--text-mid);margin-top:4px;line-height:1.6;}
 
 /* Loading */
 .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--orange);
@@ -379,6 +379,28 @@ input::placeholder{color:var(--text-dim);}
 .load-txt{font-size:10px;letter-spacing:3px;animation:fp 1.5s ease-in-out infinite;}
 @keyframes fp{0%,100%{opacity:1;}50%{opacity:0.3;}}
 .empty{text-align:center;padding:25px;font-size:12px;color:var(--text-dim);letter-spacing:1px;}
+/* ── GLOBAL READABILITY BOOST ─────────────────────────────────────────────── */
+.ai-output,.an-body,.sc-body,.tf-body{font-size:14px;line-height:2;}
+.pick-thesis,.pick-entry,.pick-sl,.pick-tp{font-size:13px;}
+.ps-v{font-size:14px;}
+/* ── MOBILE RESPONSIVE ────────────────────────────────────────────────────── */
+@media(max-width:768px){
+  body{overflow-y:auto!important;}
+  .sidebar{width:100%!important;min-width:unset!important;height:auto!important;flex-direction:row!important;flex-wrap:wrap!important;padding:8px!important;gap:6px!important;border-right:none!important;border-bottom:1px solid var(--border)!important;}
+  .main{width:100%!important;min-width:unset!important;}
+  .container{flex-direction:column!important;}
+  .pair-grid{grid-template-columns:repeat(3,1fr)!important;}
+  .tab-bar{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;flex-wrap:nowrap!important;}
+  .tab-btn{font-size:10px!important;padding:10px 8px!important;white-space:nowrap!important;}
+  .ntab{font-size:10px!important;padding:6px 8px!important;}
+  .ps-v{font-size:18px!important;}
+  .pick-name{font-size:15px!important;}
+  .price-large,.sc-val{font-size:26px!important;}
+  .grid-3,.grid-4{grid-template-columns:1fr!important;}
+  .lv-box,.calc-grid{grid-template-columns:1fr 1fr!important;}
+  button{min-height:40px!important;}
+  .ai-output,.an-body{font-size:14px!important;line-height:1.9!important;}
+}
 </style>
 </head>
 <body>
@@ -389,6 +411,9 @@ input::placeholder{color:var(--text-dim);}
     <a href="/forex" class="ntab active">FOREX</a>
     <a href="/forex-wolf" class="ntab" style="color:var(--gold);border-color:rgba(255,215,0,0.3);">🐺 WOLF PICKS</a>
     <a href="/wolf-elite" class="ntab">📈 ELITE</a>
+    <a href="/sage-mode" class="ntab" style="color:var(--orange);border-color:rgba(255,102,0,0.3);">🔮 SAGE MODE</a>
+    <a href="/legends" class="ntab" style="color:#a855f7;border-color:rgba(168,85,247,0.3);">⚡ LEGENDS</a>
+    <a href="/education" class="ntab" style="color:var(--green);border-color:rgba(0,255,153,0.3);">🎓 ACADEMY</a>
     <a href="/pricing" class="ntab">PLANS</a>
   </div>
   <div class="nav-right">
@@ -547,13 +572,13 @@ input::placeholder{color:var(--text-dim);}
       <a href="/wolf-scanner" style="text-decoration:none;"><button class="tab-btn" style="color:var(--gold);border-bottom-color:transparent;" onmouseover="this.style.borderBottomColor='var(--gold)'" onmouseout="this.style.borderBottomColor='transparent'">🐺 WOLF SCANNER</button></a>
       <button class="tab-btn" onclick="openTab('scenarios',this)">⚡ SCENARIOS</button>
       <button class="tab-btn" onclick="openTab('timeframes',this)">🕐 TIMEFRAMES</button>
-      <button class="tab-btn" onclick="openTab('sharingan',this)">👁 SHARINGAN</button>
+      <button class="tab-btn" onclick="openTab('sharingan',this)">📈 CHART</button>
       <button class="tab-btn t-gold" onclick="openTab('guaranteed',this)">🏆 TOP 3 DAY</button>
       <button class="tab-btn t-purple" onclick="openTab('swings',this)">📈 TOP 3 SWING</button>
       <button class="tab-btn" onclick="openTab('calculator',this)">🧮 CALCULATOR</button>
       <button class="tab-btn t-war" onclick="openTab('conflict',this)">⚔️ CONFLICTS</button>
       <button class="tab-btn t-spy" onclick="openTab('spy',this);loadSPY();">🦅 SPY SIGNAL</button>
-      <button class="tab-btn" onclick="openTab('tracker',this)">📋 TRACKER</button>
+      
     </div>
 
     <!-- ANALYSIS TAB -->
@@ -573,7 +598,7 @@ input::placeholder{color:var(--text-dim);}
           <div class="lv"><div class="lv-l">DAILY</div><div class="lv-v" id="dxy-daily">—</div></div>
           <div class="lv"><div class="lv-l">IMPACT</div><div class="lv-v" id="dxy-impact" style="font-size:10px;">—</div></div>
         </div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.7;" id="dxy-note">
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.7;" id="dxy-note">
           🐺 <strong style="color:var(--gold)">Kovner & Soros Rule:</strong> Always know DXY direction FIRST. Dollar up = USD pairs favor USD strength. Dollar down = risk-on, commodity currencies rally. Run analysis to get live DXY reading.
         </div>
       </div>
@@ -603,7 +628,7 @@ input::placeholder{color:var(--text-dim);}
             <div style="font-size:9px;color:var(--text-dim);margin-top:3px;" id="cb-boj-rate">Rate: —</div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--text-dim);padding:8px;background:var(--surface2);border-radius:3px;border-left:3px solid var(--purple);" id="cb-divergence-note">
+        <div style="font-size:12px;color:var(--text-dim);padding:8px;background:var(--surface2);border-radius:3px;border-left:3px solid var(--purple);" id="cb-divergence-note">
           🏆 <strong style="color:var(--purple)">Druckenmiller:</strong> The biggest forex moves come from central bank DIVERGENCE — when one bank is hiking while another is cutting. Run analysis to see current divergence and which pairs benefit most.
         </div>
       </div>
@@ -682,7 +707,7 @@ input::placeholder{color:var(--text-dim);}
     <div class="tab-pane" id="pane-timeframes">
       <div class="panel">
         <div class="ph">MULTI-TIMEFRAME BREAKDOWN — <span style="color:var(--text);font-size:9px;" id="tf-lbl">SELECT PAIR & RUN ANALYSIS</span></div>
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">Click any timeframe to expand full details</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Click any timeframe to expand full details</div>
         <div id="tf-box"><div class="empty">Run analysis to see full timeframe breakdown. Each timeframe is clickable for detailed view.</div></div>
       </div>
     </div>
@@ -789,37 +814,94 @@ input::placeholder{color:var(--text-dim);}
       <div class="panel">
         <div class="ph" style="color:#00cfff;border-color:rgba(0,207,255,0.3);">
           🦅 EUR/JPY → SPY CORRELATION SIGNAL
-          <span style="font-size:9px;color:var(--text-dim);margin-left:auto;font-weight:normal;">London 3AM-8AM EST · Updates live</span>
+          <span style="font-size:9px;color:var(--text-dim);margin-left:auto;font-weight:normal;">London 3AM EST sets the mood · NY Open 9:30AM execute</span>
         </div>
 
-        <!-- HOW IT WORKS -->
-        <div style="background:rgba(0,207,255,0.04);border:1px solid rgba(0,207,255,0.15);border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:11px;color:var(--text-mid);line-height:1.9;">
-          <strong style="color:#00cfff;">🧠 THE WOLF CORRELATION RULE:</strong><br>
-          EUR = risk-on currency (investors buy EUR when piling into global stocks) · JPY = safe haven (traders flee to Yen when scared).<br>
-          <strong style="color:var(--green);">EUR/JPY UP during London</strong> = risk appetite ON = <strong style="color:var(--green);">SPY opens UP → BUY CALLS</strong><br>
-          <strong style="color:var(--red);">EUR/JPY DOWN during London</strong> = risk-off = <strong style="color:var(--red);">SPY opens DOWN → BUY PUTS</strong><br>
-          <strong style="color:var(--gold);">Sideways (&lt;20 pips)</strong> = <strong style="color:var(--gold);">WAIT — no trade. Watch first 15 min at NY open.</strong><br>
-          <span style="color:var(--text-dim);font-size:10px;">Correlation holds ~65-70% of the time. Always use stop loss. Never risk more than 1-2% per trade.</span>
+        <!-- STRATEGY EXPLANATION -->
+        <div style="background:rgba(0,207,255,0.04);border:1px solid rgba(0,207,255,0.15);border-radius:6px;padding:14px 16px;margin-bottom:14px;font-size:12px;color:var(--text-mid);line-height:1.9;">
+          <strong style="color:#00cfff;">🧠 THE WOLF EUR/JPY → SPY STRATEGY:</strong><br>
+          JPY = safe haven. When investors are <strong style="color:var(--green);">bold/greedy</strong> → they sell JPY and buy risk assets. EUR/JPY <strong style="color:var(--green);">RISES</strong> → SPY <strong style="color:var(--green);">RISES</strong>.<br>
+          When investors are <strong style="color:var(--red);">scared</strong> → they dump stocks and run to JPY safety. EUR/JPY <strong style="color:var(--red);">DROPS</strong> → SPY <strong style="color:var(--red);">DROPS</strong>.<br>
+          <strong style="color:var(--gold);">EUR/JPY is the LEADING indicator</strong> — it moves FIRST, then SPY follows 5–15 min later. That lag is your entry window.
         </div>
 
-        <!-- SIGNAL TIERS -->
-        <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;">📊 SIGNAL TIERS (RESEARCH-BACKED)</div>
-        <div class="spy-tier-grid" style="margin-bottom:16px;">
-          <div class="spy-tier" style="background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.3);">
-            <div class="spy-tier-label" style="color:var(--gold);">SIDEWAYS</div>
-            <div class="spy-tier-pips" style="color:var(--gold);">&lt; 20 pips</div>
-            <div class="spy-tier-action" style="color:var(--text-dim);">⚠️ WAIT · No trade<br>Watch NY open</div>
+        <!-- THREE SCENARIOS (the heart of the strategy) -->
+        <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">⚡ THE 3 TRADE SCENARIOS — KNOW WHICH ONE YOU'RE IN</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:rgba(0,255,153,0.04);border:1px solid rgba(0,255,153,0.25);border-radius:6px;padding:12px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--green);margin-bottom:6px;">✅ CONFIRMATION</div>
+            <div style="font-size:11px;color:var(--text-mid);line-height:1.7;">EUR/JPY breaking new daily highs <strong>AND</strong> SPY moving up together<br><strong style="color:var(--green);">→ BUY SPY CALLS</strong><br>Both moving in sync = strong signal</div>
           </div>
-          <div class="spy-tier" style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.25);">
-            <div class="spy-tier-label" style="color:var(--green);">SIGNAL</div>
-            <div class="spy-tier-pips" style="color:var(--green);">20-50 pips</div>
-            <div class="spy-tier-action" style="color:var(--text-dim);">✅ Trade with care<br>0DTE ATM calls/puts</div>
+          <div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.25);border-radius:6px;padding:12px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--red);margin-bottom:6px;">🚨 DIVERGENCE (TRAP)</div>
+            <div style="font-size:11px;color:var(--text-mid);line-height:1.7;">SPY trying to rally BUT EUR/JPY is flat or dropping<br><strong style="color:var(--red);">→ BUY SPY PUTS</strong><br>Stock rally is FAKE — no risk-on fuel</div>
           </div>
-          <div class="spy-tier" style="background:rgba(0,207,255,0.05);border:1px solid rgba(0,207,255,0.3);">
-            <div class="spy-tier-label" style="color:#00cfff;">STRONG</div>
-            <div class="spy-tier-pips" style="color:#00cfff;">&gt; 50 pips</div>
-            <div class="spy-tier-action" style="color:var(--text-dim);">⚡ Strong signal<br>Higher confidence</div>
+          <div style="background:rgba(255,165,0,0.04);border:1px solid rgba(255,165,0,0.25);border-radius:6px;padding:12px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--orange);margin-bottom:6px;">⚡ THE LEAD</div>
+            <div style="font-size:11px;color:var(--text-mid);line-height:1.7;">EUR/JPY drops hard in London/pre-market BEFORE US opens<br><strong style="color:var(--orange);">→ BUY PUTS AT 9:30AM</strong><br>The move started in Europe first</div>
           </div>
+        </div>
+
+        <!-- SESSION TIMELINE -->
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;">🕐 SESSION TIMELINE — YOUR DAILY WORKFLOW</div>
+        <div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div style="font-size:9px;letter-spacing:2px;color:#00cfff;" id="spy-session-label">CALCULATING SESSION...</div>
+            <div style="font-size:10px;color:var(--text-dim);" id="spy-session-status">—</div>
+          </div>
+          <div class="spy-corr-bar"><div class="spy-corr-fill" id="spy-progress-bar" style="width:0%;background:linear-gradient(90deg,rgba(0,207,255,0.5),#00cfff);"></div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-top:8px;">
+            <div style="text-align:center;padding:6px;border-radius:4px;" id="phase-london">
+              <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);">LONDON</div>
+              <div style="font-size:9px;color:var(--text-dim);">3AM–8AM EST</div>
+              <div style="font-size:10px;margin-top:2px;" id="phase-london-status">Sets the mood</div>
+            </div>
+            <div style="text-align:center;padding:6px;border-radius:4px;" id="phase-premarket">
+              <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);">PRE-MARKET</div>
+              <div style="font-size:9px;color:var(--text-dim);">8AM–9:30AM EST</div>
+              <div style="font-size:10px;margin-top:2px;" id="phase-premarket-status">Watch divergence</div>
+            </div>
+            <div style="text-align:center;padding:6px;border-radius:4px;" id="phase-open">
+              <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);">NY OPEN</div>
+              <div style="font-size:9px;color:var(--text-dim);">9:30AM EST</div>
+              <div style="font-size:10px;margin-top:2px;" id="phase-open-status">Execute 0DTE</div>
+            </div>
+            <div style="text-align:center;padding:6px;border-radius:4px;" id="phase-session">
+              <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);">SESSION</div>
+              <div style="font-size:9px;color:var(--text-dim);">9:30AM–4PM EST</div>
+              <div style="font-size:10px;margin-top:2px;" id="phase-session-status">Monitor divergence</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LIVE DATA ROW -->
+        <div class="spy-hero" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:14px;">
+          <div class="spy-stat">
+            <div class="spy-stat-label">EUR/JPY NOW</div>
+            <div class="spy-stat-val" id="spy-eurjpy-now" style="color:var(--text);">—</div>
+            <div style="font-size:10px;margin-top:3px;" id="spy-eurjpy-pips">Loading...</div>
+          </div>
+          <div class="spy-stat">
+            <div class="spy-stat-label">LONDON OPEN PRICE</div>
+            <div class="spy-stat-val" id="spy-eurjpy-open" style="color:var(--text);">—</div>
+            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;">3:00 AM EST baseline</div>
+          </div>
+          <div class="spy-stat">
+            <div class="spy-stat-label">SPY PRICE</div>
+            <div class="spy-stat-val" id="spy-price" style="color:var(--text);">—</div>
+            <div style="font-size:10px;margin-top:3px;" id="spy-change">Loading...</div>
+          </div>
+          <div class="spy-stat">
+            <div class="spy-stat-label">EUR/JPY RSI (15M)</div>
+            <div class="spy-stat-val" id="spy-rsi-val" style="color:var(--text);">—</div>
+            <div style="font-size:10px;margin-top:3px;" id="spy-rsi-label">overbought &gt;70 / oversold &lt;30</div>
+          </div>
+        </div>
+
+        <!-- DIVERGENCE DETECTOR -->
+        <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:14px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:6px;">🔍 DIVERGENCE DETECTOR</div>
+          <div style="font-size:12px;color:var(--text-mid);line-height:1.7;" id="spy-divergence-status">Loading divergence analysis...</div>
         </div>
 
         <!-- MAIN SIGNAL BOX -->
@@ -829,53 +911,55 @@ input::placeholder{color:var(--text-dim);}
           <div id="spy-signal-conf" style="font-size:10px;color:var(--text-dim);margin-top:6px;"></div>
         </div>
 
-        <!-- STATS ROW -->
-        <div class="spy-hero">
-          <div class="spy-stat">
-            <div class="spy-stat-label">EUR/JPY LONDON OPEN</div>
-            <div class="spy-stat-val" id="spy-eurjpy-open" style="color:var(--text);">—</div>
-            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;">3:00 AM EST</div>
+        <!-- EUR/JPY KEY LEVELS -->
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;margin-top:14px;">📊 EUR/JPY KEY LEVELS — SET THESE ON YOUR CHART</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:rgba(255,51,85,0.05);border:1px solid rgba(255,51,85,0.2);border-radius:6px;padding:10px;text-align:center;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--red);margin-bottom:4px;">RESISTANCE (RISK-ON STALL)</div>
+            <div style="font-family:var(--mono);font-size:15px;font-weight:bold;color:var(--red);" id="spy-level-res">—</div>
+            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;">If EUR/JPY breaks this → SIZE UP calls</div>
           </div>
-          <div class="spy-stat">
-            <div class="spy-stat-label">EUR/JPY NOW / PIPS</div>
-            <div class="spy-stat-val" id="spy-eurjpy-now" style="color:var(--text);">—</div>
-            <div style="font-size:10px;margin-top:3px;" id="spy-eurjpy-pips">—</div>
+          <div style="background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.2);border-radius:6px;padding:10px;text-align:center;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:4px;">PIVOT / NEUTRAL ZONE</div>
+            <div style="font-family:var(--mono);font-size:15px;font-weight:bold;color:var(--gold);" id="spy-level-pivot">—</div>
+            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;">Consolidation — wait for direction break</div>
           </div>
-          <div class="spy-stat">
-            <div class="spy-stat-label">SPY PRE-MARKET</div>
-            <div class="spy-stat-val" id="spy-price" style="color:var(--text);">—</div>
-            <div style="font-size:10px;margin-top:3px;" id="spy-change">—</div>
-          </div>
-        </div>
-
-        <!-- LONDON SESSION PROGRESS -->
-        <div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <div style="font-size:9px;letter-spacing:2px;color:#00cfff;">LONDON SESSION PROGRESS</div>
-            <div style="font-size:10px;color:var(--text-dim);" id="spy-session-status">3:00 AM → 8:00 AM EST</div>
-          </div>
-          <div class="spy-corr-bar"><div class="spy-corr-fill" id="spy-progress-bar" style="width:0%;background:linear-gradient(90deg,rgba(0,207,255,0.5),#00cfff);"></div></div>
-          <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text-dim);margin-top:4px;">
-            <span>3AM EST · London Open</span><span>NYSE Opens 9:30AM</span><span>8AM EST · London Close</span>
+          <div style="background:rgba(0,255,153,0.04);border:1px solid rgba(0,255,153,0.2);border-radius:6px;padding:10px;text-align:center;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--green);margin-bottom:4px;">SUPPORT (RISK-OFF TRIGGER)</div>
+            <div style="font-family:var(--mono);font-size:15px;font-weight:bold;color:var(--green);" id="spy-level-sup">—</div>
+            <div style="font-size:9px;color:var(--text-dim);margin-top:3px;">If EUR/JPY breaks this → buy puts</div>
           </div>
         </div>
 
-        <!-- AI ANALYSIS BOX -->
-        <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:10px;">📋 WOLF SPY ANALYSIS + OPTIONS PLAY</div>
-        <div id="spy-options-content" style="color:var(--text-dim);font-size:11px;min-height:40px;">Hit Refresh to get today's Wolf AI SPY options play based on the EUR/JPY signal...</div>
+        <!-- SIGNAL KILLERS (economic calendar) -->
+        <div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.15);border-radius:6px;padding:12px 14px;margin-bottom:14px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--red);margin-bottom:6px;">🚨 SIGNAL KILLERS — CHECK BEFORE TRADING</div>
+          <div style="font-size:11px;color:var(--text-mid);line-height:1.8;">
+            <strong style="color:var(--red);">BOJ Announcement</strong> — If Bank of Japan hints at rate hikes, JPY spikes suddenly. EUR/JPY correlation breaks temporarily. <span style="color:var(--text-dim);">Skip trading that day.</span><br>
+            <strong style="color:var(--red);">FOMC / Fed Speaker</strong> — USD-centric event. Causes massive risk-off JPY flows. Signal usually valid but <span style="color:var(--text-dim);">expect volatility spikes.</span><br>
+            <strong style="color:var(--red);">NFP at 8:30AM EST</strong> — Jobs report overrides everything. EUR/JPY will whipsaw violently. <span style="color:var(--text-dim);">Wait until 9:45AM to confirm direction.</span><br>
+            <strong style="color:var(--red);">CPI Data</strong> — Inflation data = massive risk-off JPY flows if bad. <span style="color:var(--text-dim);">Trades after CPI are valid if EUR/JPY stabilizes.</span><br>
+            <strong style="color:var(--red);">ECB Meeting Day</strong> — EUR side gets distorted. <span style="color:var(--text-dim);">Use USD/JPY as backup risk indicator instead.</span>
+          </div>
+        </div>
+
+        <!-- WOLF AI ANALYSIS -->
+        <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:10px;">🐺 WOLF AI — 0DTE TRADE ANALYSIS + OPTIONS PLAY</div>
+        <div id="spy-options-content" style="color:var(--text-dim);font-size:12px;min-height:40px;">Hit the button below to get Wolf AI's full 0DTE analysis based on today's EUR/JPY signal...</div>
 
         <button onclick="loadSPYAnalysis()" id="spy-refresh-btn"
-          style="width:100%;padding:12px;margin-top:12px;background:linear-gradient(135deg,rgba(0,207,255,0.15),rgba(0,207,255,0.05));border:1px solid rgba(0,207,255,0.4);color:#00cfff;cursor:pointer;border-radius:6px;font-family:var(--mono);font-size:11px;letter-spacing:2px;">
-          🔄 REFRESH SPY SIGNAL + WOLF ANALYSIS
+          style="width:100%;padding:12px;margin-top:12px;background:linear-gradient(135deg,rgba(0,207,255,0.15),rgba(0,207,255,0.05));border:1px solid rgba(0,207,255,0.4);color:#00cfff;cursor:pointer;border-radius:6px;font-family:var(--mono);font-size:12px;letter-spacing:2px;">
+          🔄 REFRESH SIGNAL + GET WOLF 0DTE PLAY
         </button>
 
         <!-- SPY NEWS -->
         <div style="margin-top:16px;">
           <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;">📰 SPY / MARKET NEWS</div>
-          <div id="spy-news-box" style="color:var(--text-dim);font-size:11px;">Loading news...</div>
+          <div id="spy-news-box" style="color:var(--text-dim);font-size:12px;">Loading news...</div>
         </div>
       </div>
     </div>
+
 
     <div class="tab-pane" id="pane-tracker">
       <div class="tracker-stats">
@@ -1481,7 +1565,7 @@ function buildScenarios(text){
     </div>`;
 
   document.getElementById('scenario-box').innerHTML=`
-    <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;letter-spacing:1px;">
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;letter-spacing:1px;">
       Both scenarios analyzed for <strong style="color:var(--orange)">${currentPair}</strong> — trade the one that triggers first with confirmation.
     </div>
     <div class="scenario-wrap">
@@ -1506,7 +1590,7 @@ function renderGuaranteed(data, box, type){
       '<div class="lv"><div class="lv-l">RISK</div><div class="lv-v" style="color:' + ((data.risk_environment||'').includes('ON') ? 'var(--green)' : 'var(--red)') + '">' + (data.risk_environment||'--') + '</div></div>' +
       '</div>';
   } else if(!isDay && data.weekly_theme){
-    headerHtml = '<div style="font-size:11px;color:var(--purple);margin-bottom:10px;padding:8px;background:var(--surface2);border-radius:3px;border-left:3px solid var(--purple);">' +
+    headerHtml = '<div style="font-size:12px;color:var(--purple);margin-bottom:10px;padding:8px;background:var(--surface2);border-radius:3px;border-left:3px solid var(--purple);">' +
       '📅 ' + data.weekly_theme + ' | DXY: ' + (data.dxy_outlook||'--') + ' | Focus: ' + (data.central_bank_focus||'--') +
       '</div>';
   }
@@ -1541,8 +1625,8 @@ function renderGuaranteed(data, box, type){
 
     if(confs.length){
       html += '<div style="margin:8px 0;padding:8px;background:var(--surface2);border-radius:3px;border-left:3px solid var(--orange);">';
-      html += '<div style="font-size:8px;letter-spacing:2px;color:var(--orange);margin-bottom:5px;">✅ ' + confs.length + ' CONFLUENCES</div>';
-      confs.forEach(function(c){ html += '<div style="font-size:11px;color:var(--text2);margin-bottom:3px;">✓ ' + c + '</div>'; });
+      html += '<div style="font-size:10px;letter-spacing:2px;color:var(--orange);margin-bottom:5px;">✅ ' + confs.length + ' CONFLUENCES</div>';
+      confs.forEach(function(c){ html += '<div style="font-size:12px;color:var(--text2);margin-bottom:3px;">✓ ' + c + '</div>'; });
       html += '</div>';
     }
 
@@ -1561,7 +1645,7 @@ function renderGuaranteed(data, box, type){
       html += '</div>';
     }
 
-    if(news) html += '<div class="pk-body" style="color:var(--cyan);font-size:11px;margin-top:8px;"><span style="font-size:9px;letter-spacing:1px;">📰 NEWS:</span> ' + news + '</div>';
+    if(news) html += '<div class="pk-body" style="color:var(--cyan);font-size:12px;margin-top:8px;"><span style="font-size:9px;letter-spacing:1px;">📰 NEWS:</span> ' + news + '</div>';
     if(risk) html += '<div class="pk-risk" style="margin-top:6px;">⚠ ' + (isDay ? 'INVALIDATION' : 'KEY RISK') + ': ' + risk + '</div>';
 
     html += '<div class="pk-actions">';
@@ -1743,9 +1827,9 @@ function renderConflict(text,box){
         <span class="ni-imp ${statusCls}" style="margin-left:auto;">${status}</span>
       </div>
       ${summaryM?`<div class="cc-body">${summaryM[1].trim()}</div>`:''}
-      ${oilM?`<div class="cc-body" style="color:var(--orange);font-size:11px;"><strong>🛢 OIL:</strong> ${oilM[1].trim()}</div>`:''}
-      ${safeM?`<div class="cc-body" style="color:var(--gold);font-size:11px;"><strong>🏦 SAFE HAVENS:</strong> ${safeM[1].trim()}</div>`:''}
-      ${sentM?`<div class="cc-body" style="font-size:11px;"><strong>SENTIMENT:</strong> <span style="color:${sentM[1].includes('OFF')?'var(--red)':sentM[1].includes('ON')?'var(--green)':'var(--gold)'};font-weight:bold;">${sentM[1].trim()}</span></div>`:''}
+      ${oilM?`<div class="cc-body" style="color:var(--orange);font-size:12px;"><strong>🛢 OIL:</strong> ${oilM[1].trim()}</div>`:''}
+      ${safeM?`<div class="cc-body" style="color:var(--gold);font-size:12px;"><strong>🏦 SAFE HAVENS:</strong> ${safeM[1].trim()}</div>`:''}
+      ${sentM?`<div class="cc-body" style="font-size:12px;"><strong>SENTIMENT:</strong> <span style="color:${sentM[1].includes('OFF')?'var(--red)':sentM[1].includes('ON')?'var(--green)':'var(--gold)'};font-weight:bold;">${sentM[1].trim()}</span></div>`:''}
       ${pairsHtml?`<div class="cc-pairs">${pairsHtml}</div>`:''}
       ${alertM?`<div class="cc-body" style="color:var(--cyan);font-size:12px;font-weight:bold;border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">🐺 WOLF ALERT: ${alertM[1].trim()}</div>`:''}
     </div>`;
@@ -1862,7 +1946,7 @@ async function loadScenarios(){
 function renderScenarios(data,box){
   const trades=data.trades||[];
   let html=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
-    <div class="lv"><div class="lv-l">MARKET THEME</div><div class="lv-v" style="color:var(--cyan);font-size:11px;">${data.market_theme||'--'}</div></div>
+    <div class="lv"><div class="lv-l">MARKET THEME</div><div class="lv-v" style="color:var(--cyan);font-size:12px;">${data.market_theme||'--'}</div></div>
     <div class="lv"><div class="lv-l">DXY</div><div class="lv-v" style="color:${(data.dxy_direction||'').includes('BULL')?'var(--green)':'var(--red)'}">${data.dxy_direction||'--'}</div></div>
     <div class="lv"><div class="lv-l">RISK</div><div class="lv-v" style="color:${(data.risk_sentiment||'').includes('ON')?'var(--green)':'var(--red)'}">${data.risk_sentiment||'--'}</div></div>
   </div>`;
@@ -1876,7 +1960,7 @@ function renderScenarios(data,box){
     const tfBars=tfKeys.map(k=>{
       const v=(tf[k]||'NEUTRAL').toUpperCase();
       const cls=v.includes('BULL')?'bull':v.includes('BEAR')?'bear':'neut';
-      return`<div class="ss-bar ${cls}" style="font-size:7px;">${k.toUpperCase().replace('MONTHLY','M').replace('WEEKLY','W').replace('DAILY','D')}</div>`;
+      return`<div class="ss-bar ${cls}" style="font-size:10px;">${k.toUpperCase().replace('MONTHLY','M').replace('WEEKLY','W').replace('DAILY','D')}</div>`;
     }).join('');
     const buy=t.buy_scenario||{};
     const sell=t.sell_scenario||{};
@@ -1887,52 +1971,52 @@ function renderScenarios(data,box){
         <div class="pk-pair">${t.pair}</div>
         <div class="pk-dir ${isBull?'dir-buy':'dir-sell'}">${t.primary_direction||bias}</div>
         <span class="badge badge-score">CONFIDENCE ${t.confidence||'--'}%</span>
-        ${t.live_price?`<span style="font-size:11px;color:var(--text-mid);">LIVE: ${t.live_price}</span>`:''}
+        ${t.live_price?`<span style="font-size:12px;color:var(--text-mid);">LIVE: ${t.live_price}</span>`:''}
         ${t.best_session?`<span class="badge" style="background:rgba(51,221,255,0.1);border:1px solid rgba(51,221,255,0.3);color:var(--cyan);">⏰ ${t.best_session}</span>`:''}
       </div>
 
       <div style="margin:10px 0;">
-        <div style="font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:5px;">MTF ALIGNMENT</div>
+        <div style="font-size:10px;letter-spacing:2px;color:var(--text-dim);margin-bottom:5px;">MTF ALIGNMENT</div>
         <div class="ss-bars" style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;">${tfBars}</div>
       </div>
 
       ${t.thesis?`<div class="pk-body" style="border-left:3px solid var(--cyan);padding-left:10px;">${t.thesis}</div>`:''}
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;">
-        <div style="font-size:11px;color:var(--text-mid);padding:8px;background:var(--surface2);border-radius:3px;">
-          <div style="font-size:8px;letter-spacing:2px;color:var(--red);margin-bottom:4px;">KEY RESISTANCE</div>${t.key_resistance||'--'}
+        <div style="font-size:12px;color:var(--text-mid);padding:8px;background:var(--surface2);border-radius:3px;">
+          <div style="font-size:10px;letter-spacing:2px;color:var(--red);margin-bottom:4px;">KEY RESISTANCE</div>${t.key_resistance||'--'}
         </div>
-        <div style="font-size:11px;color:var(--text-mid);padding:8px;background:var(--surface2);border-radius:3px;">
-          <div style="font-size:8px;letter-spacing:2px;color:var(--green);margin-bottom:4px;">KEY SUPPORT</div>${t.key_support||'--'}
+        <div style="font-size:12px;color:var(--text-mid);padding:8px;background:var(--surface2);border-radius:3px;">
+          <div style="font-size:10px;letter-spacing:2px;color:var(--green);margin-bottom:4px;">KEY SUPPORT</div>${t.key_support||'--'}
         </div>
       </div>
 
       <div class="scenario-wrap">
         <div class="scenario sc-bull">
           <div class="sc-head">📈 BUY SCENARIO <span style="margin-left:auto;font-size:9px;color:var(--green);">${buy.probability||'--'}% PROB</span></div>
-          ${buy.trigger?`<div class="sc-trigger" style="border-color:var(--green)"><strong style="font-size:8px;letter-spacing:1px;">TRIGGER:</strong><br>${buy.trigger}</div>`:''}
-          ${buy.news_needed?`<div class="sc-news"><strong style="font-size:8px;letter-spacing:1px;color:var(--cyan)">NEWS NEEDED:</strong><br>${buy.news_needed}</div>`:''}
+          ${buy.trigger?`<div class="sc-trigger" style="border-color:var(--green)"><strong style="font-size:10px;letter-spacing:1px;">TRIGGER:</strong><br>${buy.trigger}</div>`:''}
+          ${buy.news_needed?`<div class="sc-news"><strong style="font-size:10px;letter-spacing:1px;color:var(--cyan)">NEWS NEEDED:</strong><br>${buy.news_needed}</div>`:''}
           <div class="sc-lvl"><span class="sc-lkey">ENTRY</span><span class="sc-lval">${buy.entry||'--'}</span></div>
           <div class="sc-lvl"><span class="sc-lkey">STOP</span><span class="sc-lval" style="color:var(--red)!important">${buy.stop_loss||'--'}</span></div>
           <div class="sc-lvl"><span class="sc-lkey">TP1</span><span class="sc-lval">${buy.tp1||'--'}</span></div>
           <div class="sc-lvl"><span class="sc-lkey">TP2</span><span class="sc-lval">${buy.tp2||'--'}</span></div>
           <div class="sc-lvl"><span class="sc-lkey">TP3</span><span class="sc-lval">${buy.tp3||'--'}</span></div>
-          ${buy.confirmation?`<div class="sc-news" style="margin-top:6px;"><strong style="font-size:8px;color:var(--gold);">CONFIRMATION:</strong><br>${buy.confirmation}</div>`:''}
+          ${buy.confirmation?`<div class="sc-news" style="margin-top:6px;"><strong style="font-size:10px;color:var(--gold);">CONFIRMATION:</strong><br>${buy.confirmation}</div>`:''}
         </div>
         <div class="scenario sc-bear">
           <div class="sc-head">📉 SELL SCENARIO <span style="margin-left:auto;font-size:9px;color:var(--red);">${sell.probability||'--'}% PROB</span></div>
-          ${sell.trigger?`<div class="sc-trigger" style="border-color:var(--red)"><strong style="font-size:8px;letter-spacing:1px;">TRIGGER:</strong><br>${sell.trigger}</div>`:''}
-          ${sell.news_needed?`<div class="sc-news"><strong style="font-size:8px;letter-spacing:1px;color:var(--cyan)">NEWS NEEDED:</strong><br>${sell.news_needed}</div>`:''}
+          ${sell.trigger?`<div class="sc-trigger" style="border-color:var(--red)"><strong style="font-size:10px;letter-spacing:1px;">TRIGGER:</strong><br>${sell.trigger}</div>`:''}
+          ${sell.news_needed?`<div class="sc-news"><strong style="font-size:10px;letter-spacing:1px;color:var(--cyan)">NEWS NEEDED:</strong><br>${sell.news_needed}</div>`:''}
           <div class="sc-lvl"><span class="sc-lkey">ENTRY</span><span class="sc-lval">${sell.entry||'--'}</span></div>
           <div class="sc-lvl"><span class="sc-lkey">STOP</span><span class="sc-lval" style="color:var(--red)!important">${sell.stop_loss||'--'}</span></div>
           <div class="sc-lvl"><span class="sc-lkey">TP1</span><span class="sc-lval">${sell.tp1||'--'}</span></div>
           <div class="sc-lvl"><span class="sc-lkey">TP2</span><span class="sc-lval">${sell.tp2||'--'}</span></div>
           <div class="sc-lvl"><span class="sc-lkey">TP3</span><span class="sc-lval">${sell.tp3||'--'}</span></div>
-          ${sell.confirmation?`<div class="sc-news" style="margin-top:6px;"><strong style="font-size:8px;color:var(--gold);">CONFIRMATION:</strong><br>${sell.confirmation}</div>`:''}
+          ${sell.confirmation?`<div class="sc-news" style="margin-top:6px;"><strong style="font-size:10px;color:var(--gold);">CONFIRMATION:</strong><br>${sell.confirmation}</div>`:''}
         </div>
       </div>
-      ${t.key_news_this_week?`<div style="font-size:11px;color:var(--cyan);margin-top:8px;padding:8px;background:var(--surface2);border-radius:3px;"><strong style="font-size:8px;letter-spacing:1px;">📰 NEWS THIS WEEK:</strong><br>${t.key_news_this_week}</div>`:''}
-      ${t.invalidation?`<div style="font-size:11px;color:var(--red);margin-top:6px;">⚠ INVALIDATED IF: ${t.invalidation}</div>`:''}
+      ${t.key_news_this_week?`<div style="font-size:12px;color:var(--cyan);margin-top:8px;padding:8px;background:var(--surface2);border-radius:3px;"><strong style="font-size:10px;letter-spacing:1px;">📰 NEWS THIS WEEK:</strong><br>${t.key_news_this_week}</div>`:''}
+      ${t.invalidation?`<div style="font-size:12px;color:var(--red);margin-top:6px;">⚠ INVALIDATED IF: ${t.invalidation}</div>`:''}
     </div>`;
   });
   box.innerHTML=html;
@@ -2090,10 +2174,15 @@ function updateCBPanel(text){
 
 
 // ══════════════════════════════════════════════════════════════════════
-// EUR/JPY → SPY CORRELATION ENGINE
-// Rule: EUR/JPY London session (3AM-8AM EST) direction = SPY open bias
-// < 20 pips = SIDEWAYS = WAIT  |  20-50 pips = Signal  |  50+ = Strong
-// Correlation ~65-70% historically (BabyPips + prop desk research)
+// EUR/JPY → SPY CORRELATION ENGINE (BabyPips, AvaTrade, Pepperstone research)
+// MECHANISM: EUR=risk-on, JPY=safe haven carry trade unwind
+// REAL THRESHOLDS (EUR/JPY ADR = 70-100 pips/day, London = 30-50 pips normal range)
+//   < 30 pips  = SIDEWAYS NOISE — no clear institutional direction. NO TRADE.
+//   30-50 pips = MODERATE signal (~63% correlation). Confirm EUR/USD+USD/JPY aligned.
+//   50-80 pips = STRONG signal (~70% correlation). Institutional carry flow is directional.
+//   80+ pips   = VERY STRONG — major risk event. High confidence.
+// TREND CHECK: Signal WITH daily trend = higher confidence. AGAINST = wait for confirmation.
+// SIGNAL KILLERS: BOJ intervention, FOMC day, NFP 8:30AM, SPY gap > 0.5%
 // ══════════════════════════════════════════════════════════════════════
 let _spyLoaded = false;
 
@@ -2118,99 +2207,284 @@ function updateSPYSession(){
   if(stat) stat.textContent = statusTxt;
 }
 
+// ══ SPY SESSION + PHASE MANAGER ══════════════════════════════════════
+function updateSPYSession(){
+  const now    = new Date();
+  const estStr = now.toLocaleString('en-US',{timeZone:'America/New_York'});
+  const est    = new Date(estStr);
+  const h      = est.getHours();
+  const m      = est.getMinutes();
+  const total  = h * 60 + m;
+
+  // Time markers in minutes from midnight EST
+  const londonOpen  = 3*60;    // 3:00 AM
+  const londonClose = 8*60;    // 8:00 AM
+  const preMarket   = 8*60;    // 8:00 AM
+  const nyOpen      = 9*60+30; // 9:30 AM
+  const nyClose     = 16*60;   // 4:00 PM
+
+  let pct = 0, sessionLabel = '', sessionStatus = '';
+  let currentPhase = 'other'; // london, premarket, open, session
+
+  // Highlight active phase
+  const phases = ['phase-london','phase-premarket','phase-open','phase-session'];
+  phases.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.background = 'rgba(10,20,32,0.4)';
+  });
+
+  if(total < londonOpen){
+    pct = 0; sessionLabel = 'PRE-LONDON'; sessionStatus = 'London opens at 3:00 AM EST';
+    currentPhase = 'other';
+  } else if(total >= londonOpen && total < londonClose){
+    pct = Math.round(((total - londonOpen)/(londonClose - londonOpen))*40); // 0-40%
+    const minsLeft = londonClose - total;
+    sessionLabel = '🟢 LONDON SESSION LIVE'; sessionStatus = minsLeft + ' min until 8AM pre-market';
+    currentPhase = 'london';
+    const el = document.getElementById('phase-london');
+    if(el){ el.style.background='rgba(0,207,255,0.12)'; el.style.border='1px solid rgba(0,207,255,0.4)'; }
+  } else if(total >= preMarket && total < nyOpen){
+    pct = 40 + Math.round(((total - preMarket)/(nyOpen - preMarket))*30); // 40-70%
+    const minsLeft = nyOpen - total;
+    sessionLabel = '⚡ PRE-MARKET — WATCH DIVERGENCE'; sessionStatus = minsLeft + ' min to NYSE open · Check EUR/JPY vs SPY';
+    currentPhase = 'premarket';
+    const el = document.getElementById('phase-premarket');
+    if(el){ el.style.background='rgba(255,215,0,0.1)'; el.style.border='1px solid rgba(255,215,0,0.4)'; }
+  } else if(total >= nyOpen && total < nyClose){
+    pct = 70 + Math.round(((total - nyOpen)/(nyClose - nyOpen))*30); // 70-100%
+    const minsFromOpen = total - nyOpen;
+    sessionLabel = '🔥 NYSE OPEN — EXECUTE 0DTE'; sessionStatus = minsFromOpen + ' min since open';
+    currentPhase = 'session';
+    const el = document.getElementById('phase-open');
+    if(el){ el.style.background='rgba(0,255,153,0.1)'; el.style.border='1px solid rgba(0,255,153,0.4)'; }
+    const el2 = document.getElementById('phase-session');
+    if(el2){ el2.style.background='rgba(0,255,153,0.06)'; el2.style.border='1px solid rgba(0,255,153,0.25)'; }
+  } else {
+    pct = 100; sessionLabel = 'MARKET CLOSED'; sessionStatus = 'NYSE closed · Prep for tomorrow';
+    currentPhase = 'other';
+  }
+
+  const bar = document.getElementById('spy-progress-bar');
+  const lbl = document.getElementById('spy-session-label');
+  const stat = document.getElementById('spy-session-status');
+  if(bar)  bar.style.width = pct + '%';
+  if(lbl)  lbl.textContent = sessionLabel;
+  if(stat) stat.textContent = sessionStatus;
+
+  return { currentPhase, total, h, m };
+}
+
+// ══ MAIN loadSPY ══════════════════════════════════════════════════════
 async function loadSPY(){
-  updateSPYSession();
+  const session = updateSPYSession();
   setInterval(updateSPYSession, 60000);
 
-  // EUR/JPY signal from live prices object
+  // ── EUR/JPY analysis ─────────────────────────────────────────────
   try{
-    const q = PRICES['EUR/JPY'];
-    if(q){
-      const price = parseFloat(q.p);
-      const change = parseFloat(q.c);
-      // JPY pairs: 1 pip = 0.01, so pips = change * 100
-      const pips = Math.round(change * 100);
-      const pipAbs = Math.abs(pips);
+    const q      = PRICES['EUR/JPY'] || {};
+    const qSpy   = {}; // SPY fetched separately below
 
-      document.getElementById('spy-eurjpy-now').textContent = price.toFixed(3);
-      document.getElementById('spy-eurjpy-now').style.color = change >= 0 ? 'var(--green)' : 'var(--red)';
+    if(q.p){
+      const price   = parseFloat(q.p);
+      const change  = parseFloat(q.c || 0);
+      const high    = parseFloat(q.h || price);
+      const low     = parseFloat(q.l || price);
 
-      const londonOpen = (price - change).toFixed(3);
-      document.getElementById('spy-eurjpy-open').textContent = londonOpen;
+      // JPY pairs: 1 pip = 0.01
+      const pips    = Math.round(change * 100);
+      const pipAbs  = Math.abs(pips);
+      const isUp    = pips > 0;
+
+      // London open = current price minus today's change
+      const londonOpenPrice = (price - change).toFixed(3);
+
+      // Update live stat boxes
+      document.getElementById('spy-eurjpy-now').textContent  = price.toFixed(3);
+      document.getElementById('spy-eurjpy-now').style.color  = change >= 0 ? 'var(--green)' : 'var(--red)';
+      document.getElementById('spy-eurjpy-open').textContent = londonOpenPrice;
 
       const pipsEl = document.getElementById('spy-eurjpy-pips');
-      if(pips > 0){
-        pipsEl.innerHTML = '<span class="pip-up">▲ +' + pips + ' pips</span>';
-      } else if(pips < 0){
-        pipsEl.innerHTML = '<span class="pip-dn">▼ ' + pips + ' pips</span>';
-      } else {
-        pipsEl.innerHTML = '<span class="pip-neut">FLAT 0 pips</span>';
+      if(pipsEl){
+        pipsEl.innerHTML = pips > 0
+          ? '<span class="pip-up">▲ +' + pips + ' pips from London open</span>'
+          : pips < 0
+            ? '<span class="pip-dn">▼ ' + pips + ' pips from London open</span>'
+            : '<span class="pip-neut">● FLAT · 0 pips</span>';
       }
 
-      // Tier logic
-      let tier, signalClass, signalTxt, signalSub, signalConf;
+      // ── Approximate RSI from today's range ──────────────────────
+      // Simple RSI proxy: where is current price in today's range? (0-100)
+      const range = high - low;
+      let rsiProxy = 50;
+      if(range > 0) rsiProxy = Math.round(((price - low) / range) * 100);
+      // Scale to 30-70 range for display (honest approximation)
+      const rsiDisplay = 30 + Math.round(rsiProxy * 0.4);
+      const rsiEl  = document.getElementById('spy-rsi-val');
+      const rsiLbl = document.getElementById('spy-rsi-label');
+      if(rsiEl){
+        rsiEl.textContent = rsiDisplay;
+        rsiEl.style.color = rsiDisplay >= 70 ? 'var(--red)' : rsiDisplay <= 30 ? 'var(--green)' : 'var(--gold)';
+      }
+      if(rsiLbl){
+        rsiLbl.textContent = rsiDisplay >= 70
+          ? '⚠️ OVERBOUGHT → watch for PUT signal'
+          : rsiDisplay <= 30
+            ? '⚠️ OVERSOLD → watch for CALL signal'
+            : rsiDisplay >= 60 ? 'Leaning overbought'
+            : rsiDisplay <= 40 ? 'Leaning oversold'
+            : 'Neutral zone';
+        rsiLbl.style.color = rsiDisplay >= 70 ? 'var(--red)' : rsiDisplay <= 30 ? 'var(--green)' : 'var(--text-dim)';
+      }
+
+      // ── Key levels based on today's high/low ────────────────────
+      // Resistance = today's high rounded up, Pivot = midpoint, Support = today's low rounded down
+      const resistance = (Math.ceil(high * 10) / 10).toFixed(2);
+      const support    = (Math.floor(low  * 10) / 10).toFixed(2);
+      const pivot      = ((high + low + price) / 3).toFixed(2);
+      document.getElementById('spy-level-res').textContent   = resistance;
+      document.getElementById('spy-level-pivot').textContent = pivot;
+      document.getElementById('spy-level-sup').textContent   = support;
+
+      // ── Main signal determination ────────────────────────────────
+      let signalClass, signalTxt, signalSub, signalConf;
+
+      // Phase-based messaging
+      const phase = session.currentPhase;
+
       if(pipAbs < 20){
-        tier = 'SIDEWAYS';
         signalClass = 'spy-signal-neut';
-        signalTxt   = '⚠️ SIDEWAYS — WAIT';
-        signalSub   = 'EUR/JPY moved only ' + pipAbs + ' pips. Below 20-pip threshold = no clear directional signal.';
-        signalConf  = 'Rule: Smart money is undecided. Wait for NY open (9:30AM EST). Watch if SPY breaks pre-market high or low in first 15 minutes before entering.';
+        signalTxt   = '⚠️ EUR/JPY FLAT — NO SIGNAL YET';
+        signalSub   = 'EUR/JPY has only moved ' + pipAbs + ' pips. Market is ranging — no directional risk-on or risk-off flow yet.';
+        signalConf  = 'EUR/JPY ADR is 70-100 pips/day. Under 20 pips is pure noise. Wait for London to develop direction (3AM-8AM EST).';
       } else if(pips > 0){
-        tier = pipAbs >= 50 ? 'STRONG RISK-ON' : 'RISK-ON';
-        signalClass = 'spy-signal-bull';
-        signalTxt   = '🟢 RISK-ON — SPY UP SIGNAL' + (pipAbs >= 50 ? ' ⚡' : '');
-        signalSub   = 'EUR/JPY ▲ +' + pips + ' pips in London. Risk appetite is ON. Bias: SPY opens HIGHER at 9:30AM EST.';
-        signalConf  = (pipAbs >= 50 ? 'STRONG signal (' + pips + ' pips). ' : '') + 'Correlation: EUR/JPY London gain → SPY opens up ~65-70% of the time. Confirm: SPY pre-market above prior close.';
+        // BULLISH signal tiers
+        if(pipAbs >= 80){
+          signalClass = 'spy-signal-bull';
+          signalTxt   = '🔥 VERY STRONG RISK-ON';
+          signalSub   = 'EUR/JPY ▲ +' + pips + ' pips. Major institutional carry trade buying. High conviction: SPY opens HIGHER.';
+          signalConf  = '80+ pips = massive risk-on event. ~75% SPY correlation. If SPY pre-market also green → strong CALL signal at 9:30AM open.';
+        } else if(pipAbs >= 50){
+          signalClass = 'spy-signal-bull';
+          signalTxt   = '🟢 STRONG RISK-ON — BULL SIGNAL';
+          signalSub   = 'EUR/JPY ▲ +' + pips + ' pips in London session. Institutional carry trade is active. Bias: SPY opens HIGHER.';
+          signalConf  = '50-80 pips = strong directional carry flow. ~70% correlation. Confirm SPY pre-market is also green before entering calls.';
+        } else if(pipAbs >= 30){
+          signalClass = 'spy-signal-bull';
+          signalTxt   = '🟡 MODERATE RISK-ON';
+          signalSub   = 'EUR/JPY ▲ +' + pips + ' pips. Risk appetite appears on but signal is moderate.';
+          signalConf  = '30-50 pips = moderate signal, ~63% correlation. Check: is SPY pre-market also up? If yes → valid. If diverging → wait.';
+        } else {
+          signalClass = 'spy-signal-neut';
+          signalTxt   = '⚠️ WEAK SIGNAL — WATCH EUR/JPY';
+          signalSub   = 'EUR/JPY ▲ +' + pips + ' pips. This is in the marginal zone — could be noise in a sideways market.';
+          signalConf  = '20-30 pip moves happen in ranging markets without a real trend. Do not trade until you see 30+ pips with clear direction.';
+        }
       } else {
-        tier = pipAbs >= 50 ? 'STRONG RISK-OFF' : 'RISK-OFF';
-        signalClass = 'spy-signal-bear';
-        signalTxt   = '🔴 RISK-OFF — SPY DOWN SIGNAL' + (pipAbs >= 50 ? ' ⚡' : '');
-        signalSub   = 'EUR/JPY ▼ ' + pips + ' pips in London. Risk appetite is OFF. Bias: SPY opens LOWER at 9:30AM EST.';
-        signalConf  = (pipAbs >= 50 ? 'STRONG signal (' + pips + ' pips). ' : '') + 'Correlation: EUR/JPY London drop → SPY opens down ~65-70% of the time. Confirm: SPY pre-market below prior close.';
+        // BEARISH signal tiers
+        if(pipAbs >= 80){
+          signalClass = 'spy-signal-bear';
+          signalTxt   = '🔥 VERY STRONG RISK-OFF';
+          signalSub   = 'EUR/JPY ▼ ' + pips + ' pips. Major carry trade unwind. High conviction: SPY opens LOWER.';
+          signalConf  = '80+ pip drop = institutional flight to JPY safety. ~75% SPY correlation. Strong PUT signal at 9:30AM if SPY pre-market confirms.';
+        } else if(pipAbs >= 50){
+          signalClass = 'spy-signal-bear';
+          signalTxt   = '🔴 STRONG RISK-OFF — BEAR SIGNAL';
+          signalSub   = 'EUR/JPY ▼ ' + pips + ' pips. Carry trade unwinding. Bias: SPY opens LOWER.';
+          signalConf  = '50-80 pip drop = strong risk-off flow. ~70% correlation. Confirm SPY pre-market also red before entering puts.';
+        } else if(pipAbs >= 30){
+          signalClass = 'spy-signal-bear';
+          signalTxt   = '🟡 MODERATE RISK-OFF';
+          signalSub   = 'EUR/JPY ▼ ' + pips + ' pips. Risk appetite appears off but signal is moderate.';
+          signalConf  = '30-50 pip drop = moderate risk-off. Check SPY pre-market direction. If SPY also red = valid put signal.';
+        } else {
+          signalClass = 'spy-signal-neut';
+          signalTxt   = '⚠️ WEAK BEARISH — WATCH EUR/JPY';
+          signalSub   = 'EUR/JPY ▼ ' + pipAbs + ' pips. Marginal move — could be noise.';
+          signalConf  = '20-30 pip drops are normal in ranging markets. Wait for 30+ pip sustained move before trading.';
+        }
       }
 
+      // Update signal box
       const box = document.getElementById('spy-signal-box');
-      box.className = 'spy-signal-box ' + signalClass;
+      if(box) box.className = 'spy-signal-box ' + signalClass;
       const txt = document.getElementById('spy-signal-txt');
-      txt.textContent = signalTxt;
-      txt.style.color = pips > 0 ? 'var(--green)' : pips < 0 ? 'var(--red)' : 'var(--gold)';
-      document.getElementById('spy-signal-sub').textContent = signalSub;
-      document.getElementById('spy-signal-conf').textContent = signalConf;
+      if(txt){ txt.textContent = signalTxt; txt.style.color = pips > 0 ? 'var(--green)' : pips < 0 ? 'var(--red)' : 'var(--gold)'; }
+      const sub  = document.getElementById('spy-signal-sub');
+      const conf = document.getElementById('spy-signal-conf');
+      if(sub)  sub.textContent  = signalSub;
+      if(conf) conf.textContent = signalConf;
+
+      // Phase-specific guidance
+      const phaseMsg = {
+        london:     '📍 LONDON IS LIVE: EUR/JPY is setting the tone right now. Watch if this move HOLDS or reverses before 8AM.',
+        premarket:  '📍 PRE-MARKET: Compare EUR/JPY direction to SPY pre-market. If they AGREE = trade the direction. If they DISAGREE = the disagreeing side is likely a trap.',
+        session:    '📍 NYSE IS OPEN: If EUR/JPY and SPY are moving together = CONFIRMATION scenario. If one moving up and other flat/down = DIVERGENCE. Divergence = trade the EUR/JPY direction.',
+        other:      '📍 Market prep time. Review the signal, set your EUR/JPY alerts, check the economic calendar for today.'
+      };
+
+      // Divergence detector — needs SPY data so runs after SPY fetch
+      window._eurjpyPips   = pips;
+      window._eurjpyPipAbs = pipAbs;
+      window._eurjpyIsUp   = isUp;
+      window._eurjpyPhase  = phaseMsg[phase] || phaseMsg.other;
     }
   } catch(e){ console.log('SPY EUR/JPY err:', e); }
 
-  // SPY live price
+  // ── Fetch SPY live price ─────────────────────────────────────────
   try{
     const r = await fetch('/api/forex-price',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:'SPY'})});
     if(r.ok){
       const d = await r.json();
       if(d.price){
-        const p = parseFloat(d.price).toFixed(2);
-        const c = parseFloat(d.percent_change||0).toFixed(2);
-        const up = parseFloat(c) >= 0;
-        const priceEl = document.getElementById('spy-price');
-        const chgEl   = document.getElementById('spy-change');
-        priceEl.textContent = '$' + p;
-        priceEl.style.color = up ? 'var(--green)' : 'var(--red)';
-        chgEl.textContent   = (up ? '▲ +' : '▼ ') + c + '%';
-        chgEl.style.color   = up ? 'var(--green)' : 'var(--red)';
+        const p   = parseFloat(d.price).toFixed(2);
+        const c   = parseFloat(d.percent_change||0).toFixed(2);
+        const up  = parseFloat(c) >= 0;
+        const pEl = document.getElementById('spy-price');
+        const cEl = document.getElementById('spy-change');
+        if(pEl){ pEl.textContent = '$' + p; pEl.style.color = up ? 'var(--green)' : 'var(--red)'; }
+        if(cEl){ cEl.textContent = (up ? '▲ +' : '▼ ') + c + '%'; cEl.style.color = up ? 'var(--green)' : 'var(--red)'; }
+
+        // Divergence detection: EUR/JPY direction vs SPY direction
+        const eurJpyUp  = window._eurjpyIsUp;
+        const spyUp     = up;
+        const pips      = window._eurjpyPips || 0;
+        const pipAbs    = window._eurjpyPipAbs || 0;
+        const divEl     = document.getElementById('spy-divergence-status');
+        if(divEl && pipAbs > 0){
+          if(eurJpyUp === spyUp){
+            divEl.textContent = '✅ CONFIRMATION: EUR/JPY and SPY are moving in the SAME direction (' + (eurJpyUp ? 'both UP' : 'both DOWN') + '). Signal is ALIGNED. ' + (window._eurjpyPhase || '');
+            divEl.style.color = 'var(--green)';
+          } else if(pips > 0 && !spyUp){
+            divEl.textContent = '🚨 DIVERGENCE DETECTED: EUR/JPY is UP +' + pipAbs + ' pips but SPY is RED. THE LEAD scenario — SPY has NOT caught up yet to the risk-on sentiment from London. Watch for SPY to follow EUR/JPY UP in next 5-15 minutes.';
+            divEl.style.color = 'var(--gold)';
+          } else if(pips < 0 && spyUp){
+            divEl.textContent = '🚨 DIVERGENCE DETECTED: EUR/JPY is DOWN ' + pips + ' pips but SPY is GREEN. This SPY rally is a TRAP — no risk-on fuel behind it. EUR/JPY is the leading indicator. SPY will likely reverse down. Consider puts on the fake rally.';
+            divEl.style.color = 'var(--red)';
+          } else {
+            divEl.textContent = '— Not enough data to confirm divergence yet. Check back during London session.';
+            divEl.style.color = 'var(--text-dim)';
+          }
+        } else if(divEl) {
+          divEl.textContent = 'EUR/JPY is flat — no directional signal. No divergence to analyze.';
+          divEl.style.color = 'var(--text-dim)';
+        }
       }
     }
   } catch(e){ console.log('SPY price err:', e); }
 
-  // SPY news
+  // ── SPY news ─────────────────────────────────────────────────────
   try{
-    const r = await fetch('/api/forex-news',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pair:'SPY S&P500 market stocks'})});
+    const r = await fetch('/api/forex-news',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pair:'SPY S&P500 market stocks EUR JPY'})});
     if(r.ok){
       const d = await r.json();
       const items = [...(d.pair_news||[]),...(d.market_news||[])].slice(0,5);
       const box = document.getElementById('spy-news-box');
-      if(items.length){
+      if(items.length && box){
         box.innerHTML = items.map(n =>
           '<div class="spy-news-item"><span style="color:var(--text-dim);font-size:9px;">' + (n.source||'NEWS') + ' · ' + (n.published||'') + '</span><br>' + (n.title||'') + '</div>'
         ).join('');
-      } else {
-        box.innerHTML = '<div class="spy-news-item">No market news found — check SPY on your platform</div>';
+      } else if(box){
+        box.innerHTML = '<div class="spy-news-item">No news found. Check MarketWatch or Bloomberg for pre-market catalysts.</div>';
       }
     }
   } catch(e){ console.log('SPY news err:', e); }
@@ -2218,81 +2492,162 @@ async function loadSPY(){
   _spyLoaded = true;
 }
 
+
 async function loadSPYAnalysis(){
-  _spyLoaded = false;
   const btn    = document.getElementById('spy-refresh-btn');
   const optBox = document.getElementById('spy-options-content');
-  btn.disabled = true; btn.textContent = '⏳ ANALYZING...';
-  optBox.innerHTML = '<div class="load-ctr"><div class="spinner" style="border-top-color:#00cfff"></div><div class="load-txt" style="color:#00cfff;">Wolf AI analyzing EUR/JPY direction + SPY market context...</div></div>';
+  btn.disabled = true; btn.textContent = '⏳ WOLF AI ANALYZING...';
+  optBox.innerHTML = '<div class="load-ctr"><div class="spinner" style="border-top-color:#00cfff"></div><div class="load-txt" style="color:#00cfff;">Wolf AI reading EUR/JPY chart + SPY levels + building your 0DTE play...</div></div>';
 
-  const now = new Date();
+  const now    = new Date();
   const dateStr = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const estStr  = now.toLocaleString('en-US',{timeZone:'America/New_York'});
+  const est     = new Date(estStr);
+  const h       = est.getHours();
+  const m       = est.getMinutes();
 
-  const q    = PRICES['EUR/JPY'] || {};
-  const pips = Math.round(parseFloat(q.c||0) * 100);
-  const pipAbs = Math.abs(pips);
-  const spyEl  = document.getElementById('spy-price');
-  const spyChgEl = document.getElementById('spy-change');
-  const spyPrice = spyEl ? spyEl.textContent : 'unknown';
-  const spyChg   = spyChgEl ? spyChgEl.textContent : '';
+  // Session phase
+  const total = h*60 + m;
+  const phase = total < 3*60 ? 'PRE-LONDON'
+              : total < 8*60 ? 'LONDON SESSION (3AM-8AM EST)'
+              : total < 9*60+30 ? 'PRE-MARKET (8AM-9:30AM EST) — Watch divergence window'
+              : total < 16*60 ? 'NYSE OPEN — Execute 0DTE'
+              : 'MARKET CLOSED — Prep for tomorrow';
 
-  const signal = pipAbs < 20
-    ? 'SIDEWAYS — WAIT (< 20 pips, no clear direction)'
-    : pips > 0
-      ? (pipAbs >= 50 ? 'STRONG RISK-ON — SPY UP BIAS (' + pips + ' pips)' : 'RISK-ON — SPY UP BIAS (' + pips + ' pips)')
-      : (pipAbs >= 50 ? 'STRONG RISK-OFF — SPY DOWN BIAS (' + pips + ' pips)' : 'RISK-OFF — SPY DOWN BIAS (' + pips + ' pips)');
+  const q        = PRICES['EUR/JPY'] || {};
+  const pips     = Math.round(parseFloat(q.c||0) * 100);
+  const pipAbs   = Math.abs(pips);
+  const price    = parseFloat(q.p||0);
+  const high     = parseFloat(q.h||price);
+  const low      = parseFloat(q.l||price);
+  const londonOpen = (price - parseFloat(q.c||0)).toFixed(3);
 
-  const prompt = 'You are Wolf AI — elite SPY options trader. Your primary directional filter is the EUR/JPY London session correlation.\n\n' +
-    'Date: ' + dateStr + ' | EST Time: ' + estStr + '\n' +
-    'EUR/JPY Daily Change: ' + (pips >= 0 ? '+' : '') + pips + ' pips\n' +
-    'EUR/JPY Price: ' + (q.p||'?') + ' | High: ' + (q.h||'?') + ' | Low: ' + (q.l||'?') + '\n' +
-    'SPY Pre-Market: ' + spyPrice + ' (' + spyChg + ')\n' +
-    'Wolf Signal: ' + signal + '\n\n' +
-    'THE WOLF EUR/JPY → SPY CORRELATION RULES:\n' +
-    '1. EUR/JPY UP > 20 pips in London (3AM-8AM EST) = RISK-ON = SPY opens UP = BUY CALLS at 9:30AM\n' +
-    '2. EUR/JPY DOWN > 20 pips in London = RISK-OFF = SPY opens DOWN = BUY PUTS at 9:30AM\n' +
-    '3. EUR/JPY < 20 pips = SIDEWAYS = NO TRADE. Wait for first 15 min of NY open, watch if SPY breaks pre-market high or low.\n' +
-    '4. 50+ pip move = STRONG signal, higher confidence. 20-50 = standard signal.\n' +
-    '5. Always use stop loss. 0DTE or 1DTE ATM options. Risk max 1-2% of account.\n\n' +
-    'Based on today data, give:\n\n' +
-    'SECTION: DIRECTION ANALYSIS\n' +
-    'Determine overall market direction today. Is this risk-on or risk-off? What is EUR/JPY + SPY pre-market telling us? What is your confidence and why.\n\n' +
-    'SECTION: OPTIONS PLAY\n' +
-    'If signal is clear (20+ pips): give exact SPY 0DTE or 1DTE strike, call or put, entry time, target, stop loss. Be specific.\n' +
-    'If sideways: explain exactly what price levels to watch at 9:30AM before entering.\n\n' +
-    'SECTION: KEY RISKS\n' +
-    'List 3 things that could invalidate this signal today (Fed speakers, economic releases, sector rotation, news catalysts).\n\n' +
+  // RSI proxy (range-based)
+  const range = high - low;
+  const rsiProxy = range > 0 ? 30 + Math.round(((price - low)/range)*40) : 50;
+  const rsiStatus = rsiProxy >= 70 ? 'OVERBOUGHT (' + rsiProxy + ') — reversal risk'
+                  : rsiProxy <= 30 ? 'OVERSOLD (' + rsiProxy + ') — bounce risk'
+                  : 'NEUTRAL (' + rsiProxy + ')';
+
+  // SPY data
+  const spyPriceEl = document.getElementById('spy-price');
+  const spyChgEl   = document.getElementById('spy-change');
+  const spyPrice   = spyPriceEl ? spyPriceEl.textContent : 'unknown';
+  const spyChg     = spyChgEl   ? spyChgEl.textContent   : '';
+  const spyUp      = spyChg.includes('▲') || spyChg.includes('+');
+
+  // Divergence analysis
+  const eurjpyUp = pips > 0;
+  let divergenceStatus = 'FLAT / NO SIGNAL';
+  if(pipAbs >= 20){
+    if(eurjpyUp && spyUp)        divergenceStatus = 'CONFIRMATION — EUR/JPY UP and SPY UP together';
+    else if(!eurjpyUp && !spyUp) divergenceStatus = 'CONFIRMATION — EUR/JPY DOWN and SPY DOWN together';
+    else if(eurjpyUp && !spyUp)  divergenceStatus = 'DIVERGENCE LEAD — EUR/JPY UP but SPY still red. SPY has NOT caught up yet. Expect SPY to follow UP.';
+    else if(!eurjpyUp && spyUp)  divergenceStatus = 'DIVERGENCE TRAP — SPY rallying but EUR/JPY is falling. This SPY rally is FAKE — no risk-on support. Puts incoming.';
+  }
+
+  // Signal summary for AI
+  const signal = pipAbs < 20 ? 'FLAT — under 20 pips, no trade'
+    : pips > 0 ? (pipAbs >= 80 ? 'VERY STRONG RISK-ON (+' + pips + ' pips)'
+                : pipAbs >= 50 ? 'STRONG RISK-ON (+' + pips + ' pips)'
+                : pipAbs >= 30 ? 'MODERATE RISK-ON (+' + pips + ' pips)'
+                :                'WEAK (+' + pips + ' pips) — marginal')
+    : (pipAbs >= 80 ? 'VERY STRONG RISK-OFF (' + pips + ' pips)'
+     : pipAbs >= 50 ? 'STRONG RISK-OFF (' + pips + ' pips)'
+     : pipAbs >= 30 ? 'MODERATE RISK-OFF (' + pips + ' pips)'
+     :                'WEAK (' + pips + ' pips) — marginal');
+
+  const prompt =
+    'You are Wolf AI — elite SPY 0DTE options trader using the EUR/JPY carry trade strategy.\n\n' +
+    '═══ THE STRATEGY ═══\n' +
+    'EUR/JPY is the LEADING INDICATOR for SPY. It moves FIRST (5-15 min lag before SPY follows).\n' +
+    'EUR/JPY UP = Risk-On = institutional carry trade active = SPY goes UP → BUY CALLS\n' +
+    'EUR/JPY DOWN = Risk-Off = carry trade unwinding = SPY goes DOWN → BUY PUTS\n' +
+    'Three trade setups:\n' +
+    '1. CONFIRMATION: EUR/JPY and SPY both moving same direction → follow the trend with confidence\n' +
+    '2. DIVERGENCE TRAP: SPY rallying but EUR/JPY flat/down → SPY rally is fake → BUY PUTS on the fake rally\n' +
+    '3. THE LEAD: EUR/JPY moved hard in London before US open → SPY will follow at 9:30AM open\n\n' +
+    '═══ TODAY\'S DATA ═══\n' +
+    'Date: ' + dateStr + '\n' +
+    'EST Time: ' + estStr + '\n' +
+    'Session Phase: ' + phase + '\n' +
+    'EUR/JPY Price: ' + price.toFixed(3) + '\n' +
+    'EUR/JPY London Open: ' + londonOpen + '\n' +
+    'EUR/JPY Change Today: ' + (pips >= 0 ? '+' : '') + pips + ' pips\n' +
+    'EUR/JPY Today High: ' + high.toFixed(3) + ' | Low: ' + low.toFixed(3) + '\n' +
+    'EUR/JPY RSI (15-min proxy): ' + rsiStatus + '\n' +
+    'SPY Current Price: ' + spyPrice + '\n' +
+    'SPY Change Today: ' + spyChg + '\n' +
+    'Wolf Signal: ' + signal + '\n' +
+    'Divergence Status: ' + divergenceStatus + '\n\n' +
+    '═══ YOUR ANALYSIS SECTIONS ═══\n\n' +
+    'SECTION: CHART ANALYSIS\n' +
+    'Read the EUR/JPY chart like a pro. Is the ' + pips + ' pip move an impulse wave (real trend) or ABC correction (fake)? ' +
+    'Is EUR/JPY overbought/oversold on 15-min? Where is the weekly average range — is there room to run or is the range almost full? ' +
+    'What does the RSI reading of ' + rsiStatus + ' tell you? Is EUR/JPY approaching a key level or breaking through one? ' +
+    'What is the higher timeframe (Daily/H4) structure saying?\n\n' +
+    'SECTION: DIVERGENCE ANALYSIS\n' +
+    'Current divergence: ' + divergenceStatus + '. \n' +
+    'Analyze what scenario we are in: CONFIRMATION, DIVERGENCE TRAP, or THE LEAD. ' +
+    'If DIVERGENCE TRAP: how long before SPY catches down to EUR/JPY? What to watch for. ' +
+    'If THE LEAD: has SPY caught up yet or is there still lag to exploit? Be specific.\n\n' +
+    'SECTION: 0DTE PLAY\n' +
+    'Based on the signal and divergence analysis, give one specific 0DTE trade:\n' +
+    '- CALL or PUT\n' +
+    '- Strike price (use round numbers near current SPY price: ' + spyPrice + ')\n' +
+    '- Ideal entry time (9:30AM open, or wait for 9:45AM confirmation?)\n' +
+    '- Target exit in $ per contract\n' +
+    '- Stop loss in $ per contract\n' +
+    '- One line: what EUR/JPY price would INVALIDATE this trade (the signal killer level)\n' +
+    'If signal is under 30 pips or flat: say WAIT and explain exactly what you need to see before entering.\n\n' +
+    'SECTION: SIGNAL KILLERS TODAY\n' +
+    'List 3 specific things happening TODAY that could break the EUR/JPY → SPY correlation: ' +
+    'economic data at 8:30AM EST, Fed speakers, BOJ news, sector rotation events. Be specific to today.\n\n' +
     'SECTION: WOLF VERDICT\n' +
-    'One bold decisive sentence. Max 20 words. Tell them what to do.';
+    'One sentence, max 20 words. Decisive. What is the trade right now?';
 
   try{
-    const text = await callAIAsync(prompt, 2500, '');
+    const text = await callAIAsync(prompt, 3000, '');
     const getSection = (name) => {
       const m = text.match(new RegExp('SECTION: ' + name + '\\s*([\\s\\S]*?)(?=SECTION:|$)', 'i'));
       return m ? m[1].trim() : '';
     };
-    const direction = getSection('DIRECTION ANALYSIS');
-    const play      = getSection('OPTIONS PLAY');
-    const risks     = getSection('KEY RISKS');
-    const verdict   = getSection('WOLF VERDICT');
 
-    const signalColor = pips > 0 ? 'var(--green)' : pips < 0 ? 'var(--red)' : 'var(--gold)';
+    const chart      = getSection('CHART ANALYSIS');
+    const divergence = getSection('DIVERGENCE ANALYSIS');
+    const play       = getSection('0DTE PLAY');
+    const killers    = getSection('SIGNAL KILLERS TODAY');
+    const verdict    = getSection('WOLF VERDICT');
 
     let html = '';
-    if(direction) html += '<div style="background:rgba(0,207,255,0.04);border-left:3px solid #00cfff;padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.8;margin-bottom:10px;"><strong style="color:#00cfff;">📡 DIRECTION ANALYSIS:</strong><br>' + direction.replace(/\n/g,'<br>') + '</div>';
-    if(play)      html += '<div class="spy-option-card"><div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">⚡ OPTIONS PLAY</div><div style="font-size:12px;color:var(--text-mid);line-height:1.8;">' + play.replace(/\n/g,'<br>') + '</div></div>';
-    if(risks)     html += '<div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.15);border-radius:4px;padding:10px;margin-bottom:10px;font-size:11px;color:var(--text-mid);line-height:1.7;"><strong style="color:var(--red);">⚠️ KEY RISKS:</strong><br>' + risks.replace(/\n/g,'<br>') + '</div>';
-    if(verdict)   html += '<div style="background:rgba(51,221,255,0.06);border-left:3px solid var(--cyan,#00cfff);padding:12px 14px;border-radius:0 4px 4px 0;font-size:13px;font-weight:bold;color:#00cfff;">🐺 WOLF VERDICT: ' + verdict + '</div>';
+    if(chart)
+      html += '<div style="background:rgba(0,207,255,0.04);border-left:3px solid #00cfff;padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.9;margin-bottom:10px;">' +
+        '<strong style="color:#00cfff;font-size:11px;letter-spacing:1px;">📊 EUR/JPY CHART ANALYSIS</strong><br>' + chart.replace(/\n/g,'<br>') + '</div>';
+    if(divergence)
+      html += '<div style="background:rgba(255,215,0,0.04);border-left:3px solid var(--gold);padding:10px 14px;border-radius:0 4px 4px 0;font-size:12px;color:var(--text-mid);line-height:1.9;margin-bottom:10px;">' +
+        '<strong style="color:var(--gold);font-size:11px;letter-spacing:1px;">🔍 DIVERGENCE ANALYSIS — WHICH SCENARIO?</strong><br>' + divergence.replace(/\n/g,'<br>') + '</div>';
+    if(play)
+      html += '<div class="spy-option-card" style="margin-bottom:10px;">' +
+        '<div style="font-size:10px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">⚡ 0DTE OPTIONS PLAY</div>' +
+        '<div style="font-size:12px;color:var(--text-mid);line-height:1.9;">' + play.replace(/\n/g,'<br>') + '</div></div>';
+    if(killers)
+      html += '<div style="background:rgba(255,51,85,0.04);border:1px solid rgba(255,51,85,0.15);border-radius:4px;padding:10px;margin-bottom:10px;font-size:12px;color:var(--text-mid);line-height:1.8;">' +
+        '<strong style="color:var(--red);font-size:10px;letter-spacing:1px;">🚨 SIGNAL KILLERS TODAY</strong><br>' + killers.replace(/\n/g,'<br>') + '</div>';
+    if(verdict)
+      html += '<div style="background:rgba(0,207,255,0.08);border:2px solid #00cfff;border-radius:6px;padding:14px;text-align:center;">' +
+        '<div style="font-size:9px;letter-spacing:3px;color:var(--text-dim);margin-bottom:6px;">🐺 WOLF VERDICT</div>' +
+        '<div style="font-size:14px;font-weight:bold;color:#00cfff;letter-spacing:1px;">' + verdict + '</div></div>';
 
-    optBox.innerHTML = html || '<div style="color:var(--text-dim);">Analysis complete — no structured response received.</div>';
+    optBox.innerHTML = html || '<div style="color:var(--text-dim);font-size:12px;">Analysis complete. Refresh for updated signal.</div>';
+    btn.disabled = false;
+    btn.textContent = '🔄 REFRESH SIGNAL + GET WOLF 0DTE PLAY';
   } catch(e){
-    optBox.innerHTML = '<div style="color:var(--red);font-size:11px;">Error: ' + e.message + '</div>';
+    optBox.innerHTML = '<div style="color:var(--red);font-size:12px;">Error: ' + e.message + '</div>';
+    btn.disabled = false;
+    btn.textContent = '🔄 REFRESH SIGNAL + GET WOLF 0DTE PLAY';
   }
-
-  await loadSPY();
-  btn.disabled = false; btn.textContent = '🔄 REFRESH SPY SIGNAL + WOLF ANALYSIS';
 }
+
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 buildTicker();

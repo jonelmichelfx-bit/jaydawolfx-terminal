@@ -1984,7 +1984,7 @@ def _run_sage_job(job_id, pair, mode):
 
         da=cd.get("daily",{}); h4=cd.get("h4",{}); wk=cd.get("weekly",{}); h1=cd.get("hourly",{})
 
-        _sage_jobs[job_id]["step"]="Synthesizing all 10 chart masters + 4 legends..."
+        _sage_jobs[job_id]["step"]="Synthesizing all 10 chart masters + 4 legends + market structure..."
         prompt=("You are SAGE MODE — the most powerful trading intelligence system ever built.\n"
             "Date: {} | Instrument: {} | Price: {} | Session: {}\n\n"
             "LIVE NEWS:\n{}\n\n"
@@ -2001,15 +2001,24 @@ def _run_sage_job(job_id, pair, mode):
             "- JOHN BOLLINGER Bands: Upper:{} Mid:{} Lower:{}\n"
             "- WILDER ATR: Daily ATR={} use 1.5x for SL 3x for TP3\n\n"
             "{}\n\n"
+            "CRITICAL MARKET STRUCTURE ANALYSIS (prevents wrong-direction trades):\n"
+            "1. WHERE IS PRICE? Near major S/R? Top of range? Bottom? Mid-range?\n"
+            "2. MARKET PHASE: Trending (HH+HL or LH+LL) or Ranging (bouncing between levels)?\n"
+            "3. ABC/WAVE POSITION: Is this an IMPULSE wave (trend direction, strong) or ABC CORRECTION (counter-trend trap)?\n"
+            "4. KEY S/R ZONES: 2 nearest resistance levels above. 2 nearest support levels below. Rejecting any?\n"
+            "5. TREND STRENGTH: ADX-equivalent — strong trend (25+) or consolidating/ranging (<20)?\n"
+            "6. HIGHER TF CONTEXT: Weekly and Daily structure — respecting Daily EMA? In a weekly range?\n"
+            "7. RULE: Return WAIT if: at major S/R without breakout, ABC correction likely, or ranging with no edge.\n\n"
             "MANDATE: 30-40 pip minimum. SL behind real SR. Min 2:1 RR. High TF=direction Low TF=entry.\n\n"
-            "Return ONLY valid JSON:\n"
-            '{{"verdict":"BUY or SELL or WAIT","confidence":0,"session":"{}","entry":"{}","stop_loss":"0","sl_pips":0,'
-            '"tp1":"0","tp1_pips":0,"tp2":"0","tp2_pips":0,"tp3":"0","tp3_pips":0,"rr_ratio":"0:1",'
-            '"timeframe_alignment":{{"weekly":"?","daily":"?","h4":"?","h1":"?","m15":"?"}},'
-            '"legend_consensus":{{"soros":"","druckenmiller":"","lipschutz":"","kovner":""}},'
-            '"chart_masters":{{"murphy":"","nison":"","douglas":"","kathy_lien":"","silvani":"","laidi":"","elder":"","wyckoff":"","bollinger":"","wilder":""}},'
-            '"key_levels":{{"nearest_support":"","nearest_resistance":"","stop_zone":""}},'
-            '"candlestick_signal":"","news_impact":"","geopolitical_risk":"","sage_says":"","invalidation":""}}'
+            "Return ONLY valid JSON (no markdown, no extra text):\n"
+            '{{\"verdict\":\"BUY or SELL or WAIT\",\"confidence\":0,\"session\":\"{}\",\"entry\":\"{}\",\"stop_loss\":\"0\",\"sl_pips\":0,'
+            '\"tp1\":\"0\",\"tp1_pips\":0,\"tp2\":\"0\",\"tp2_pips\":0,\"tp3\":\"0\",\"tp3_pips\":0,\"rr_ratio\":\"0:1\",'
+            '\"timeframe_alignment\":{{\"weekly\":\"?\",\"daily\":\"?\",\"h4\":\"?\",\"h1\":\"?\",\"m15\":\"?\"}},'
+            '\"legend_consensus\":{{\"soros\":\"\",\"druckenmiller\":\"\",\"lipschutz\":\"\",\"kovner\":\"\"}},'
+            '\"chart_masters\":{{\"murphy\":\"\",\"nison\":\"\",\"douglas\":\"\",\"kathy_lien\":\"\",\"silvani\":\"\",\"laidi\":\"\",\"elder\":\"\",\"wyckoff\":\"\",\"bollinger\":\"\",\"wilder\":\"\"}},'
+            '\"key_levels\":{{\"nearest_support\":\"\",\"nearest_resistance\":\"\",\"stop_zone\":\"\"}},'
+            '\"market_structure\":{{\"phase\":\"TRENDING or RANGING or BREAKOUT or REVERSAL\",\"abc_position\":\"IMPULSE WAVE or ABC CORRECTION or UNKNOWN\",\"price_location\":\"AT RESISTANCE or AT SUPPORT or MID-RANGE or BREAKOUT ZONE\",\"trend_strength\":\"STRONG TREND or MODERATE TREND or RANGING or CHOPPY\",\"higher_tf_context\":\"\",\"sr_above\":\"\",\"sr_below\":\"\"}},'
+            '\"candlestick_signal\":\"\",\"news_impact\":\"\",\"geopolitical_risk\":\"\",\"sage_says\":\"\",\"invalidation\":\"\"}}'
         ).format(ds,pair,cp,sn,news,leg,pair,sn,pair,
                  wk.get("trend","?"),da.get("trend","?"),h4.get("trend","?"),
                  da.get("bb_upper","?"),da.get("bb_mid","?"),da.get("bb_lower","?"),
@@ -2057,6 +2066,97 @@ def sage_poll(job_id):
         err=job.get("error","Unknown"); _sage_jobs.pop(job_id,None)
         return jsonify({"status":"error","error":err}),500
     return jsonify({"status":job["status"],"step":job.get("step","Processing...")})
+
+
+
+@app.route("/api/sage-scanner", methods=["POST"])
+@login_required
+@byakugan_required
+def sage_scanner():
+    """Scan 8-10 forex pairs simultaneously and return trending ones"""
+    try:
+        import uuid as _uuid
+        job_id = str(_uuid.uuid4())[:8]
+        _sage_jobs[job_id] = {"status": "running", "step": "Scanning 10 pairs for trending setups..."}
+        threading.Thread(target=_run_sage_scanner_job, args=(job_id,), daemon=True).start()
+        return jsonify({"job_id": job_id, "status": "starting"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/sage-scanner-poll/<job_id>", methods=["GET"])
+@login_required
+def sage_scanner_poll(job_id):
+    job = _sage_jobs.get(job_id)
+    if not job: return jsonify({"status": "error", "error": "Job not found"}), 404
+    if job["status"] == "done":
+        result = dict(job["result"]); result["status"] = "done"
+        _sage_jobs.pop(job_id, None); return jsonify(result)
+    if job["status"] == "error":
+        err = job.get("error", "Unknown"); _sage_jobs.pop(job_id, None)
+        return jsonify({"status": "error", "error": err}), 500
+    return jsonify({"status": job["status"], "step": job.get("step", "Scanning...")})
+
+def _run_sage_scanner_job(job_id):
+    try:
+        SCAN_PAIRS = ["EUR/USD","GBP/USD","USD/JPY","AUD/USD","USD/CAD","NZD/USD","USD/CHF","EUR/JPY","GBP/JPY","XAU/USD"]
+        results = []
+        for i, pair in enumerate(SCAN_PAIRS):
+            _sage_jobs[job_id]["step"] = "Scanning {}/10: {}...".format(i+1, pair)
+            try:
+                pd = get_price(pair)
+                if not pd: continue
+                cp = float(pd["price"])
+                cd = get_sage_chart_data(pair, cp)
+                da = cd.get("daily", {}); h4 = cd.get("h4", {}); wk = cd.get("weekly", {})
+                prompt = (
+                    "Analyze {} at price {}. Daily trend: {}. H4 trend: {}. Weekly trend: {}. "
+                    "BB Upper:{} Mid:{} Lower:{}. ATR:{}. "
+                    "In ONE JSON object answer: "
+                    "{{"pair":"{}","verdict":"BUY or SELL or WAIT","confidence":0-100,"
+                    ""trend_strength":"STRONG or MODERATE or WEAK or RANGING","
+                    ""direction":"UP or DOWN or SIDEWAYS","
+                    ""reason":"one sentence max 15 words","
+                    ""entry":"{}","sl":"","tp1":"","
+                    ""market_phase":"TRENDING or RANGING or BREAKOUT","
+                    ""abc_position":"IMPULSE or CORRECTION or UNKNOWN"}}"
+                ).format(pair, cp,
+                    da.get("trend","?"), h4.get("trend","?"), wk.get("trend","?"),
+                    da.get("bb_upper","?"), da.get("bb_mid","?"), da.get("bb_lower","?"),
+                    da.get("atr","?"), pair, cp)
+                raw = call_claude(prompt, max_tokens=400)
+                parsed = parse_json_response(raw)
+                if parsed and parsed.get("verdict") in ["BUY","SELL"]:
+                    parsed["pair"] = pair
+                    parsed["price"] = cp
+                    results.append(parsed)
+            except Exception as pe:
+                print("[SageScanner] {} error: {}".format(pair, pe))
+                continue
+
+        # Sort by confidence descending
+        results.sort(key=lambda x: int(x.get("confidence", 0)), reverse=True)
+        # Return top 5 with real signals, rest as WAIT
+        top = [r for r in results if r.get("verdict") in ["BUY","SELL"]][:5]
+        # Add WAIT pairs
+        all_pairs_result = []
+        for pair in SCAN_PAIRS:
+            found = next((r for r in results if r.get("pair") == pair), None)
+            if found:
+                all_pairs_result.append(found)
+            else:
+                all_pairs_result.append({"pair": pair, "verdict": "WAIT", "confidence": 0, "trend_strength": "UNKNOWN", "direction": "SIDEWAYS", "reason": "No data or ranging market"})
+
+        _sage_jobs[job_id] = {
+            "status": "done",
+            "result": {
+                "pairs": all_pairs_result,
+                "top_picks": top,
+                "scanned_at": datetime.now().strftime("%H:%M UTC")
+            }
+        }
+    except Exception as e:
+        import traceback; print("[SageScanner] {}".format(traceback.format_exc()))
+        _sage_jobs[job_id] = {"status": "error", "error": str(e)}
 
 
 AI_INFRA_UNIVERSE = {
