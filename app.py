@@ -2552,12 +2552,15 @@ def sage_poll(job_id):
 @login_required
 @byakugan_required
 def sage_scanner():
-    """Scan 8-10 forex pairs simultaneously and return trending ones"""
+    """Scan forex pairs, top stocks, or custom list simultaneously"""
     try:
         import uuid as _uuid
+        body = request.get_json() or {}
+        scan_type   = body.get('scan_type', 'forex')
+        custom_list = body.get('custom_list', [])
         job_id = str(_uuid.uuid4())[:8]
-        _sage_jobs[job_id] = {"status": "running", "step": "Scanning 10 pairs for trending setups..."}
-        threading.Thread(target=_run_sage_scanner_job, args=(job_id,), daemon=True).start()
+        _sage_jobs[job_id] = {"status": "running", "step": "Initializing scanner..."}
+        threading.Thread(target=_run_sage_scanner_job, args=(job_id, scan_type, custom_list), daemon=True).start()
         return jsonify({"job_id": job_id, "status": "starting"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -2575,24 +2578,38 @@ def sage_scanner_poll(job_id):
         return jsonify({"status": "error", "error": err}), 500
     return jsonify({"status": job["status"], "step": job.get("step", "Scanning...")})
 
-def _run_sage_scanner_job(job_id):
+def _run_sage_scanner_job(job_id, scan_type='forex', custom_list=None):
     try:
-        SCAN_PAIRS = ["EUR/USD","GBP/USD","USD/JPY","AUD/USD","USD/CAD","NZD/USD","USD/CHF","EUR/JPY","GBP/JPY","XAU/USD"]
+        FOREX_PAIRS  = ["EUR/USD","GBP/USD","USD/JPY","AUD/USD","USD/CAD","NZD/USD","USD/CHF","EUR/JPY","GBP/JPY","XAU/USD"]
+        TOP_STOCKS   = ["NVDA","AAPL","TSLA","AMZN","META","MSFT","GOOGL","SPY","QQQ","AMD","PLTR","MSTR"]
+
+        if scan_type == 'stocks':
+            scan_list = TOP_STOCKS
+            label = 'stock'
+        elif scan_type == 'custom' and custom_list:
+            scan_list = [s.upper() for s in custom_list][:12]
+            label = 'instrument'
+        else:
+            scan_list = FOREX_PAIRS
+            label = 'pair'
+
+        total = len(scan_list)
         results = []
-        for i, pair in enumerate(SCAN_PAIRS):
-            _sage_jobs[job_id]["step"] = "Scanning {}/10: {}...".format(i+1, pair)
+
+        for i, instrument in enumerate(scan_list):
+            _sage_jobs[job_id]["step"] = "Scanning {}/{}: {}...".format(i+1, total, instrument)
             try:
-                pd = get_price(pair)
+                pd = get_price(instrument)
                 if not pd: continue
                 cp = float(pd["price"])
-                cd = get_sage_chart_data(pair, cp)
+                cd = get_sage_chart_data(instrument, cp)
                 da = cd.get("daily", {}); h4 = cd.get("h4", {}); wk = cd.get("weekly", {})
                 chart_str = format_sage_chart(cd)
                 verdict_prompt = (
-                    'Analyze ' + pair + ' at ' + str(cp) + '. '
+                    'Analyze ' + instrument + ' at ' + str(cp) + '. '
                     'Real chart data:\n' + chart_str + '\n\n'
                     'Based ONLY on the real data above, return compact JSON (no markdown):\n'
-                    '{"pair":"' + pair + '",'
+                    '{"pair":"' + instrument + '",'
                     '"verdict":"BUY or SELL or WAIT",'
                     '"confidence":0,'
                     '"trend_strength":"STRONG BULLISH or STRONG BEARISH or MODERATE BULLISH or MODERATE BEARISH or RANGING",'
@@ -2605,35 +2622,35 @@ def _run_sage_scanner_job(job_id):
                     '"tp1":"next real S/R level",'
                     '"key_pattern":"candlestick pattern or none"}'
                 )
-                prompt = verdict_prompt
-                raw = call_claude(prompt, max_tokens=400)
+                raw = call_claude(verdict_prompt, max_tokens=400)
                 parsed = parse_json_response(raw)
                 if parsed and parsed.get("verdict") in ["BUY","SELL"]:
-                    parsed["pair"] = pair
+                    parsed["pair"] = instrument
                     parsed["price"] = cp
                     results.append(parsed)
             except Exception as pe:
-                print("[SageScanner] {} error: {}".format(pair, pe))
+                print("[SageScanner] {} error: {}".format(instrument, pe))
                 continue
 
-        # Sort by confidence descending
         results.sort(key=lambda x: int(x.get("confidence", 0)), reverse=True)
-        # Return top 5 with real signals, rest as WAIT
         top = [r for r in results if r.get("verdict") in ["BUY","SELL"]][:5]
-        # Add WAIT pairs
-        all_pairs_result = []
-        for pair in SCAN_PAIRS:
-            found = next((r for r in results if r.get("pair") == pair), None)
+
+        all_result = []
+        for instrument in scan_list:
+            found = next((r for r in results if r.get("pair") == instrument), None)
             if found:
-                all_pairs_result.append(found)
+                all_result.append(found)
             else:
-                all_pairs_result.append({"pair": pair, "verdict": "WAIT", "confidence": 0, "trend_strength": "UNKNOWN", "direction": "SIDEWAYS", "reason": "No data or ranging market"})
+                all_result.append({"pair": instrument, "verdict": "WAIT", "confidence": 0,
+                                   "trend_strength": "UNKNOWN", "direction": "SIDEWAYS",
+                                   "reason": "No data or ranging market"})
 
         _sage_jobs[job_id] = {
             "status": "done",
             "result": {
-                "pairs": all_pairs_result,
+                "pairs": all_result,
                 "top_picks": top,
+                "scan_type": scan_type,
                 "scanned_at": datetime.now().strftime("%H:%M UTC")
             }
         }

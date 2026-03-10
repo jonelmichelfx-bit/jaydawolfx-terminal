@@ -279,8 +279,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   <!-- MULTI-PAIR SCANNER SECTION -->
   <div class="input-section" style="margin-bottom:16px;">
     <div class="input-label" style="color:var(--cyan);">🔍 WOLF MULTI-PAIR SCANNER — Find The Trending Setups</div>
-    <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;">Scan 10 pairs simultaneously. Wolf AI identifies which pairs are <strong style="color:var(--green);">TRENDING</strong> vs ranging sideways. Click any result to run full Sage analysis.</div>
-    <button class="scan-btn" id="scanAllBtn" onclick="startScanner()" style="width:100%;background:linear-gradient(135deg,rgba(51,221,255,0.15),rgba(10,20,32,0));border-color:var(--cyan);color:var(--cyan);margin-bottom:12px;">🔍 SCAN ALL 10 PAIRS — FIND ME THE TRENDS</button>
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;">Scan simultaneously. Wolf AI identifies what is <strong style="color:var(--green);">TRENDING</strong> vs ranging. Click any result to run full Sage analysis.</div>
+
+    <!-- Scan type toggle -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button id="scan-type-forex" onclick="setScanType('forex')" style="flex:1;min-width:110px;padding:8px;border-radius:4px;font-family:var(--mono);font-size:10px;letter-spacing:1px;cursor:pointer;border:1px solid var(--cyan);background:rgba(51,221,255,0.15);color:var(--cyan);">💱 FOREX / GOLD</button>
+      <button id="scan-type-stocks" onclick="setScanType('stocks')" style="flex:1;min-width:110px;padding:8px;border-radius:4px;font-family:var(--mono);font-size:10px;letter-spacing:1px;cursor:pointer;border:1px solid rgba(255,255,255,0.12);background:rgba(8,12,15,0.5);color:var(--text-dim);">📈 TOP STOCKS</button>
+      <button id="scan-type-custom" onclick="setScanType('custom')" style="flex:1;min-width:110px;padding:8px;border-radius:4px;font-family:var(--mono);font-size:10px;letter-spacing:1px;cursor:pointer;border:1px solid rgba(255,255,255,0.12);background:rgba(8,12,15,0.5);color:var(--text-dim);">✏️ CUSTOM</button>
+    </div>
+    <div id="scan-custom-box" style="display:none;margin-bottom:10px;">
+      <input id="scan-custom-input" placeholder="AAPL, TSLA, NVDA, EUR/USD, GBP/JPY..." style="width:100%;background:rgba(8,12,15,0.8);border:1px solid rgba(255,255,255,0.15);color:var(--text-mid);padding:9px 12px;border-radius:4px;font-family:var(--mono);font-size:12px;box-sizing:border-box;"/>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Comma-separated — mix forex pairs and stock tickers (max 12)</div>
+    </div>
+
+    <button class="scan-btn" id="scanAllBtn" onclick="startScanner()" style="width:100%;background:linear-gradient(135deg,rgba(51,221,255,0.15),rgba(10,20,32,0));border-color:var(--cyan);color:var(--cyan);margin-bottom:12px;">🔍 <span id="scan-btn-label">SCAN ALL 10 FOREX PAIRS</span></button>
     <div id="scannerResults" style="display:none;">
       <div style="font-size:9px;letter-spacing:2px;color:var(--cyan);margin-bottom:10px;" id="scannerTime">SCAN RESULTS</div>
       <div id="scannerGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;"></div>
@@ -765,30 +777,68 @@ function renderResult(d){
 // ══ MULTI-PAIR SCANNER ═══════════════════════════════════
 let _scannerJobId = null;
 let _scannerPoll  = null;
+let _scanType = 'forex';
+
+const SCAN_LABELS = {
+  forex:  'SCAN ALL 10 FOREX PAIRS',
+  stocks: 'SCAN TOP 12 STOCKS',
+  custom: 'SCAN CUSTOM LIST',
+};
+
+function setScanType(type){
+  _scanType = type;
+  ['forex','stocks','custom'].forEach(t=>{
+    const btn = document.getElementById('scan-type-'+t);
+    if(!btn) return;
+    const active = t === type;
+    btn.style.borderColor    = active ? 'var(--cyan)' : 'rgba(255,255,255,0.12)';
+    btn.style.background     = active ? 'rgba(51,221,255,0.15)' : 'rgba(8,12,15,0.5)';
+    btn.style.color          = active ? 'var(--cyan)' : 'var(--text-dim)';
+  });
+  const labelEl = document.getElementById('scan-btn-label');
+  if(labelEl) labelEl.textContent = SCAN_LABELS[type] || 'SCAN';
+  const customBox = document.getElementById('scan-custom-box');
+  if(customBox) customBox.style.display = type === 'custom' ? 'block' : 'none';
+}
 
 async function startScanner(){
   const btn = document.getElementById('scanAllBtn');
   const loading = document.getElementById('scannerLoading');
   const results = document.getElementById('scannerResults');
   btn.disabled = true;
-  btn.textContent = '⏳ SCANNING 10 PAIRS...';
+  const labelEl = document.getElementById('scan-btn-label');
+  if(labelEl) labelEl.textContent = '⏳ SCANNING...';
   loading.style.display = 'block';
   results.style.display = 'none';
 
+  let customList = [];
+  if(_scanType === 'custom'){
+    const raw = (document.getElementById('scan-custom-input')?.value||'').trim();
+    customList = raw.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean).slice(0,12);
+    if(!customList.length){
+      btn.disabled = false;
+      if(labelEl) labelEl.textContent = SCAN_LABELS[_scanType];
+      loading.style.display = 'none';
+      alert('Enter at least one ticker or pair in the custom list.');
+      return;
+    }
+  }
+
   try{
-    const resp = await fetch('/api/sage-scanner',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const body = {scan_type: _scanType, custom_list: customList};
+    const resp = await fetch('/api/sage-scanner',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data = await resp.json();
     if(data.job_id){
       _scannerJobId = data.job_id;
       _scannerPoll = setInterval(pollScanner, 2000);
     } else {
       btn.disabled = false;
-      btn.textContent = '🔍 SCAN ALL 10 PAIRS — FIND ME THE TRENDS';
+      if(labelEl) labelEl.textContent = SCAN_LABELS[_scanType];
       loading.style.display = 'none';
     }
   } catch(e){
     btn.disabled = false;
-    btn.textContent = '🔍 SCAN ALL 10 PAIRS — FIND ME THE TRENDS';
+    if(labelEl) labelEl.textContent = SCAN_LABELS[_scanType];
     loading.style.display = 'none';
   }
 }
@@ -809,7 +859,8 @@ async function pollScanner(){
       clearInterval(_scannerPoll);
       const btn = document.getElementById('scanAllBtn');
       btn.disabled = false;
-      btn.textContent = '🔍 SCAN ALL 10 PAIRS — FIND ME THE TRENDS';
+      const labelEl = document.getElementById('scan-btn-label');
+      if(labelEl) labelEl.textContent = SCAN_LABELS[_scanType];
       document.getElementById('scannerLoading').style.display = 'none';
     }
   } catch(e){ /* continue polling */ }
@@ -818,7 +869,8 @@ async function pollScanner(){
 function renderScannerResults(data){
   const btn = document.getElementById('scanAllBtn');
   btn.disabled = false;
-  btn.textContent = '🔄 RE-SCAN ALL 10 PAIRS';
+  const labelEl = document.getElementById('scan-btn-label');
+  if(labelEl) labelEl.textContent = '🔄 RE-SCAN';
   document.getElementById('scannerLoading').style.display = 'none';
   document.getElementById('scannerResults').style.display = 'block';
 
