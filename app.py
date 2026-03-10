@@ -955,6 +955,11 @@ def parse_json_response(text):
 @pro_required
 def forex(): return render_template('forex.html')
 
+@app.route('/wolf-scanner')
+@login_required
+@pro_required
+def wolf_scanner(): return render_template('forex.html')
+
 @app.route('/forex-wolf')
 @login_required
 def forex_wolf(): return render_template('forex_wolf.html')
@@ -1397,25 +1402,12 @@ def forex_scan_poll(job_id):
 @app.route('/api/forex-scenarios', methods=['POST'])
 @login_required
 def forex_scenarios():
-    """Legacy sync endpoint — now redirects to async for Render timeout prevention"""
+    """True async — starts background job, returns job_id immediately (no blocking)"""
     try:
         job_id = str(uuid.uuid4())[:8]
-        _forex_scan_jobs[job_id] = {'status': 'starting'}
+        _forex_scan_jobs[job_id] = {'status': 'starting', 'step': 'Fetching live prices...'}
         threading.Thread(target=_run_forex_scan_job, args=(job_id, 'scenarios'), daemon=True).start()
-        # Wait up to 25s (under Render 30s limit) for result
-        for _ in range(25):
-            time.sleep(1)
-            job = _forex_scan_jobs.get(job_id, {})
-            if job.get('status') == 'done':
-                result = dict(job.get('result', {}))
-                _forex_scan_jobs.pop(job_id, None)
-                return jsonify(result)
-            if job.get('status') == 'error':
-                err = job.get('error', 'Unknown')
-                _forex_scan_jobs.pop(job_id, None)
-                return jsonify({'error': err}), 500
-        # Timeout — return job_id so client can poll
-        return jsonify({'job_id': job_id, 'status': 'running', 'step': 'Processing... use /api/forex-scan-poll/' + job_id})
+        return jsonify({'job_id': job_id, 'status': 'starting'})
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -1423,22 +1415,12 @@ def forex_scenarios():
 @app.route('/api/forex-daily-picks', methods=['POST'])
 @login_required
 def forex_daily_picks():
-    """Async wrapper — prevents Render 30s timeout"""
+    """True async — starts background job, returns job_id immediately (no blocking)"""
     try:
         job_id = str(uuid.uuid4())[:8]
-        _forex_scan_jobs[job_id] = {'status': 'starting'}
+        _forex_scan_jobs[job_id] = {'status': 'starting', 'step': 'Fetching live prices...'}
         threading.Thread(target=_run_forex_scan_job, args=(job_id, 'daily'), daemon=True).start()
-        for _ in range(25):
-            time.sleep(1)
-            job = _forex_scan_jobs.get(job_id, {})
-            if job.get('status') == 'done':
-                result = dict(job.get('result', {}))
-                _forex_scan_jobs.pop(job_id, None)
-                return jsonify(result)
-            if job.get('status') == 'error':
-                err = job.get('error', 'Unknown'); _forex_scan_jobs.pop(job_id, None)
-                return jsonify({'error': err}), 500
-        return jsonify({'job_id': job_id, 'status': 'running'})
+        return jsonify({'job_id': job_id, 'status': 'starting'})
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -1446,22 +1428,12 @@ def forex_daily_picks():
 @app.route('/api/forex-weekly-picks', methods=['POST'])
 @login_required
 def forex_weekly_picks():
-    """Async wrapper — prevents Render 30s timeout"""
+    """True async — starts background job, returns job_id immediately (no blocking)"""
     try:
         job_id = str(uuid.uuid4())[:8]
-        _forex_scan_jobs[job_id] = {'status': 'starting'}
+        _forex_scan_jobs[job_id] = {'status': 'starting', 'step': 'Fetching live prices...'}
         threading.Thread(target=_run_forex_scan_job, args=(job_id, 'weekly'), daemon=True).start()
-        for _ in range(25):
-            time.sleep(1)
-            job = _forex_scan_jobs.get(job_id, {})
-            if job.get('status') == 'done':
-                result = dict(job.get('result', {}))
-                _forex_scan_jobs.pop(job_id, None)
-                return jsonify(result)
-            if job.get('status') == 'error':
-                err = job.get('error', 'Unknown'); _forex_scan_jobs.pop(job_id, None)
-                return jsonify({'error': err}), 500
-        return jsonify({'job_id': job_id, 'status': 'running'})
+        return jsonify({'job_id': job_id, 'status': 'starting'})
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
