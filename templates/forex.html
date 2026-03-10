@@ -578,6 +578,7 @@ input::placeholder{color:var(--text-dim);}
       <button class="tab-btn" onclick="openTab('calculator',this)">🧮 CALCULATOR</button>
       <button class="tab-btn t-war" onclick="openTab('conflict',this)">⚔️ CONFLICTS</button>
       <button class="tab-btn t-spy" onclick="openTab('spy',this);loadSPY();">🦅 SPY SIGNAL</button>
+      <button class="tab-btn" style="color:var(--text-dim);" onclick="openTab('news',this);loadNews();">📰 NEWS</button>
       
     </div>
 
@@ -985,6 +986,18 @@ input::placeholder{color:var(--text-dim);}
         <button class="submit-btn" onclick="logTrade()">+ LOG TRADE</button>
       </div>
       <div class="panel"><div class="ph">TRADE HISTORY</div><div id="trade-hist"><div class="empty">No trades logged yet.</div></div></div>
+    </div>
+
+    <!-- NEWS TAB -->
+    <div class="tab-pane" id="pane-news">
+      <div class="panel" style="margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="ph" style="margin:0;">📰 LIVE FOREX NEWS & SIGNAL KILLERS</div>
+          <button onclick="loadNews()" style="background:rgba(0,200,240,0.1);border:1px solid var(--cyan);color:var(--cyan);padding:6px 14px;font-family:var(--mono);font-size:10px;letter-spacing:2px;cursor:pointer;border-radius:2px;">↻ REFRESH</button>
+        </div>
+        <div id="news-killers-box" style="margin-bottom:14px;"></div>
+        <div id="news-feed-box"><div class="empty" style="color:var(--text-dim);padding:20px;text-align:center;">Loading live news...</div></div>
+      </div>
     </div>
   </main>
 </div>
@@ -2721,6 +2734,71 @@ function calcFxSize(){
   document.getElementById('fx-rr').textContent      = '1:' + rr;
 }
 calcFxSize();
+
+
+// ── NEWS CALENDAR ────────────────────────────────────────────────────────────
+async function loadNews(){
+  const killersBox = document.getElementById('news-killers-box');
+  const feedBox    = document.getElementById('news-feed-box');
+  if(!killersBox || !feedBox) return;
+  feedBox.innerHTML = '<div class="load-ctr"><div class="spinner" style="border-top-color:var(--cyan)"></div><div class="load-txt" style="color:var(--cyan)">FETCHING LIVE FOREX NEWS...</div></div>';
+  killersBox.innerHTML = '';
+  try{
+    const res = await fetch('/api/news-calendar');
+    if(!res.ok) throw new Error('News fetch failed');
+    const data = await res.json();
+    if(data.error){ feedBox.innerHTML=`<div style="color:var(--red);padding:20px;">${data.error}</div>`; return; }
+
+    const articles = data.articles || [];
+    const killers  = articles.filter(a => a.is_killer);
+
+    // Signal killers section
+    if(killers.length){
+      let kHtml = '<div style="background:rgba(255,41,82,0.08);border:1px solid rgba(255,41,82,0.3);border-radius:4px;padding:12px;margin-bottom:10px;">';
+      kHtml += '<div style="font-size:9px;letter-spacing:2px;color:var(--red);margin-bottom:10px;">🚨 ACTIVE SIGNAL KILLERS</div>';
+      const seen = new Set();
+      killers.forEach(a => {
+        (a.killers||[]).forEach(k => {
+          if(!seen.has(k.label)){
+            seen.add(k.label);
+            kHtml += `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,41,82,0.15);">
+              <span style="color:var(--red);font-size:11px;font-weight:700;">${k.label}</span>
+              <div style="color:var(--text-mid);font-size:11px;margin-top:3px;">⚠️ ${k.rule}</div>
+              <div style="color:var(--text-dim);font-size:10px;margin-top:2px;">Affects: ${(k.pairs||[]).join(' · ')}</div>
+            </div>`;
+          }
+        });
+      });
+      kHtml += '</div>';
+      killersBox.innerHTML = kHtml;
+    }
+
+    // News feed
+    if(!articles.length){ feedBox.innerHTML='<div class="empty" style="color:var(--text-dim);padding:20px;">No news found</div>'; return; }
+
+    let html = `<div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:10px;">📡 LATEST FOREX HEADLINES <span style="color:var(--text-dim);margin-left:8px;">Updated ${data.fetched_at||''}</span></div>`;
+    articles.forEach(a => {
+      const sentColor = a.sentiment==='bullish'?'var(--green)':a.sentiment==='bearish'?'var(--red)':'var(--text-dim)';
+      const pairs = (a.pairs||[]).map(p=>`<span style="background:rgba(0,200,240,0.08);border:1px solid rgba(0,200,240,0.2);color:var(--cyan);font-size:9px;padding:1px 5px;border-radius:2px;">${p}</span>`).join(' ');
+      html += `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+        ${a.is_killer?'<span style="color:var(--red);font-size:9px;letter-spacing:1px;">🚨 SIGNAL KILLER · </span>':''}
+        <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px;">
+          <a href="${a.url||'#'}" target="_blank" style="color:var(--text-mid);font-size:12px;line-height:1.5;text-decoration:none;flex:1;">${a.title||''}</a>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+          <span style="color:var(--text-dim);font-size:10px;">${a.source||''}</span>
+          <span style="color:var(--text-dim);font-size:10px;">${a.published||''}</span>
+          <span style="color:${sentColor};font-size:9px;letter-spacing:1px;">${(a.sentiment||'').toUpperCase()}</span>
+          ${pairs}
+        </div>
+        ${a.desc?`<div style="color:var(--text-dim);font-size:11px;margin-top:4px;line-height:1.5;">${a.desc}</div>`:''}
+      </div>`;
+    });
+    feedBox.innerHTML = html;
+  }catch(e){
+    feedBox.innerHTML = `<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+  }
+}
 
 </script>
 </body>
