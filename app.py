@@ -979,6 +979,101 @@ def forex_price():
         return jsonify(q or {'error': 'Unavailable'})
     except Exception as e: return jsonify({'error': str(e)}), 500
 
+@app.route('/api/news-calendar', methods=['GET'])
+@login_required
+def news_calendar():
+    """
+    Fetch this week's high-impact economic calendar from ForexFactory.
+    Cached for 30 minutes to avoid rate limits.
+    Returns events sorted by time, HIGH impact first, with signal killer flags.
+    """
+    try:
+        cache_key = '_ff_news_cache'
+        now_ts = time.time()
+        # Use module-level cache
+        if not hasattr(news_calendar, '_cache'):
+            news_calendar._cache = None
+            news_calendar._cache_ts = 0
+        if news_calendar._cache and (now_ts - news_calendar._cache_ts) < 1800:
+            return jsonify(news_calendar._cache)
+
+        url = 'https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json'
+        resp = http_requests.get(url, timeout=10, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; trading-terminal/1.0)'
+        })
+        if resp.status_code != 200:
+            return jsonify({'error': 'Calendar unavailable', 'events': []}), 200
+
+        raw = resp.json()
+        # Signal killers — these override normal trading
+        SIGNAL_KILLERS = {
+            'Non-Farm Employment Change': {'label': 'NFP', 'rule': 'Wait until 9:45AM EST — whipsaws violently'},
+            'Nonfarm Payrolls': {'label': 'NFP', 'rule': 'Wait until 9:45AM EST — whipsaws violently'},
+            'FOMC Statement': {'label': 'FOMC', 'rule': 'Massive USD risk-off flows — expect volatility spikes'},
+            'Federal Funds Rate': {'label': 'FOMC', 'rule': 'Massive USD risk-off flows — expect volatility spikes'},
+            'FOMC Press Conference': {'label': 'FOMC', 'rule': 'Massive USD risk-off flows — expect volatility spikes'},
+            'CPI y/y': {'label': 'CPI', 'rule': 'JPY safe-haven flows if hot — wait for stabilization'},
+            'CPI m/m': {'label': 'CPI', 'rule': 'JPY safe-haven flows if hot — wait for stabilization'},
+            'Core CPI': {'label': 'CPI', 'rule': 'JPY safe-haven flows if hot — wait for stabilization'},
+            'Monetary Policy Statement': {'label': 'CENTRAL BANK', 'rule': 'Currency distortion — reduce position size'},
+            'ECB Main Refinancing Rate': {'label': 'ECB', 'rule': 'EUR side distorted — use USD/JPY as backup'},
+            'ECB Press Conference': {'label': 'ECB', 'rule': 'EUR side distorted — use USD/JPY as backup'},
+            'BOJ Policy Rate': {'label': 'BOJ', 'rule': 'JPY spikes suddenly — correlation breaks. Skip that day.'},
+            'BOJ Rate Decision': {'label': 'BOJ', 'rule': 'JPY spikes suddenly — correlation breaks. Skip that day.'},
+            'Overnight Call Rate': {'label': 'BOJ', 'rule': 'JPY spikes suddenly — correlation breaks. Skip that day.'},
+            'GDP q/q': {'label': 'GDP', 'rule': 'Can shift trend direction — wait for initial candle to close'},
+            'Advance GDP': {'label': 'GDP', 'rule': 'Can shift trend direction — wait for initial candle to close'},
+            'PPI m/m': {'label': 'PPI', 'rule': 'Inflation proxy — watch for JPY flows'},
+            'Retail Sales m/m': {'label': 'RETAIL SALES', 'rule': 'USD consumer data — moderate volatility'},
+            'ISM Manufacturing PMI': {'label': 'ISM', 'rule': 'Risk sentiment shift possible'},
+            'ISM Services PMI': {'label': 'ISM', 'rule': 'Risk sentiment shift possible'},
+            'ADP Non-Farm Employment': {'label': 'ADP', 'rule': 'NFP preview — moderate USD move'},
+            'Unemployment Claims': {'label': 'JOBLESS CLAIMS', 'rule': 'Weekly USD data — minor volatility'},
+            'BOE Official Bank Rate': {'label': 'BOE', 'rule': 'GBP pairs distorted — GBP/JPY avoid'},
+            'RBA Rate Statement': {'label': 'RBA', 'rule': 'AUD pairs distorted'},
+            'RBNZ Rate Statement': {'label': 'RBNZ', 'rule': 'NZD pairs distorted'},
+        }
+        HIGH_IMPACT_COUNTRIES = {'USD','EUR','JPY','GBP','CHF','AUD','NZD','CAD'}
+
+        events = []
+        for e in raw:
+            impact = e.get('impact','').strip()
+            country = e.get('country','').strip().upper()
+            title = e.get('title','').strip()
+            # Only High impact events from major currency countries
+            if impact not in ('High','Medium') or country not in HIGH_IMPACT_COUNTRIES:
+                continue
+            # Check signal killer
+            killer = None
+            for key, val in SIGNAL_KILLERS.items():
+                if key.lower() in title.lower():
+                    killer = val
+                    break
+            events.append({
+                'date':     e.get('date',''),
+                'time':     e.get('time',''),
+                'country':  country,
+                'title':    title,
+                'impact':   impact,
+                'forecast': e.get('forecast',''),
+                'previous': e.get('previous',''),
+                'killer':   killer,
+            })
+        # Sort by date/time
+        def sort_key(ev):
+            d = ev.get('date','')
+            t = ev.get('time','') or '00:00am'
+            return d + t
+        events.sort(key=sort_key)
+
+        result = {'events': events, 'fetched_at': datetime.utcnow().strftime('%H:%M UTC')}
+        news_calendar._cache = result
+        news_calendar._cache_ts = now_ts
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e), 'events': []}), 200
+
+
 @app.route('/api/forex-news', methods=['POST'])
 @login_required
 def forex_news():
