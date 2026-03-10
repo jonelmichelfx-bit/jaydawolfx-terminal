@@ -983,95 +983,155 @@ def forex_price():
 @login_required
 def news_calendar():
     """
-    Fetch this week's high-impact economic calendar from ForexFactory.
-    Cached for 30 minutes to avoid rate limits.
-    Returns events sorted by time, HIGH impact first, with signal killer flags.
+    Live forex news feed via NewsAPI.
+    Fetches multiple targeted queries, deduplicates, tags pairs affected,
+    detects signal killers, and returns sorted by recency.
+    Cached 20 minutes.
     """
     try:
-        cache_key = '_ff_news_cache'
         now_ts = time.time()
-        # Use module-level cache
         if not hasattr(news_calendar, '_cache'):
             news_calendar._cache = None
             news_calendar._cache_ts = 0
-        if news_calendar._cache and (now_ts - news_calendar._cache_ts) < 1800:
+        if news_calendar._cache and (now_ts - news_calendar._cache_ts) < 1200:
             return jsonify(news_calendar._cache)
 
-        url = 'https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json'
-        resp = http_requests.get(url, timeout=10, headers={
-            'User-Agent': 'Mozilla/5.0 (compatible; trading-terminal/1.0)'
-        })
-        if resp.status_code != 200:
-            return jsonify({'error': 'Calendar unavailable', 'events': []}), 200
+        if not NEWS_API_KEY:
+            return jsonify({'error': 'NEWS_API_KEY not configured', 'articles': []}), 200
 
-        raw = resp.json()
-        # Signal killers — these override normal trading
+        # Signal killer keywords → rule
         SIGNAL_KILLERS = {
-            'Non-Farm Employment Change': {'label': 'NFP', 'rule': 'Wait until 9:45AM EST — whipsaws violently'},
-            'Nonfarm Payrolls': {'label': 'NFP', 'rule': 'Wait until 9:45AM EST — whipsaws violently'},
-            'FOMC Statement': {'label': 'FOMC', 'rule': 'Massive USD risk-off flows — expect volatility spikes'},
-            'Federal Funds Rate': {'label': 'FOMC', 'rule': 'Massive USD risk-off flows — expect volatility spikes'},
-            'FOMC Press Conference': {'label': 'FOMC', 'rule': 'Massive USD risk-off flows — expect volatility spikes'},
-            'CPI y/y': {'label': 'CPI', 'rule': 'JPY safe-haven flows if hot — wait for stabilization'},
-            'CPI m/m': {'label': 'CPI', 'rule': 'JPY safe-haven flows if hot — wait for stabilization'},
-            'Core CPI': {'label': 'CPI', 'rule': 'JPY safe-haven flows if hot — wait for stabilization'},
-            'Monetary Policy Statement': {'label': 'CENTRAL BANK', 'rule': 'Currency distortion — reduce position size'},
-            'ECB Main Refinancing Rate': {'label': 'ECB', 'rule': 'EUR side distorted — use USD/JPY as backup'},
-            'ECB Press Conference': {'label': 'ECB', 'rule': 'EUR side distorted — use USD/JPY as backup'},
-            'BOJ Policy Rate': {'label': 'BOJ', 'rule': 'JPY spikes suddenly — correlation breaks. Skip that day.'},
-            'BOJ Rate Decision': {'label': 'BOJ', 'rule': 'JPY spikes suddenly — correlation breaks. Skip that day.'},
-            'Overnight Call Rate': {'label': 'BOJ', 'rule': 'JPY spikes suddenly — correlation breaks. Skip that day.'},
-            'GDP q/q': {'label': 'GDP', 'rule': 'Can shift trend direction — wait for initial candle to close'},
-            'Advance GDP': {'label': 'GDP', 'rule': 'Can shift trend direction — wait for initial candle to close'},
-            'PPI m/m': {'label': 'PPI', 'rule': 'Inflation proxy — watch for JPY flows'},
-            'Retail Sales m/m': {'label': 'RETAIL SALES', 'rule': 'USD consumer data — moderate volatility'},
-            'ISM Manufacturing PMI': {'label': 'ISM', 'rule': 'Risk sentiment shift possible'},
-            'ISM Services PMI': {'label': 'ISM', 'rule': 'Risk sentiment shift possible'},
-            'ADP Non-Farm Employment': {'label': 'ADP', 'rule': 'NFP preview — moderate USD move'},
-            'Unemployment Claims': {'label': 'JOBLESS CLAIMS', 'rule': 'Weekly USD data — minor volatility'},
-            'BOE Official Bank Rate': {'label': 'BOE', 'rule': 'GBP pairs distorted — GBP/JPY avoid'},
-            'RBA Rate Statement': {'label': 'RBA', 'rule': 'AUD pairs distorted'},
-            'RBNZ Rate Statement': {'label': 'RBNZ', 'rule': 'NZD pairs distorted'},
+            'nonfarm':      {'label': 'NFP 🔴', 'rule': 'Wait until 9:45AM EST — EUR/JPY whipsaws violently', 'pairs': ['USD/JPY','EUR/JPY','GBP/USD','EUR/USD']},
+            'non-farm':     {'label': 'NFP 🔴', 'rule': 'Wait until 9:45AM EST — EUR/JPY whipsaws violently', 'pairs': ['USD/JPY','EUR/JPY','GBP/USD','EUR/USD']},
+            'nfp':          {'label': 'NFP 🔴', 'rule': 'Wait until 9:45AM EST — EUR/JPY whipsaws violently', 'pairs': ['USD/JPY','EUR/JPY','GBP/USD','EUR/USD']},
+            'fomc':         {'label': 'FOMC 🔴', 'rule': 'Massive USD risk-off flows — expect volatility spikes', 'pairs': ['USD/JPY','EUR/USD','GBP/USD','EUR/JPY']},
+            'federal reserve': {'label': 'FED 🔴', 'rule': 'USD-centric event — signal valid but expect vol spikes', 'pairs': ['USD/JPY','EUR/USD','GBP/USD']},
+            'fed rate':     {'label': 'FED 🔴', 'rule': 'USD-centric event — signal valid but expect vol spikes', 'pairs': ['USD/JPY','EUR/USD','GBP/USD']},
+            'cpi':          {'label': 'CPI 🔴', 'rule': 'Inflation data = JPY safe-haven flows if hot — wait for stabilization', 'pairs': ['USD/JPY','EUR/JPY','GBP/JPY']},
+            'inflation':    {'label': 'CPI ⚠️', 'rule': 'Inflation narrative driving JPY flows — trade carefully', 'pairs': ['USD/JPY','EUR/JPY','XAU/USD']},
+            'ecb':          {'label': 'ECB 🔴', 'rule': 'EUR side distorted — use USD/JPY as backup indicator', 'pairs': ['EUR/USD','EUR/JPY','EUR/GBP']},
+            'lagarde':      {'label': 'ECB ⚠️', 'rule': 'EUR side distorted — use USD/JPY as backup indicator', 'pairs': ['EUR/USD','EUR/JPY']},
+            'boj':          {'label': 'BOJ 🔴', 'rule': 'JPY spikes suddenly — correlation breaks. Skip that day.', 'pairs': ['USD/JPY','EUR/JPY','GBP/JPY']},
+            'bank of japan':{'label': 'BOJ 🔴', 'rule': 'JPY spikes suddenly — correlation breaks. Skip that day.', 'pairs': ['USD/JPY','EUR/JPY','GBP/JPY']},
+            'ueda':         {'label': 'BOJ ⚠️', 'rule': 'BOJ Governor speaking — JPY volatility risk', 'pairs': ['USD/JPY','EUR/JPY','GBP/JPY']},
+            'gdp':          {'label': 'GDP ⚠️', 'rule': 'Can shift trend direction — wait for 15-min candle to close', 'pairs': ['USD/JPY','EUR/USD','GBP/USD']},
+            'ppi':          {'label': 'PPI ⚠️', 'rule': 'Inflation proxy — watch for JPY flows', 'pairs': ['USD/JPY','EUR/JPY']},
+            'tariff':       {'label': 'TARIFFS ⚠️', 'rule': 'Risk-off trigger — JPY and gold spike on escalation', 'pairs': ['USD/JPY','EUR/JPY','XAU/USD']},
+            'trade war':    {'label': 'TRADE WAR ⚠️', 'rule': 'Risk-off — JPY safe haven demand spikes', 'pairs': ['USD/JPY','EUR/JPY','XAU/USD']},
+            'recession':    {'label': 'RECESSION FEAR ⚠️', 'rule': 'Risk-off — USD and JPY both spike', 'pairs': ['USD/JPY','EUR/JPY','XAU/USD']},
+            'powell':       {'label': 'FED CHAIR 🔴', 'rule': 'Fed Chair speaking — USD moves sharply on tone', 'pairs': ['USD/JPY','EUR/USD','GBP/USD']},
+            'rate cut':     {'label': 'RATE CUT ⚠️', 'rule': 'Dovish signal — watch currency side for direction', 'pairs': ['USD/JPY','EUR/USD','GBP/USD']},
+            'rate hike':    {'label': 'RATE HIKE ⚠️', 'rule': 'Hawkish signal — strengthens that currency', 'pairs': ['USD/JPY','EUR/USD','GBP/USD']},
         }
-        HIGH_IMPACT_COUNTRIES = {'USD','EUR','JPY','GBP','CHF','AUD','NZD','CAD'}
 
-        events = []
-        for e in raw:
-            impact = e.get('impact','').strip()
-            country = e.get('country','').strip().upper()
-            title = e.get('title','').strip()
-            # Only High impact events from major currency countries
-            if impact not in ('High','Medium') or country not in HIGH_IMPACT_COUNTRIES:
+        # Pair keyword detection
+        PAIR_KEYWORDS = {
+            'EUR/USD': ['eur','euro','eurusd','european','ecb','lagarde'],
+            'GBP/USD': ['gbp','pound','sterling','gbpusd','boe','bank of england','bailey'],
+            'USD/JPY': ['jpy','yen','usdjpy','boj','bank of japan','ueda','japan'],
+            'EUR/JPY': ['eurjpy','eur/jpy'],
+            'GBP/JPY': ['gbpjpy','gbp/jpy'],
+            'USD/CHF': ['chf','franc','usdchf','snb'],
+            'AUD/USD': ['aud','aussie','audusd','rba'],
+            'USD/CAD': ['cad','loonie','usdcad','boc','bank of canada'],
+            'XAU/USD': ['gold','xauusd','xau','bullion'],
+            'DXY':     ['dxy','dollar index','usd index','usdx'],
+            'USD':     ['usd','dollar','federal reserve','fomc','fed','powell','nfp','nonfarm','cpi','inflation'],
+        }
+
+        # Fetch multiple targeted queries in parallel
+        QUERIES = [
+            'forex market today',
+            'FOMC Federal Reserve interest rate',
+            'NFP nonfarm payrolls jobs',
+            'ECB Bank of Japan BOJ rate decision',
+            'CPI inflation USD EUR JPY',
+            'tariffs trade war dollar yen',
+        ]
+
+        seen_titles = set()
+        all_articles = []
+
+        def fetch_query(q):
+            try:
+                url = (f'https://newsapi.org/v2/everything?q={http_requests.utils.quote(q)}'
+                       f'&language=en&sortBy=publishedAt&pageSize=5&apiKey={NEWS_API_KEY}')
+                r = http_requests.get(url, timeout=5)
+                return r.json().get('articles', [])
+            except:
+                return []
+
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            futures = [ex.submit(fetch_query, q) for q in QUERIES]
+            for f in futures:
+                all_articles.extend(f.result())
+
+        processed = []
+        for a in all_articles:
+            title = (a.get('title') or '').strip()
+            if not title or title in seen_titles or '[Removed]' in title:
                 continue
-            # Check signal killer
-            killer = None
-            for key, val in SIGNAL_KILLERS.items():
-                if key.lower() in title.lower():
-                    killer = val
-                    break
-            events.append({
-                'date':     e.get('date',''),
-                'time':     e.get('time',''),
-                'country':  country,
-                'title':    title,
-                'impact':   impact,
-                'forecast': e.get('forecast',''),
-                'previous': e.get('previous',''),
-                'killer':   killer,
-            })
-        # Sort by date/time
-        def sort_key(ev):
-            d = ev.get('date','')
-            t = ev.get('time','') or '00:00am'
-            return d + t
-        events.sort(key=sort_key)
+            seen_titles.add(title)
 
-        result = {'events': events, 'fetched_at': datetime.utcnow().strftime('%H:%M UTC')}
+            desc   = (a.get('description') or '')
+            source = a.get('source', {}).get('name', 'Unknown')
+            pub    = a.get('publishedAt', '')[:16].replace('T', ' ')
+            url    = a.get('url', '')
+            full   = (title + ' ' + desc).lower()
+
+            # Detect signal killers
+            killers = []
+            seen_k = set()
+            for kw, val in SIGNAL_KILLERS.items():
+                if kw in full and val['label'] not in seen_k:
+                    killers.append(val)
+                    seen_k.add(val['label'])
+
+            # Detect pairs affected
+            pairs = []
+            for pair, kws in PAIR_KEYWORDS.items():
+                if any(kw in full for kw in kws):
+                    pairs.append(pair)
+
+            # Remove generic USD duplication if specific pairs found
+            if len(pairs) > 1 and 'USD' in pairs:
+                pairs.remove('USD')
+
+            # Sentiment hint
+            bullish_words = ['rise','rally','surge','gain','strength','hawkish','beat','strong','high']
+            bearish_words = ['fall','drop','plunge','weak','dovish','miss','low','concern','fear','risk']
+            b_score = sum(1 for w in bullish_words if w in full)
+            br_score = sum(1 for w in bearish_words if w in full)
+            sentiment = 'bullish' if b_score > br_score else 'bearish' if br_score > b_score else 'neutral'
+
+            processed.append({
+                'title':     title,
+                'desc':      desc[:180] if desc else '',
+                'source':    source,
+                'published': pub,
+                'url':       url,
+                'killers':   killers[:2],   # max 2 killer tags per article
+                'pairs':     pairs[:5],
+                'sentiment': sentiment,
+                'is_killer': len(killers) > 0,
+            })
+
+        # Sort: signal killers first, then by time
+        processed.sort(key=lambda x: (0 if x['is_killer'] else 1, x['published']), reverse=False)
+        processed.sort(key=lambda x: x['is_killer'], reverse=True)
+
+        result = {
+            'articles': processed[:20],
+            'fetched_at': datetime.utcnow().strftime('%H:%M UTC'),
+            'total': len(processed),
+        }
         news_calendar._cache = result
         news_calendar._cache_ts = now_ts
         return jsonify(result)
     except Exception as e:
-        return jsonify({'error': str(e), 'events': []}), 200
+        import traceback; print('[NewsCalendar]', traceback.format_exc())
+        return jsonify({'error': str(e), 'articles': []}), 200
 
 
 @app.route('/api/forex-news', methods=['POST'])

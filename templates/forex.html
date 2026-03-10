@@ -1258,51 +1258,51 @@ input::placeholder{color:var(--text-dim);}
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
           <div>
-            <div style="font-family:var(--head);font-size:22px;font-weight:900;color:#ff9500;">📰 ECONOMIC NEWS TRACKER</div>
-            <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">High-impact events this week · Signal killers highlighted · ForexFactory data</div>
+            <div style="font-family:var(--head);font-size:22px;font-weight:900;color:#ff9500;">📰 LIVE MARKET NEWS</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">Real-time forex headlines · Signal killers flagged · Pairs affected tagged</div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <span id="news-fetch-time" style="font-size:10px;color:var(--text-dim);"></span>
             <button onclick="loadNews(true)" style="background:rgba(255,149,0,0.1);border:1px solid rgba(255,149,0,0.4);color:#ff9500;padding:8px 16px;border-radius:4px;font-size:11px;font-family:var(--mono);letter-spacing:1px;cursor:pointer;">↻ REFRESH</button>
           </div>
         </div>
 
-        <!-- Signal Killers Reference -->
+        <!-- Signal Killers Quick Reference -->
         <div style="background:rgba(255,51,85,0.06);border:1px solid rgba(255,51,85,0.25);border-radius:8px;padding:14px 16px;margin-bottom:16px;">
-          <div style="font-family:var(--head);font-size:10px;letter-spacing:3px;color:var(--red);margin-bottom:10px;">🚨 SIGNAL KILLERS — RULES WHEN THESE FIRE</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="killer-rules">
-            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">🏦 BOJ</strong> — JPY spikes suddenly. EUR/JPY correlation breaks. <span style="color:var(--gold);">Skip that day.</span></div>
-            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">🇺🇸 FOMC</strong> — Massive USD risk-off JPY flows. <span style="color:var(--gold);">Signal valid but expect volatility.</span></div>
-            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">📊 NFP</strong> — Overrides everything. EUR/JPY whipsaws. <span style="color:var(--gold);">Wait until 9:45AM EST.</span></div>
-            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">🔥 CPI</strong> — Massive risk-off JPY flows if hot. <span style="color:var(--gold);">Trade after EUR/JPY stabilizes.</span></div>
-            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">🇪🇺 ECB</strong> — EUR side distorted. <span style="color:var(--gold);">Use USD/JPY as backup indicator.</span></div>
-            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">📈 GDP</strong> — Can shift trend direction. <span style="color:var(--gold);">Wait for first 15-min candle to close.</span></div>
+          <div style="font-family:var(--head);font-size:10px;letter-spacing:3px;color:var(--red);margin-bottom:10px;">🚨 SIGNAL KILLERS — RULES WHEN THESE APPEAR IN NEWS</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;">
+            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">📊 NFP</strong> — Wait until 9:45AM EST. EUR/JPY whipsaws.</div>
+            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">🇺🇸 FOMC/FED</strong> — Expect vol spikes. Signal still valid.</div>
+            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">🔥 CPI</strong> — JPY safe-haven flows. Trade after stabilization.</div>
+            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">🇪🇺 ECB</strong> — EUR distorted. Use USD/JPY as backup.</div>
+            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">🏦 BOJ</strong> — JPY spikes suddenly. Skip JPY pairs that day.</div>
+            <div style="font-size:11px;color:var(--text-dim);padding:7px 10px;background:rgba(8,12,15,0.5);border-radius:4px;border-left:2px solid var(--red);line-height:1.7;"><strong style="color:var(--text-mid);">⚠️ TARIFFS</strong> — Risk-off. JPY + gold spike on escalation.</div>
           </div>
         </div>
 
-        <!-- Loading state -->
+        <!-- Loading -->
         <div id="news-loading" style="text-align:center;padding:40px;display:none;">
           <div class="spinner" style="border-top-color:#ff9500;margin:0 auto 12px;"></div>
-          <div style="font-size:11px;color:var(--text-dim);letter-spacing:2px;">FETCHING CALENDAR...</div>
+          <div style="font-size:11px;color:var(--text-dim);letter-spacing:2px;">SCANNING LIVE MARKETS...</div>
         </div>
 
-        <!-- Error state -->
+        <!-- Error -->
         <div id="news-error" style="display:none;padding:20px;text-align:center;background:rgba(255,51,85,0.05);border:1px solid rgba(255,51,85,0.2);border-radius:6px;font-size:12px;color:var(--red);"></div>
 
-        <!-- Events: Today -->
-        <div id="news-today-section" style="display:none;margin-bottom:20px;">
-          <div style="font-family:var(--head);font-size:11px;letter-spacing:3px;color:var(--orange);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">⚡ TODAY'S HIGH-IMPACT EVENTS</div>
-          <div id="news-today"></div>
+        <!-- Signal Killer Alerts (top of feed) -->
+        <div id="news-killers-section" style="display:none;margin-bottom:20px;">
+          <div style="font-family:var(--head);font-size:11px;letter-spacing:3px;color:var(--red);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,51,85,0.2);">🚨 ACTIVE SIGNAL KILLERS IN TODAY'S NEWS</div>
+          <div id="news-killers"></div>
         </div>
 
-        <!-- Events: Rest of week -->
-        <div id="news-week-section" style="display:none;">
-          <div style="font-family:var(--head);font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">📅 THIS WEEK</div>
-          <div id="news-week"></div>
+        <!-- General News Feed -->
+        <div id="news-feed-section" style="display:none;">
+          <div style="font-family:var(--head);font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">📡 LATEST FOREX HEADLINES</div>
+          <div id="news-feed"></div>
         </div>
 
-        <!-- Empty state -->
-        <div id="news-empty" style="display:none;text-align:center;padding:40px;color:var(--text-dim);font-size:13px;">No high-impact events found for this week.</div>
+        <!-- Empty -->
+        <div id="news-empty" style="display:none;text-align:center;padding:40px;color:var(--text-dim);font-size:13px;">No news articles found.</div>
 
       </div>
     </div>
@@ -1566,48 +1566,34 @@ async function loadNews(force=false){
   if(_newsLoaded && !force) return;
   document.getElementById('news-loading').style.display='block';
   document.getElementById('news-error').style.display='none';
-  document.getElementById('news-today-section').style.display='none';
-  document.getElementById('news-week-section').style.display='none';
+  document.getElementById('news-killers-section').style.display='none';
+  document.getElementById('news-feed-section').style.display='none';
   document.getElementById('news-empty').style.display='none';
   try{
     const r = await fetch('/api/news-calendar');
     const d = await r.json();
     document.getElementById('news-loading').style.display='none';
-    if(d.error && !d.events?.length){
+    if(d.error && (!d.articles||!d.articles.length)){
       document.getElementById('news-error').style.display='block';
-      document.getElementById('news-error').textContent='Could not load calendar: '+d.error;
+      document.getElementById('news-error').textContent='Could not load news: '+d.error;
       return;
     }
-    document.getElementById('news-fetch-time').textContent='Updated '+d.fetched_at;
-    const events = d.events||[];
-    if(!events.length){
-      document.getElementById('news-empty').style.display='block';
-      return;
-    }
+    const articles = d.articles||[];
+    document.getElementById('news-fetch-time').textContent='Updated '+d.fetched_at+' · '+articles.length+' articles';
+    if(!articles.length){ document.getElementById('news-empty').style.display='block'; return; }
 
-    // Split today vs rest of week
-    const today = new Date();
-    const todayStr = today.toISOString().slice(0,10); // YYYY-MM-DD
-    const todayEvents=[], weekEvents=[];
-    events.forEach(ev=>{
-      // FF date format: "2025-03-10T08:30:00-0500" or "03-10-2025"
-      const evDate = ev.date ? ev.date.slice(0,10) : '';
-      if(evDate === todayStr) todayEvents.push(ev);
-      else weekEvents.push(ev);
-    });
+    const killers = articles.filter(a=>a.is_killer);
+    const general = articles.filter(a=>!a.is_killer);
 
-    if(todayEvents.length){
-      document.getElementById('news-today-section').style.display='block';
-      document.getElementById('news-today').innerHTML = todayEvents.map(renderNewsCard).join('');
+    if(killers.length){
+      document.getElementById('news-killers-section').style.display='block';
+      document.getElementById('news-killers').innerHTML=killers.map(renderNewsCard).join('');
     }
-    if(weekEvents.length){
-      document.getElementById('news-week-section').style.display='block';
-      document.getElementById('news-week').innerHTML = renderWeekGroups(weekEvents);
-    }
-    if(!todayEvents.length && !weekEvents.length){
-      document.getElementById('news-empty').style.display='block';
-    }
-    _newsLoaded = true;
+    document.getElementById('news-feed-section').style.display='block';
+    document.getElementById('news-feed').innerHTML=general.length
+      ? general.map(renderNewsCard).join('')
+      : '<div style="color:var(--text-dim);font-size:12px;padding:12px;">All stories flagged as signal killers above.</div>';
+    _newsLoaded=true;
   }catch(e){
     document.getElementById('news-loading').style.display='none';
     document.getElementById('news-error').style.display='block';
@@ -1615,77 +1601,54 @@ async function loadNews(force=false){
   }
 }
 
-function renderWeekGroups(events){
-  // Group by date
-  const groups={};
-  events.forEach(ev=>{
-    const dt = ev.date||'';
-    const key = dt.slice(0,10);
-    if(!groups[key]) groups[key]=[];
-    groups[key].push(ev);
-  });
-  return Object.entries(groups).map(([date,evs])=>{
-    const d = new Date(date+'T12:00:00');
-    const dayName = d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
-    return `<div style="margin-bottom:16px;">
-      <div style="font-size:10px;letter-spacing:2px;color:var(--text-dim);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:8px;">${dayName}</div>
-      ${evs.map(renderNewsCard).join('')}
-    </div>`;
-  }).join('');
-}
+function renderNewsCard(a){
+  const isKiller=a.is_killer;
+  const sentiment=a.sentiment||'neutral';
+  const sentCol=sentiment==='bullish'?'var(--green)':sentiment==='bearish'?'var(--red)':'var(--text-dim)';
+  const sentIcon=sentiment==='bullish'?'\u25b2':sentiment==='bearish'?'\u25bc':'\u25ac';
+  const borderCol=isKiller?'rgba(255,51,85,0.5)':'rgba(255,255,255,0.07)';
+  const bgCol=isKiller?'rgba(255,51,85,0.04)':'rgba(8,12,15,0.4)';
 
-function renderNewsCard(ev){
-  const isKiller = !!ev.killer;
-  const isHigh   = ev.impact === 'High';
-  const isMed    = ev.impact === 'Medium';
-
-  // Country flag emoji map
-  const flags = {USD:'🇺🇸',EUR:'🇪🇺',JPY:'🇯🇵',GBP:'🇬🇧',CHF:'🇨🇭',AUD:'🇦🇺',NZD:'🇳🇿',CAD:'🇨🇦'};
-  const flag = flags[ev.country]||'🌐';
-
-  // Parse time — FF gives time like "8:30am"
-  const timeStr = ev.time ? ev.time.toUpperCase() : 'ALL DAY';
-
-  // Border + bg based on type
-  const borderCol = isKiller ? '#ff3355' : isHigh ? 'rgba(255,136,0,0.5)' : 'rgba(255,255,255,0.08)';
-  const bgCol     = isKiller ? 'rgba(255,51,85,0.05)' : isHigh ? 'rgba(255,136,0,0.04)' : 'rgba(8,12,15,0.4)';
-
-  let html = `<div style="background:${bgCol};border:1px solid ${borderCol};border-radius:6px;padding:12px 14px;margin-bottom:8px;position:relative;">`;
-
-  // Killer badge
-  if(isKiller){
-    html += `<div style="position:absolute;top:-1px;right:12px;background:var(--red);color:white;font-size:9px;letter-spacing:2px;padding:2px 8px;border-radius:0 0 4px 4px;font-family:var(--head);">🚨 SIGNAL KILLER</div>`;
+  let timeAgo='';
+  if(a.published){
+    try{
+      const diff=Math.floor((Date.now()-new Date(a.published+'Z').getTime())/60000);
+      if(diff<60) timeAgo=diff+'m ago';
+      else if(diff<1440) timeAgo=Math.floor(diff/60)+'h ago';
+      else timeAgo=Math.floor(diff/1440)+'d ago';
+    }catch(e){}
   }
 
-  html += `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <div style="font-size:18px;">${flag}</div>
-    <div style="font-family:var(--mono);font-size:11px;color:${isKiller?'var(--red)':isHigh?'var(--orange)':'var(--text-dim)'};min-width:55px;">${timeStr}</div>
-    <div style="flex:1;min-width:160px;">
-      <div style="font-size:13px;color:var(--text-mid);font-weight:600;">${ev.title}</div>
-      <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${ev.country} · ${ev.impact} Impact</div>
-    </div>`;
+  let html=`<div style="background:${bgCol};border:1px solid ${borderCol};border-radius:6px;padding:12px 14px;margin-bottom:8px;">`;
+  html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;flex-wrap:wrap;gap:6px;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:10px;color:var(--orange);font-family:var(--mono);letter-spacing:1px;">${a.source||'Unknown'}</span>
+      ${timeAgo?`<span style="font-size:10px;color:var(--text-dim);">${timeAgo}</span>`:''}
+      ${isKiller?`<span style="background:var(--red);color:white;font-size:9px;letter-spacing:1px;padding:2px 7px;border-radius:3px;font-family:var(--head);">\ud83d\udea8 SIGNAL KILLER</span>`:''}
+    </div>
+    <span style="font-size:11px;color:${sentCol};font-family:var(--mono);">${sentIcon} ${sentiment.toUpperCase()}</span>
+  </div>`;
 
-  // Forecast / Previous
-  if(ev.forecast || ev.previous){
-    html += `<div style="display:flex;gap:12px;font-size:10px;text-align:center;">`;
-    if(ev.forecast) html += `<div><div style="color:var(--text-dim);">FORECAST</div><div style="color:var(--cyan);font-weight:600;">${ev.forecast}</div></div>`;
-    if(ev.previous) html += `<div><div style="color:var(--text-dim);">PREV</div><div style="color:var(--text-mid);">${ev.previous}</div></div>`;
-    html += `</div>`;
+  html+=`<div style="font-size:13px;color:var(--text-mid);font-weight:600;line-height:1.5;margin-bottom:6px;">${a.title}</div>`;
+  if(a.desc) html+=`<div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;">${a.desc}${a.desc.length>=180?'...':''}</div>`;
+
+  if(isKiller && a.killers && a.killers.length){
+    a.killers.forEach(k=>{
+      html+=`<div style="margin-bottom:6px;padding:7px 10px;background:rgba(255,51,85,0.08);border-left:2px solid var(--red);border-radius:0 4px 4px 0;font-size:11px;color:var(--text-mid);line-height:1.7;">
+        <strong style="color:var(--red);">${k.label}:</strong> ${k.rule}
+      </div>`;
+    });
   }
 
-  // Impact pill
-  html += `<div style="font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:3px;background:${isHigh?'rgba(255,136,0,0.15)':'rgba(255,255,255,0.05)'};color:${isHigh?'var(--orange)':'var(--text-dim)'};">${ev.impact.toUpperCase()}</div>`;
-
-  html += `</div>`;
-
-  // Killer rule
-  if(isKiller && ev.killer){
-    html += `<div style="margin-top:8px;padding:8px 10px;background:rgba(255,51,85,0.08);border-radius:4px;font-size:11px;color:var(--text-mid);line-height:1.7;">
-      <strong style="color:var(--red);">${ev.killer.label}:</strong> ${ev.killer.rule}
-    </div>`;
+  if(a.pairs && a.pairs.length){
+    html+=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;">
+      <span style="font-size:9px;color:var(--text-dim);letter-spacing:1px;">WATCH:</span>`;
+    a.pairs.forEach(p=>{
+      html+=`<span style="font-size:10px;padding:2px 8px;border-radius:3px;font-family:var(--mono);background:${isKiller?'rgba(255,51,85,0.15)':'rgba(255,136,0,0.1)'};color:${isKiller?'var(--red)':'var(--orange)'};border:1px solid ${isKiller?'rgba(255,51,85,0.3)':'rgba(255,136,0,0.25)'};">${p}</span>`;
+    });
+    html+=`</div>`;
   }
-
-  html += `</div>`;
+  html+=`</div>`;
   return html;
 }
 
