@@ -2416,7 +2416,11 @@ def _run_sage_job(job_id, pair, mode):
         cd=get_sage_chart_data(pair,cp); cs=format_sage_chart(cd)
 
         _sage_jobs[job_id]["step"]="Scanning live news and economic events..."
-        news=call_claude_with_search("Search: breaking news economic data and central bank statements affecting {} today {}. What is moving {} right now? 3 sentence summary.".format(pair,datetime.now().strftime("%B %d %Y"),pair))
+        try:
+            raw_news = get_news(pair)
+            news = "\n".join([f"- {n['title']} ({n['source']})" for n in raw_news[:4]]) if raw_news else "No major news found."
+        except Exception:
+            news = "News unavailable."
 
         is_forex=any(x in pair for x in ["USD","EUR","GBP","JPY","CHF","AUD","NZD","CAD","XAU"])
         leg = ("FOREX LEGENDS — Apply ALL 4 simultaneously:\n"
@@ -2475,7 +2479,20 @@ def _run_sage_job(job_id, pair, mode):
                  da.get("bb_upper","?"),da.get("bb_mid","?"),da.get("bb_lower","?"),
                  da.get("atr","?"),cs,sn,cp)
 
-        raw=call_claude(prompt,max_tokens=4000)
+        raw = None
+        for attempt in range(3):
+            try:
+                raw = call_claude(prompt, max_tokens=2500)
+                break
+            except Exception as ce:
+                if "429" in str(ce) or "rate_limit" in str(ce).lower():
+                    wait = 20 * (attempt + 1)
+                    _sage_jobs[job_id]["step"] = f"Rate limit hit — retrying in {wait}s (attempt {attempt+1}/3)..."
+                    time.sleep(wait)
+                else:
+                    raise
+        if not raw:
+            raise Exception("Rate limit exceeded after 3 attempts — please wait 60 seconds and try again.")
         result=parse_json_response(raw)
         result.update({"pair":pair,"price":cp,"mode":mode,"analyzed_at":datetime.now().strftime("%H:%M UTC")})
         _sage_jobs[job_id]={"status":"done","result":result}
