@@ -606,29 +606,65 @@ function renderResult(d){
   document.getElementById('loadingCard').classList.remove('visible');
   document.getElementById('scanBtn').disabled = false;
 
+  const isWait = (d.verdict||'').toUpperCase() === 'WAIT';
+  const isBuy  = (d.verdict||'').toUpperCase() === 'BUY';
+  const isSell = (d.verdict||'').toUpperCase() === 'SELL';
+
   // Verdict banner
   const banner = document.getElementById('verdictBanner');
   banner.className = 'verdict-banner ' + (d.verdict||'wait').toLowerCase();
-  document.getElementById('verdictMain').textContent = d.verdict || '—';
-  const conf = parseInt(d.confidence)||0;
+
+  // Show clear verdict text
+  const verdictEl = document.getElementById('verdictMain');
+  if(isBuy)       verdictEl.textContent = '🟢 BUY';
+  else if(isSell) verdictEl.textContent = '🔴 SELL';
+  else            verdictEl.textContent = '⏳ WAIT — Setup Building';
+
+  const conf = parseInt(d.confidence) || 0;
   document.getElementById('vmConf').textContent = conf + '%';
   const fill = document.getElementById('confFill');
-  fill.style.width = conf+'%';
+  fill.style.width = conf + '%';
   fill.style.background = conf>=75 ? '#00ff99' : conf>=50 ? '#ffd700' : '#ff3355';
   document.getElementById('vmSess').textContent = d.session || '—';
-  document.getElementById('vmRR').textContent = d.rr_ratio || '—';
+  document.getElementById('vmRR').textContent = (d.rr_ratio && d.rr_ratio !== '0:1') ? d.rr_ratio : '—';
   document.getElementById('vmTime').textContent = d.analyzed_at || '—';
 
+  // Helper: clean a price value — return '—' if missing/zero/invalid
+  const cleanPrice = (v) => {
+    if(!v || v === '0' || v === 0 || v === 'REAL_PRICE') return '—';
+    return v;
+  };
+  const cleanPips = (v) => {
+    const n = parseInt(v);
+    if(!n || n <= 0) return '—';
+    return n;
+  };
+
   // Levels
-  document.getElementById('lvEntry').textContent = d.entry || '—';
-  document.getElementById('lvSL').textContent = d.stop_loss || '—';
-  document.getElementById('lvSLpips').textContent = (d.sl_pips||'—') + ' pips risk';
-  document.getElementById('lvTP1').textContent = d.tp1 || '—';
-  document.getElementById('lvTP1pips').textContent = (d.tp1_pips||'—') + ' pips';
-  document.getElementById('lvTP2').textContent = d.tp2 || '—';
-  document.getElementById('lvTP2pips').textContent = (d.tp2_pips||'—') + ' pips';
-  document.getElementById('lvTP3').textContent = d.tp3 || '—';
-  document.getElementById('lvTP3pips').textContent = (d.tp3_pips||'—') + ' pips';
+  const entryLabel = isWait ? document.querySelector('#resultCard .level-card.entry .lc-label') : null;
+  if(entryLabel) entryLabel.textContent = 'IF TRIGGERED';
+  document.getElementById('lvEntry').textContent = cleanPrice(d.entry);
+  document.getElementById('lvEntry').title = isWait ? 'Conditional entry — only valid if price reaches this level with confirmation' : '';
+  document.getElementById('lvSL').textContent = cleanPrice(d.stop_loss);
+  document.getElementById('lvSLpips').textContent = cleanPips(d.sl_pips) !== '—' ? cleanPips(d.sl_pips) + ' pips risk' : '— pips';
+  document.getElementById('lvTP1').textContent = cleanPrice(d.tp1);
+  document.getElementById('lvTP1pips').textContent = cleanPips(d.tp1_pips) !== '—' ? cleanPips(d.tp1_pips) + ' pips' : '—';
+  document.getElementById('lvTP2').textContent = cleanPrice(d.tp2);
+  document.getElementById('lvTP2pips').textContent = cleanPips(d.tp2_pips) !== '—' ? cleanPips(d.tp2_pips) + ' pips' : '—';
+  document.getElementById('lvTP3').textContent = cleanPrice(d.tp3);
+  document.getElementById('lvTP3pips').textContent = cleanPips(d.tp3_pips) !== '—' ? cleanPips(d.tp3_pips) + ' pips' : '—';
+
+  // If WAIT — add a banner below the levels explaining why
+  const existingWaitNote = document.getElementById('waitNote');
+  if(existingWaitNote) existingWaitNote.remove();
+  if(isWait && d.invalidation){
+    const waitNote = document.createElement('div');
+    waitNote.id = 'waitNote';
+    waitNote.style.cssText = 'background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.25);border-radius:6px;padding:12px 16px;margin:10px 0;font-size:12px;color:var(--text-mid);line-height:1.8;';
+    waitNote.innerHTML = '<span style="color:var(--gold);font-family:var(--head);font-size:10px;letter-spacing:2px;">⚠️ WHY WAIT</span><br>' + (d.sage_says || d.invalidation || 'Market is ranging — no clean edge yet. Levels above show where a setup could form.');
+    const levelsGrid = document.querySelector('#resultCard .levels-grid');
+    if(levelsGrid) levelsGrid.insertAdjacentElement('afterend', waitNote);
+  }
 
   // Timeframes
   const tf = d.timeframe_alignment || {};
