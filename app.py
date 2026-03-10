@@ -1345,21 +1345,21 @@ def _run_forex_scan_job(job_id, scan_type):
 
         if scan_type == 'scenarios':
             prompt = f"""You are Wolf AI — professional forex trader. Today: {date_str}. Session: {session_name}.
-LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}\n{chart_ctx}
+LIVE PRICES:\n{prices_str}\nNEWS (real headlines only — do NOT invent upcoming events like NFP/CPI/FOMC unless they appear in these headlines):\n{news_str}\n{chart_ctx}
 Using the REAL chart data above (actual EMA, RSI, MACD, swing S/R levels), find the 7 BEST trades. Only include pairs where 4+ timeframes align. Use the EXACT S/R levels from the chart data above. Give BOTH buy AND sell scenario for each trade.
 Respond ONLY in valid JSON (no markdown, no backticks):
 {{"week":"{date_str}","session":"{session_name}","market_theme":"string","dxy_direction":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","trades":[{{"rank":1,"pair":"EUR/USD","live_price":"1.0380","overall_bias":"BEARISH","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"aligned_count":5,"confidence":82,"primary_direction":"SELL","thesis":"3-4 sentence thesis using real chart data","key_resistance":"1.0400","key_support":"1.0340","buy_scenario":{{"trigger":"string","entry":"1.0410","stop_loss":"1.0380","tp1":"1.0450","tp2":"1.0500","tp3":"1.0550","probability":30}},"sell_scenario":{{"trigger":"string","entry":"1.0360","stop_loss":"1.0390","tp1":"1.0320","tp2":"1.0280","tp3":"1.0240","probability":70}},"best_session":"LONDON","key_news_this_week":"string","invalidation":"string"}}]}}"""
             max_tok = 5000
         elif scan_type == 'daily':
             prompt = f"""You are Wolf AI — professional intraday forex trader. Today: {date_str}. Session: {session_name}.
-LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}\n{chart_ctx}
+LIVE PRICES:\n{prices_str}\nNEWS (real headlines only — do NOT invent events like NFP/CPI/FOMC unless in headlines above):\n{news_str}\n{chart_ctx}
 Using the REAL hourly chart data above (actual EMA, RSI, MACD, real S/R levels from swing highs/lows), find the 3 BEST day trades for today's session. Use EXACT price levels from the chart data.
 Respond ONLY in valid JSON (no markdown):
-{{"date":"{date_str}","session":"{session_name}","dxy_bias":"BULLISH or BEARISH","risk_environment":"RISK-ON or RISK-OFF","picks":[{{"rank":1,"pair":"EUR/USD","direction":"SELL","entry":"1.0390","stop_loss":"1.0420","tp1":"1.0350","tp2":"1.0310","tp3":"1.0270","rr_ratio":"1:2.5","confidence":85,"sharingan_score":5,"thesis":"2-3 sentence thesis using real chart data","confluences":["Price below EMA200 daily","RSI 42 bearish","Hourly resistance at 1.0400"],"best_window":"London Open 3-5AM EST","key_news":"NFP Friday","invalidation":"Break above 1.0430","buy_scenario":"string","sell_scenario":"string"}}]}}"""
+{{"date":"{date_str}","session":"{session_name}","dxy_bias":"BULLISH or BEARISH","risk_environment":"RISK-ON or RISK-OFF","picks":[{{"rank":1,"pair":"EUR/USD","direction":"SELL","entry":"1.0390","stop_loss":"1.0420","tp1":"1.0350","tp2":"1.0310","tp3":"1.0270","rr_ratio":"1:2.5","confidence":85,"sharingan_score":5,"thesis":"2-3 sentence thesis using real chart data","confluences":["Price below EMA200 daily","RSI 42 bearish","Hourly resistance at 1.0400"],"best_window":"London Open 3-5AM EST","key_news":"derive from real news above only — no invented events","invalidation":"Break above 1.0430","buy_scenario":"string","sell_scenario":"string"}}]}}"""
             max_tok = 4000
         else:  # weekly
             prompt = f"""You are Wolf AI — professional swing trader. Today: {date_str}.
-LIVE PRICES:\n{prices_str}\nNEWS:\n{news_str}\n{chart_ctx}
+LIVE PRICES:\n{prices_str}\nNEWS (real headlines only — do NOT invent events like NFP/CPI/FOMC unless in headlines above):\n{news_str}\n{chart_ctx}
 Using the REAL weekly and daily chart data above (actual EMA, RSI, 52-week range, real S/R levels), find the 3 BEST swing trades for this week (2-5 day holds). Use EXACT levels from real chart data.
 Respond ONLY in valid JSON (no markdown):
 {{"week":"{date_str}","weekly_theme":"Main macro theme","dxy_outlook":"BULLISH or BEARISH","central_bank_focus":"Key CB event this week","picks":[{{"rank":1,"pair":"GBP/USD","direction":"SELL","entry_zone":"1.2630-1.2650","stop_loss":"1.2700","tp1":"1.2570","tp2":"1.2500","tp3":"1.2420","rr_ratio":"1:2.8","confidence":80,"sharingan_score":4,"hold_days":"3-4","fundamental":"string","technical":"string using real EMA/RSI data","confluences":["Weekly bearish","Daily below EMA200","RSI 45 bearish"],"key_events":"BOE minutes","key_risk":"Surprise hawkish BOE","buy_scenario":"string","sell_scenario":"string"}}]}}"""
@@ -2416,11 +2416,7 @@ def _run_sage_job(job_id, pair, mode):
         cd=get_sage_chart_data(pair,cp); cs=format_sage_chart(cd)
 
         _sage_jobs[job_id]["step"]="Scanning live news and economic events..."
-        try:
-            raw_news = get_news(pair)
-            news = "\n".join([f"- {n['title']} ({n['source']})" for n in raw_news[:4]]) if raw_news else "No major news found."
-        except Exception:
-            news = "News unavailable."
+        news=call_claude_with_search("Search: breaking news economic data and central bank statements affecting {} today {}. What is moving {} right now? 3 sentence summary.".format(pair,datetime.now().strftime("%B %d %Y"),pair))
 
         is_forex=any(x in pair for x in ["USD","EUR","GBP","JPY","CHF","AUD","NZD","CAD","XAU"])
         leg = ("FOREX LEGENDS — Apply ALL 4 simultaneously:\n"
@@ -2439,7 +2435,7 @@ def _run_sage_job(job_id, pair, mode):
         _sage_jobs[job_id]["step"]="Synthesizing all 10 chart masters + 4 legends + market structure..."
         prompt=("You are SAGE MODE — the most powerful trading intelligence system ever built.\n"
             "Date: {} | Instrument: {} | Price: {} | Session: {}\n\n"
-            "LIVE NEWS:\n{}\n\n"
+            "LIVE NEWS (use ONLY these — do NOT invent economic events, do NOT mention NFP/CPI/FOMC unless it appears in the headlines below):\n{}\n\n"
             "{}\n\n"
             "CHART MASTERS — apply ALL 10:\n"
             "- JOHN MURPHY Intermarket: bonds/commodities/DXY vs {}\n"
@@ -2479,20 +2475,7 @@ def _run_sage_job(job_id, pair, mode):
                  da.get("bb_upper","?"),da.get("bb_mid","?"),da.get("bb_lower","?"),
                  da.get("atr","?"),cs,sn,cp)
 
-        raw = None
-        for attempt in range(3):
-            try:
-                raw = call_claude(prompt, max_tokens=2500)
-                break
-            except Exception as ce:
-                if "429" in str(ce) or "rate_limit" in str(ce).lower():
-                    wait = 20 * (attempt + 1)
-                    _sage_jobs[job_id]["step"] = f"Rate limit hit — retrying in {wait}s (attempt {attempt+1}/3)..."
-                    time.sleep(wait)
-                else:
-                    raise
-        if not raw:
-            raise Exception("Rate limit exceeded after 3 attempts — please wait 60 seconds and try again.")
+        raw=call_claude(prompt,max_tokens=4000)
         result=parse_json_response(raw)
         result.update({"pair":pair,"price":cp,"mode":mode,"analyzed_at":datetime.now().strftime("%H:%M UTC")})
         _sage_jobs[job_id]={"status":"done","result":result}
