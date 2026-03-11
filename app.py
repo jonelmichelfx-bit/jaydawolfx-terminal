@@ -105,16 +105,23 @@ YF_MAP = {
     'SPY':     'SPY',      'QQQ':     'QQQ',      'VIX':     '^VIX',
 }
 
-# Candle cache — avoid re-fetching on every request
+# Candle cache — interval-aware TTLs so short TFs stay fresh
 _candle_cache = {}
-_candle_cache_ttl = 900  # 15 minutes — reuse candles across scanner requests
+_candle_cache_ttls = {
+    '15m':  120,   # M15: 2 min  — new candle every 15min, stay current
+    '1h':   180,   # H1:  3 min  — entry timeframe, needs to be current
+    '4h':   300,   # H4:  5 min  — direction confirmation
+    '1d':   600,   # Daily: 10 min — trend, slower moving
+    '1wk':  900,   # Weekly: 15 min — big picture
+}
 
 def get_candles(pair, interval='1d', period='3mo'):
     cache_key = f"{pair}_{interval}_{period}"
     now = time.time()
+    ttl = _candle_cache_ttls.get(interval, 300)
     if cache_key in _candle_cache:
         cached = _candle_cache[cache_key]
-        if now - cached['ts'] < _candle_cache_ttl:
+        if now - cached['ts'] < ttl:
             return cached['data']
 
     try:
@@ -808,7 +815,7 @@ FALLBACK = {
     'DXY':    {'price':107.82,'change':0.21,'pct':0.19,'high':108.11,'low':107.51},
 }
 
-_price_cache = {'prices': {}, 'fetched_at': 0, 'ttl': 60, 'live': False}
+_price_cache = {'prices': {}, 'fetched_at': 0, 'ttl': 20, 'live': False}
 _er_cache = {'rates': {}, 'fetched_at': 0}
 
 def get_session():
@@ -998,7 +1005,7 @@ def news_calendar():
         if not hasattr(news_calendar, '_cache'):
             news_calendar._cache = None
             news_calendar._cache_ts = 0
-        if news_calendar._cache and (now_ts - news_calendar._cache_ts) < 1200:
+        if news_calendar._cache and (now_ts - news_calendar._cache_ts) < 300:  # 5min cache
             return jsonify(news_calendar._cache)
 
         if not NEWS_API_KEY:
