@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wolf Agent | JayDaWolfX Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;500;700&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:    #e8a014;  --gold-dim: rgba(232,160,20,0.12);  --gold-glow: rgba(232,160,20,0.35);
+  --cyan:    #00c8f0;  --cyan-dim: rgba(0,200,240,0.10);
+  --green:   #00e676;  --green-dim: rgba(0,230,118,0.10);
+  --red:     #ff2952;  --red-dim: rgba(255,41,82,0.10);
+  --purple:  #b060ff;  --purple-dim: rgba(176,96,255,0.10);
+  --orange:  #ff7c2a;
+  --bg:  #03070b;  --bg1: #060c11;  --bg2: #090f15;  --bg3: #0c1419;
+  --border:  rgba(232,160,20,0.18);
+  --text:    #c0d0de;  --muted: #3d5568;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;overflow-x:hidden;}
+
+/* grid bg */
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(232,160,20,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(232,160,20,.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0;}
+/* top scanline */
+body::after{content:'';position:fixed;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:scan 5s linear infinite;opacity:.4;z-index:999;}
+@keyframes scan{0%{top:0;opacity:.6}100%{top:100vh;opacity:0}}
+
+.wrap{position:relative;z-index:1;max-width:1460px;margin:0 auto;padding:18px 20px;}
+
+/* ── NAV BAR ── */
+.topnav{display:flex;align-items:center;gap:8px;padding:10px 0 18px;border-bottom:1px solid var(--border);margin-bottom:22px;flex-wrap:wrap;}
+.navlink{font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:2px;color:var(--muted);text-decoration:none;padding:5px 10px;border:1px solid transparent;transition:.15s;}
+.navlink:hover{color:var(--text);border-color:var(--border);}
+.navlink.active{color:var(--gold);border-color:rgba(232,160,20,.35);background:var(--gold-dim);}
+
+/* ── HEADER ── */
+.hdr{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+.logo-block{display:flex;align-items:center;gap:16px;}
+.wolfname{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;letter-spacing:5px;color:var(--gold);text-shadow:0 0 28px var(--gold-glow);line-height:1;}
+.wolfsub{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;color:var(--cyan);letter-spacing:4px;text-transform:uppercase;margin-top:2px;}
+.session-pill{padding:5px 14px;border:1px solid var(--cyan);color:var(--cyan);font-size:.62rem;letter-spacing:3px;font-family:'Barlow Condensed',sans-serif;background:var(--cyan-dim);}
+
+/* ── KNOWLEDGE STRIP ── */
+.kstrip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.kb{padding:3px 10px;border:1px solid rgba(232,160,20,.25);font-size:.57rem;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;color:var(--gold);opacity:.65;background:var(--gold-dim);}
+
+/* ── CONTROLS ── */
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:22px;}
+.scan-btn{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:3px;padding:11px 28px;border:1px solid var(--gold);background:var(--gold-dim);color:var(--gold);cursor:pointer;position:relative;overflow:hidden;transition:.15s;}
+.scan-btn::before{content:'';position:absolute;inset:0;background:var(--gold);transform:scaleX(0);transform-origin:left;transition:.2s;z-index:0;}
+.scan-btn:hover::before,.scan-btn.loading::before{transform:scaleX(1);}
+.scan-btn:hover span,.scan-btn.loading span{color:var(--bg);}
+.scan-btn span{position:relative;z-index:1;}
+.scan-btn:disabled{opacity:.35;cursor:not-allowed;}
+.ftab{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:2px;padding:9px 16px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:.15s;}
+.ftab.on,.ftab:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);}
+
+/* ── STATUS ── */
+.statusbar{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-left:3px solid var(--gold);font-size:.68rem;letter-spacing:1px;color:var(--gold);margin-bottom:18px;}
+.statusbar.on{display:flex;}
+.spin{width:11px;height:11px;border:2px solid rgba(232,160,20,.25);border-top-color:var(--gold);border-radius:50%;animation:s .7s linear infinite;flex-shrink:0;}
+@keyframes s{to{transform:rotate(360deg)}}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:center;gap:10px;margin:28px 0 14px;}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;color:var(--gold);}
+.sec-badge{font-size:.58rem;color:var(--muted);border:1px solid var(--border);padding:2px 8px;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;}
+.sec-line{flex:1;height:1px;background:var(--border);}
+
+/* ── CARDS GRID ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px;}
+
+/* ── SIGNAL CARD ── */
+.card{background:var(--bg1);border:1px solid var(--border);padding:18px;position:relative;overflow:hidden;animation:cin .35s ease both;}
+@keyframes cin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.card.BUY::after{background:var(--green);}
+.card.SELL::after{background:var(--red);}
+.card.WAIT::after{background:var(--gold);}
+
+/* card top row */
+.ctop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:13px;}
+.csym{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:3px;line-height:1;}
+.cprice{font-size:.72rem;color:var(--muted);margin-top:2px;}
+.cbadges{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.sig-badge{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:3px;padding:3px 13px;}
+.sig-badge.BUY {background:var(--green-dim); color:var(--green); border:1px solid var(--green);}
+.sig-badge.SELL{background:var(--red-dim);   color:var(--red);   border:1px solid var(--red);}
+.sig-badge.WAIT{background:var(--gold-dim);  color:var(--gold);  border:1px solid var(--gold);}
+.conf-badge{font-size:.57rem;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;padding:2px 8px;}
+.conf-badge.HIGH  {color:var(--green);border:1px solid rgba(0,230,118,.3);}
+.conf-badge.MEDIUM{color:var(--gold); border:1px solid rgba(232,160,20,.3);}
+.conf-badge.LOW   {color:var(--red);  border:1px solid rgba(255,41,82,.3);}
+
+/* ── KEY LEVELS GRID ── */
+.levels-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0;}
+.lvl-box{padding:7px 8px;background:var(--bg2);border:1px solid rgba(255,255,255,.05);text-align:center;}
+.lvl-label{font-size:.52rem;color:var(--muted);letter-spacing:2px;margin-bottom:3px;font-family:'Barlow Condensed',sans-serif;}
+.lvl-val{font-size:.72rem;font-weight:600;}
+.lvl-val.gold  {color:var(--gold);}
+.lvl-val.green {color:var(--green);}
+.lvl-val.red   {color:var(--red);}
+.lvl-val.cyan  {color:var(--cyan);}
+.lvl-val.purple{color:var(--purple);}
+.lvl-val.orange{color:var(--orange);}
+
+/* ── ORB SECTION ── */
+.orb-block{margin:10px 0;padding:10px 12px;background:var(--bg2);border:1px solid rgba(176,96,255,.25);}
+.orb-title{font-family:'Barlow Condensed',sans-serif;font-size:.57rem;letter-spacing:3px;color:var(--purple);margin-bottom:8px;}
+.orb-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.orb-item{text-align:center;}
+.orb-lbl{font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:2px;}
+.orb-v  {font-size:.72rem;font-weight:600;}
+.orb-pos-bar{margin-top:6px;display:flex;align-items:center;gap:8px;}
+.orb-track{flex:1;height:6px;background:rgba(255,255,255,.05);border-radius:3px;position:relative;overflow:visible;}
+.orb-range{position:absolute;height:100%;background:rgba(176,96,255,.3);border:1px solid rgba(176,96,255,.5);}
+.orb-cursor{position:absolute;width:3px;height:12px;top:-3px;background:var(--gold);border-radius:1px;transform:translateX(-50%);}
+.orb-pos-label{font-size:.55rem;color:var(--muted);}
+
+/* ── VWAP BAR ── */
+.vwap-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);border:1px solid rgba(255,255,255,.04);margin:6px 0;}
+.vwap-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.vwap-dot.above{background:var(--green);box-shadow:0 0 5px var(--green);}
+.vwap-dot.below{background:var(--red);  box-shadow:0 0 5px var(--red);}
+.vwap-dot.na   {background:var(--muted);}
+.vwap-text{font-size:.62rem;}
+
+/* ── EMA + ADX + RSI ROW ── */
+.indicator-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:8px 0;}
+.ind-box{padding:7px 10px;background:var(--bg2);border:1px solid rgba(255,255,255,.04);}
+.ind-lbl{font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:3px;font-family:'Barlow Condensed',sans-serif;}
+.ind-val{font-size:.7rem;font-weight:600;}
+.adx-mini{margin-top:4px;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;}
+.adx-mini-fill{height:100%;border-radius:2px;}
+
+/* ── ENTRY/SL + TPs ── */
+.esl-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0;}
+.esl-box{padding:8px 10px;background:var(--bg2);border:1px solid rgba(255,255,255,.05);}
+.esl-lbl{font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:2px;font-family:'Barlow Condensed',sans-serif;}
+.esl-v  {font-size:.75rem;font-weight:600;}
+.tp-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:8px 0;}
+.tp-box{text-align:center;padding:7px 4px;background:var(--bg2);border:1px solid rgba(255,255,255,.05);}
+.tp-lbl{font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:2px;}
+.tp-v  {font-size:.74rem;font-weight:700;}
+
+/* ── KEY LEVEL + PATTERN ── */
+.info-row{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:.63rem;}
+.info-lbl{color:var(--muted);min-width:90px;}
+.info-val{text-align:right;max-width:260px;line-height:1.4;}
+
+/* ── ANALYSIS BOX ── */
+.analysis{margin-top:10px;padding:10px 12px;background:var(--bg2);border-left:2px solid var(--gold);font-size:.64rem;line-height:1.65;color:var(--text);opacity:.9;}
+
+/* ── 0DTE OPTIONS PLAY ── */
+.opt-play{margin-top:10px;padding:12px;background:rgba(176,96,255,.06);border:1px solid rgba(176,96,255,.3);}
+.opt-title{font-family:'Barlow Condensed',sans-serif;font-size:.58rem;letter-spacing:3px;color:var(--purple);margin-bottom:8px;}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;}
+.opt-cell{padding:6px 8px;background:rgba(176,96,255,.06);border:1px solid rgba(176,96,255,.15);}
+.opt-clbl{font-size:.5rem;color:var(--muted);letter-spacing:1px;margin-bottom:2px;}
+.opt-cv  {font-size:.66rem;font-weight:600;color:var(--text);}
+.opt-type-CALL{color:var(--green);}
+.opt-type-PUT {color:var(--red);}
+.opt-rationale{font-size:.61rem;color:var(--text);opacity:.8;line-height:1.5;padding:6px 0 0;}
+
+/* ── NEWS WARNING ── */
+.news-warn{margin-top:8px;padding:7px 10px;background:rgba(255,41,82,.06);border:1px solid rgba(255,41,82,.3);font-size:.6rem;color:var(--red);}
+.news-ok  {font-size:.58rem;color:var(--green);opacity:.55;padding:4px 0;}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:80px 20px;}
+.empty-icon{font-size:3.5rem;opacity:.2;margin-bottom:12px;}
+.empty-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:5px;color:var(--muted);margin-bottom:8px;}
+.empty-sub{font-size:.6rem;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;color:var(--muted);opacity:.5;line-height:1.8;}
+
+/* ── METHOD EXPLAINER ── */
+.method-bar{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:24px;}
+.method-box{padding:12px;background:var(--bg1);border:1px solid var(--border);}
+.m-num{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--gold);opacity:.4;line-height:1;}
+.m-title{font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:2px;color:var(--gold);margin:2px 0;}
+.m-desc{font-size:.58rem;color:var(--muted);line-height:1.5;}
+
+/* ── META FOOTER ── */
+.scanmeta{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--border);margin-top:28px;font-size:.58rem;color:var(--muted);flex-wrap:wrap;gap:6px;}
+
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr;}
+  .wolfname{font-size:2rem;}
+  .levels-grid{grid-template-columns:repeat(2,1fr);}
+  .indicator-row{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Nav -->
+  <div class="topnav">
+    <a href="/forex"       class="navlink">⚡ TERMINAL</a>
+    <a href="/sage-mode"   class="navlink">🔮 SAGE MODE</a>
+    <a href="/wolf-agent"  class="navlink active">🐺 WOLF AGENT</a>
+    <a href="/pricing"     class="navlink">📋 PLANS</a>
+  </div>
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="logo-block">
+      <div>
+        <div class="wolfname">🐺 WOLF AGENT</div>
+        <div class="wolfsub">REAL CHART READING · ORB · VWAP · S&amp;R · 0DTE</div>
+      </div>
+      <div id="sessionPill" class="session-pill">-- SESSION --</div>
+    </div>
+    <div id="scanTime" style="font-size:.58rem;color:var(--muted);text-align:right;line-height:1.6;"></div>
+  </div>
+
+  <!-- Knowledge strip -->
+  <div class="kstrip">
+    <div class="kb">📖 VOLMAN PRICE ACTION</div>
+    <div class="kb">📚 BABYPIPS PIPSOLOGY</div>
+    <div class="kb">📊 FIDELITY CHART PATTERNS</div>
+    <div class="kb">⚡ ORB METHOD</div>
+    <div class="kb">📐 VWAP ANALYSIS</div>
+    <div class="kb">📍 PREV DAY HIGH/LOW</div>
+    <div class="kb">📰 NEWS RISK CHECK</div>
+    <div class="kb">🎯 REAL OHLC DATA</div>
+  </div>
+
+  <!-- Method explainer -->
+  <div class="method-bar">
+    <div class="method-box">
+      <div class="m-num">01</div>
+      <div class="m-title">PRE-MARKET SETUP</div>
+      <div class="m-desc">Mark Previous Day High/Low. These are the day's most important levels. Price above prev close = bullish bias.</div>
+    </div>
+    <div class="method-box">
+      <div class="m-num">02</div>
+      <div class="m-title">OPENING RANGE (ORB)</div>
+      <div class="m-desc">First 15-30 min after 9:30 ET forms the range. ORB High + Low = the day's breakout levels. Don't trade inside the range.</div>
+    </div>
+    <div class="method-box">
+      <div class="m-num">03</div>
+      <div class="m-title">VWAP FILTER</div>
+      <div class="m-desc">Above VWAP = CALL bias. Below VWAP = PUT bias. Best setups have ORB breakout + VWAP alignment together.</div>
+    </div>
+    <div class="method-box">
+      <div class="m-num">04</div>
+      <div class="m-title">ENTRY TRIGGER</div>
+      <div class="m-desc">CALL: Close above ORB high + above VWAP. PUT: Close below ORB low + below VWAP. Retest = best entry.</div>
+    </div>
+    <div class="method-box">
+      <div class="m-num">05</div>
+      <div class="m-title">STRIKE + EXIT</div>
+      <div class="m-desc">ATM on strong break. Slightly OTM on retest. Take 50-100% gain. Stop = 50% loss OR close back inside ORB.</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="scan-btn" id="scanBtn" onclick="startScan()">
+      <span>🐺 RUN WOLF SCAN</span>
+    </button>
+    <button class="ftab on"  id="f-all"     onclick="setFilter('all')">ALL MARKETS</button>
+    <button class="ftab"     id="f-forex"   onclick="setFilter('forex')">FOREX</button>
+    <button class="ftab"     id="f-stocks"  onclick="setFilter('stocks')">STOCKS</button>
+    <button class="ftab"     id="f-options" onclick="setFilter('options')">0DTE OPTIONS</button>
+  </div>
+
+  <!-- Status -->
+  <div class="statusbar" id="sb">
+    <div class="spin"></div>
+    <span id="sbText">Initializing Wolf Agent...</span>
+  </div>
+
+  <!-- Results -->
+  <div id="resultsArea">
+    <!-- Empty state -->
+    <div class="empty" id="emptyState">
+      <div class="empty-icon">🐺</div>
+      <div class="empty-title">WOLF AGENT READY</div>
+      <div class="empty-sub">
+        SCANS 14 FOREX PAIRS + 10 STOCKS + 0DTE SPY/QQQ<br>
+        REAL OHLC DATA · ORB + VWAP ANALYSIS · PREV DAY LEVELS<br>
+        VOLMAN + BABYPIPS TRAINED · LIVE NEWS CHECK<br><br>
+        <span style="opacity:.4;font-size:.52rem;">SIGNAL GIVEN WHEN 2+ CONDITIONS ALIGN — NO FORCED WAITS</span>
+      </div>
+    </div>
+
+    <!-- Forex section -->
+    <div id="forexSec" style="display:none">
+      <div class="sec-hdr">
+        <div class="sec-title">FOREX SIGNALS</div>
+        <div class="sec-badge" id="forexBadge">TOP 3 TRENDING</div>
+        <div class="sec-line"></div>
+        <span style="font-size:.55rem;color:var(--muted)">VOLMAN + BABYPIPS METHOD</span>
+      </div>
+      <div class="grid" id="forexCards"></div>
+    </div>
+
+    <!-- Stocks section -->
+    <div id="stocksSec" style="display:none">
+      <div class="sec-hdr">
+        <div class="sec-title">STOCK SIGNALS</div>
+        <div class="sec-badge" id="stocksBadge">TOP 3 TRENDING</div>
+        <div class="sec-line"></div>
+        <span style="font-size:.55rem;color:var(--muted)">DAILY STRUCTURE + EMA</span>
+      </div>
+      <div class="grid" id="stocksCards"></div>
+    </div>
+
+    <!-- Options section -->
+    <div id="optionsSec" style="display:none">
+      <div class="sec-hdr">
+        <div class="sec-title">0DTE OPTIONS</div>
+        <div class="sec-badge" id="optsBadge">SPY + QQQ</div>
+        <div class="sec-line"></div>
+        <span style="font-size:.55rem;color:var(--muted)">ORB · VWAP · PDH/PDL METHOD</span>
+      </div>
+      <div class="grid" id="optsCards"></div>
+    </div>
+  </div>
+
+  <!-- Footer meta -->
+  <div class="scanmeta" id="scanMeta" style="display:none">
+    <span id="metaTime"></span>
+    <span>WOLF AGENT v2.0 · ORB + VWAP · REAL DATA · NO PRICE PREDICTION</span>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+let activeFilter = 'all';
+let pollTimer = null;
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('on'));
+  document.getElementById('f-' + f).classList.add('on');
+}
+
+function showStatus(txt) {
+  document.getElementById('sb').classList.add('on');
+  document.getElementById('sbText').textContent = txt;
+}
+function hideStatus() { document.getElementById('sb').classList.remove('on'); }
+
+function setLoading(on) {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = on;
+  btn.querySelector('span').textContent = on ? '⏳ SCANNING...' : '🐺 RUN WOLF SCAN';
+  if (on) btn.classList.add('loading'); else btn.classList.remove('loading');
+}
+
+async function startScan() {
+  setLoading(true);
+  ['emptyState','forexSec','stocksSec','optionsSec'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = id === 'emptyState' ? 'none' : 'none'; }
+  });
+  document.getElementById('scanMeta').style.display = 'none';
+  showStatus('🐺 Wolf Agent initializing...');
+
+  const scanType = activeFilter === 'all' ? 'all' : activeFilter;
+  const r = await fetch('/api/wolf-scan', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({scan_type: scanType})
+  });
+  const d = await r.json();
+  pollJob(d.job_id);
+}
+
+function pollJob(jobId) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    const r = await fetch(`/api/wolf-poll/${jobId}`);
+    const d = await r.json();
+    if (d.status === 'running') {
+      showStatus(d.step || 'Analyzing...');
+    } else if (d.status === 'done') {
+      clearInterval(pollTimer);
+      hideStatus(); setLoading(false);
+      render(d.result);
+    } else if (d.status === 'error') {
+      clearInterval(pollTimer);
+      hideStatus(); setLoading(false);
+      showStatus('❌ ' + (d.error || 'Scan error'));
+    }
+  }, 2000);
+}
+
+function render(res) {
+  document.getElementById('sessionPill').textContent = res.market_session || 'ACTIVE';
+  document.getElementById('scanTime').innerHTML =
+    `<span style="color:var(--gold)">SCAN COMPLETE</span><br>${res.scan_time}`;
+
+  if (res.forex?.length) {
+    document.getElementById('forexSec').style.display = 'block';
+    document.getElementById('forexBadge').textContent = res.forex.length + ' PAIRS ANALYZED';
+    renderCards('forexCards', res.forex, 'forex');
+  }
+  if (res.stocks?.length) {
+    document.getElementById('stocksSec').style.display = 'block';
+    document.getElementById('stocksBadge').textContent = res.stocks.length + ' STOCKS ANALYZED';
+    renderCards('stocksCards', res.stocks, 'stock');
+  }
+  if (res.options?.length) {
+    document.getElementById('optionsSec').style.display = 'block';
+    renderCards('optsCards', res.options, '0dte');
+  }
+
+  document.getElementById('scanMeta').style.display = 'flex';
+  document.getElementById('metaTime').textContent = 'Last scan: ' + res.scan_time;
+}
+
+function renderCards(containerId, signals, type) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  signals.forEach((s, i) => {
+    setTimeout(() => c.appendChild(buildCard(s, type)), i * 100);
+  });
+}
+
+function buildCard(s, type) {
+  const el    = document.createElement('div');
+  const sig   = s.signal || 'WAIT';
+  el.className = `card ${sig}`;
+
+  const price  = fp(s.current_price);
+  const adxN   = parseFloat(s.adx) || 0;
+  const adxPct = Math.min(adxN / 60 * 100, 100);
+  const adxClass= adxN >= 25 ? 'var(--green)' : adxN >= 18 ? 'var(--gold)' : 'var(--red)';
+  const adxLbl  = adxN >= 25 ? 'TRENDING' : adxN >= 18 ? 'MODERATE' : 'RANGING';
+  const rsiN    = parseFloat(s.rsi) || 0;
+  const rsiColor= rsiN >= 70 ? 'var(--red)' : rsiN <= 30 ? 'var(--green)' : 'var(--text)';
+  const rsiLbl  = rsiN >= 70 ? 'OVERBOUGHT' : rsiN <= 30 ? 'OVERSOLD' : 'NEUTRAL';
+
+  // EMA color
+  const emaStr  = (s.ema100_status || '').toLowerCase();
+  const emaAbove= emaStr.includes('above');
+  const emaColor= emaAbove ? 'var(--green)' : 'var(--red)';
+  const emaIcon = emaAbove ? '▲' : '▼';
+
+  // VWAP
+  const vwapStr  = (s.vwap_status || '').toLowerCase();
+  const vwapAbove= vwapStr.includes('above');
+  const vwapDot  = s.vwap ? (vwapAbove ? 'above' : 'below') : 'na';
+  const vwapText = s.vwap ? `${vwapAbove ? 'ABOVE VWAP' : 'BELOW VWAP'} @ ${fp(s.vwap)}` : 'VWAP N/A';
+
+  // ORB
+  const orb = s.orb;
+  let orbHTML = '';
+  if (orb) {
+    const orbW   = orb.high - orb.low;
+    const pctInOrb = orbW > 0 ? Math.max(0, Math.min(100,
+      (s.current_price - orb.low) / orbW * 100)) : 50;
+    const orbPos  = s.current_price > orb.high ? 'ABOVE HIGH 🟢' :
+                    s.current_price < orb.low  ? 'BELOW LOW 🔴' : 'INSIDE RANGE ⚪';
+    orbHTML = `
+    <div class="orb-block">
+      <div class="orb-title">⚡ OPENING RANGE BREAKOUT</div>
+      <div class="orb-grid">
+        <div class="orb-item"><div class="orb-lbl">ORB HIGH</div><div class="orb-v" style="color:var(--green)">${fp(orb.high)}</div></div>
+        <div class="orb-item"><div class="orb-lbl">ORB LOW</div><div class="orb-v" style="color:var(--red)">${fp(orb.low)}</div></div>
+        <div class="orb-item"><div class="orb-lbl">WIDTH</div><div class="orb-v" style="color:var(--gold)">${fp(orb.width)}</div></div>
+      </div>
+      <div class="orb-pos-bar" style="margin-top:8px">
+        <span class="orb-pos-label" style="width:80px">PRICE POS</span>
+        <div class="orb-track">
+          <div class="orb-range" style="left:0;width:100%"></div>
+          <div class="orb-cursor" style="left:${pctInOrb}%"></div>
+        </div>
+        <span class="orb-pos-label" style="width:120px;color:${s.current_price > orb.high ? 'var(--green)' : s.current_price < orb.low ? 'var(--red)' : 'var(--muted)'}">${orbPos}</span>
+      </div>
+    </div>`;
+  }
+
+  // PDH / PDL
+  const pdhStr  = s.pdh ? fp(s.pdh) : '---';
+  const pdlStr  = s.pdl ? fp(s.pdl) : '---';
+  const pdAbove = s.pdh && s.current_price > s.pdh;
+  const pdBelow = s.pdl && s.current_price < s.pdl;
+
+  // Entry / SL / TPs
+  const entryLow  = s.entry_zone?.low  ? fp(s.entry_zone.low)  : '---';
+  const entryHigh = s.entry_zone?.high ? fp(s.entry_zone.high) : '---';
+  const sl   = s.stop_loss ? fp(s.stop_loss) : '---';
+  const tp1  = s.tp1 ? fp(s.tp1) : '---';
+  const tp2  = s.tp2 ? fp(s.tp2) : '---';
+  const tp3  = s.tp3 ? fp(s.tp3) : '---';
+  const rr   = s.risk_reward || '---';
+
+  const biasColor = s.bias === 'BULLISH' ? 'var(--green)' : s.bias === 'BEARISH' ? 'var(--red)' : 'var(--gold)';
+
+  // 0DTE badge
+  const dteBadge = type === '0dte'
+    ? `<span style="font-size:.52rem;color:var(--purple);border:1px solid rgba(176,96,255,.4);padding:2px 6px;margin-left:6px;">0DTE</span>`
+    : '';
+
+  // Options play
+  let optHTML = '';
+  if (s.option_play) {
+    const op  = s.option_play;
+    const oc  = op.type === 'CALL' ? 'opt-type-CALL' : 'opt-type-PUT';
+    optHTML = `
+    <div class="opt-play">
+      <div class="opt-title">⚡ 0DTE OPTION PLAY</div>
+      <div class="opt-grid">
+        <div class="opt-cell"><div class="opt-clbl">DIRECTION</div><div class="opt-cv ${oc}" style="font-size:.85rem;font-weight:700">${op.type || '--'}</div></div>
+        <div class="opt-cell"><div class="opt-clbl">STRIKE</div><div class="opt-cv">${op.strike || '--'}</div></div>
+        <div class="opt-cell"><div class="opt-clbl">TARGET</div><div class="opt-cv" style="color:var(--green)">${op.profit_target || '50-100%'}</div></div>
+        <div class="opt-cell"><div class="opt-clbl">ENTRY WINDOW</div><div class="opt-cv" style="color:var(--cyan)">${op.best_window || '9:45-11:30 ET'}</div></div>
+      </div>
+      <div class="opt-cell" style="margin-bottom:6px"><div class="opt-clbl">ENTRY TRIGGER</div><div class="opt-cv">${op.entry_trigger || '---'}</div></div>
+      <div class="opt-cell"><div class="opt-clbl">STOP</div><div class="opt-cv" style="color:var(--red)">${op.stop || '50% loss on option'}</div></div>
+      <div class="opt-rationale">${op.rationale || ''}</div>
+    </div>`;
+  }
+
+  // Pattern
+  const patHtml = (s.pattern_detected && s.pattern_detected !== 'NONE')
+    ? `<div class="info-row"><span class="info-lbl">PATTERN</span><span class="info-val" style="color:var(--cyan)">📐 ${s.pattern_detected}</span></div>`
+    : '';
+  const candleHtml = (s.candlestick && s.candlestick !== 'NONE')
+    ? `<div class="info-row"><span class="info-lbl">CANDLE</span><span class="info-val" style="color:var(--orange)">🕯 ${s.candlestick}</span></div>`
+    : '';
+
+  el.innerHTML = `
+  <!-- TOP ROW -->
+  <div class="ctop">
+    <div>
+      <div class="csym" style="color:${sig==='BUY'?'var(--green)':sig==='SELL'?'var(--red)':'var(--gold)'}">${s.symbol || '--'}${dteBadge}</div>
+      <div class="cprice">${price} &nbsp;|&nbsp; R/R ${rr}</div>
+    </div>
+    <div class="cbadges">
+      <div class="sig-badge ${sig}">${sig}</div>
+      <div class="conf-badge ${s.confidence||'LOW'}">${s.confidence||'LOW'} CONFIDENCE</div>
+    </div>
+  </div>
+
+  <!-- KEY LEVELS -->
+  <div class="levels-grid">
+    <div class="lvl-box"><div class="lvl-label">PDH</div><div class="lvl-val ${pdAbove?'green':'orange'}">${pdhStr}</div></div>
+    <div class="lvl-box"><div class="lvl-label">PDL</div><div class="lvl-val ${pdBelow?'red':'orange'}">${pdlStr}</div></div>
+    <div class="lvl-box"><div class="lvl-label">VWAP</div><div class="lvl-val ${vwapAbove?'green':'red'}">${s.vwap?fp(s.vwap):'N/A'}</div></div>
+    <div class="lvl-box"><div class="lvl-label">BIAS</div><div class="lvl-val" style="color:${biasColor}">${s.bias||'---'}</div></div>
+  </div>
+
+  <!-- VWAP STATUS -->
+  <div class="vwap-row">
+    <div class="vwap-dot ${vwapDot}"></div>
+    <span class="vwap-text">${vwapText}</span>
+  </div>
+
+  <!-- ORB BLOCK (if available) -->
+  ${orbHTML}
+
+  <!-- EMA + ADX + RSI -->
+  <div class="indicator-row">
+    <div class="ind-box">
+      <div class="ind-lbl">100 EMA</div>
+      <div class="ind-val" style="color:${emaColor}">${emaIcon} ${emaAbove?'ABOVE':'BELOW'}</div>
+    </div>
+    <div class="ind-box">
+      <div class="ind-lbl">ADX — ${adxLbl}</div>
+      <div class="ind-val" style="color:${adxClass}">${adxN||'--'}</div>
+      <div class="adx-mini"><div class="adx-mini-fill" style="width:${adxPct}%;background:${adxClass}"></div></div>
+    </div>
+    <div class="ind-box">
+      <div class="ind-lbl">RSI — ${rsiLbl}</div>
+      <div class="ind-val" style="color:${rsiColor}">${rsiN||'--'}</div>
+    </div>
+  </div>
+
+  <!-- STRUCTURE + KEY LEVEL + PATTERN -->
+  <div class="info-row"><span class="info-lbl">STRUCTURE</span><span class="info-val" style="font-size:.6rem">${s.trend_structure||'---'}</span></div>
+  <div class="info-row"><span class="info-lbl">KEY LEVEL</span><span class="info-val" style="color:var(--cyan);font-size:.6rem">${s.key_level||'---'}</span></div>
+  ${patHtml}${candleHtml}
+  <div class="info-row"><span class="info-lbl">RSI READ</span><span class="info-val" style="color:${rsiColor};font-size:.6rem">${s.rsi_reading||'---'}</span></div>
+
+  <!-- ENTRY / SL -->
+  <div class="esl-row">
+    <div class="esl-box">
+      <div class="esl-lbl">ENTRY ZONE</div>
+      <div class="esl-v" style="color:var(--cyan)">${entryLow} – ${entryHigh}</div>
+    </div>
+    <div class="esl-box">
+      <div class="esl-lbl">STOP LOSS</div>
+      <div class="esl-v" style="color:var(--red)">${sl}</div>
+    </div>
+  </div>
+
+  <!-- TPs -->
+  <div class="tp-row">
+    <div class="tp-box"><div class="tp-lbl">TP1</div><div class="tp-v" style="color:var(--green)">${tp1}</div></div>
+    <div class="tp-box"><div class="tp-lbl">TP2</div><div class="tp-v" style="color:var(--cyan)">${tp2}</div></div>
+    <div class="tp-box"><div class="tp-lbl">TP3</div><div class="tp-v" style="color:var(--gold)">${tp3}</div></div>
+  </div>
+
+  <!-- ANALYSIS -->
+  <div class="analysis">${s.analysis||'Analysis unavailable'}</div>
+
+  <!-- 0DTE OPTIONS PLAY -->
+  ${optHTML}
+
+  <!-- NEWS -->
+  ${s.news_warning
+    ? `<div class="news-warn">⚠️ ${s.news_warning}</div>`
+    : `<div class="news-ok">✓ NO HIGH IMPACT NEWS DETECTED</div>`}
+  `;
+
+  return el;
+}
+
+function fp(v) {
+  if (v === null || v === undefined || v === '') return '---';
+  const n = parseFloat(v);
+  if (isNaN(n) || n === 0) return '---';
+  return n < 10 ? n.toFixed(5) : n < 1000 ? n.toFixed(2) : n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+}
+</script>
+</body>
+</html>
