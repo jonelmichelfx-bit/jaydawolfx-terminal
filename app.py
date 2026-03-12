@@ -88,17 +88,15 @@ from scanner import scanner_bp
 app.register_blueprint(scanner_bp)
 from forex import forex_bp
 app.register_blueprint(forex_bp)
-from wolf_agent import wolf_bp
-app.register_blueprint(wolf_bp)
 
 with app.app_context():
     db.create_all()
 
 # ═══════════════════════════════════════════════════════════════
-# CANDLESTICK ENGINE — Real chart data using yfinance (FREE)
+# CANDLESTICK ENGINE — Real chart data from TwelveData (yfinance fallback)
 # ═══════════════════════════════════════════════════════════════
 
-# Yahoo Finance symbol map for forex pairs
+# Yahoo Finance symbol map for forex pairs (fallback only)
 YF_MAP = {
     'EUR/USD': 'EURUSD=X', 'GBP/USD': 'GBPUSD=X', 'USD/JPY': 'USDJPY=X',
     'USD/CHF': 'USDCHF=X', 'AUD/USD': 'AUDUSD=X', 'USD/CAD': 'USDCAD=X',
@@ -118,6 +116,10 @@ _candle_cache_ttls = {
 }
 
 def get_candles(pair, interval='1d', period='3mo'):
+    """
+    Fetch real OHLC candles. Tries TwelveData first (35 days), falls back to yfinance.
+    TwelveData interval map: 1d->1day, 1wk->1week, 4h->4h, 1h->1h, 15m->15min
+    """
     cache_key = f"{pair}_{interval}_{period}"
     now = time.time()
     ttl = _candle_cache_ttls.get(interval, 300)
@@ -126,6 +128,44 @@ def get_candles(pair, interval='1d', period='3mo'):
         if now - cached['ts'] < ttl:
             return cached['data']
 
+    # TwelveData interval mapping
+    TD_INTERVAL_MAP = {
+        '1d': '1day', '1wk': '1week', '4h': '4h',
+        '1h': '1h', '15m': '15min', '30m': '30min'
+    }
+    # TwelveData outputsize mapping (how many candles to request)
+    TD_OUTPUTSIZE_MAP = {
+        '1d': 35, '1wk': 52, '4h': 60, '1h': 72, '15m': 96, '30m': 60
+    }
+
+    td_interval = TD_INTERVAL_MAP.get(interval)
+    td_size = TD_OUTPUTSIZE_MAP.get(interval, 35)
+
+    # ── Try TwelveData first ──────────────────────────────────────
+    if TWELVE_DATA_KEY and td_interval:
+        try:
+            url = (f'https://api.twelvedata.com/time_series'
+                   f'?symbol={pair}&interval={td_interval}'
+                   f'&outputsize={td_size}&apikey={TWELVE_DATA_KEY}')
+            resp = http_requests.get(url, timeout=10)
+            js = resp.json()
+            if 'values' in js and js['values']:
+                candles = []
+                for v in reversed(js['values']):  # oldest first
+                    candles.append({
+                        'time':   v['datetime'],
+                        'open':   round(float(v['open']),  5),
+                        'high':   round(float(v['high']),  5),
+                        'low':    round(float(v['low']),   5),
+                        'close':  round(float(v['close']), 5),
+                        'volume': float(v.get('volume', 0))
+                    })
+                _candle_cache[cache_key] = {'data': candles, 'ts': now}
+                return candles
+        except Exception as e:
+            print(f'[TwelveData candles] {pair} {interval} error: {e}')
+
+    # ── Fallback: yfinance ────────────────────────────────────────
     try:
         import yfinance as yf
         sym = YF_MAP.get(pair, pair.replace('/', '') + '=X')
@@ -136,17 +176,17 @@ def get_candles(pair, interval='1d', period='3mo'):
         candles = []
         for ts, row in df.iterrows():
             candles.append({
-                'time': str(ts)[:10] if interval != '1h' else str(ts)[:16],
-                'open':  round(float(row['Open']),  5),
-                'high':  round(float(row['High']),  5),
-                'low':   round(float(row['Low']),   5),
-                'close': round(float(row['Close']), 5),
+                'time':   str(ts)[:10] if interval not in ('1h', '15m', '4h') else str(ts)[:16],
+                'open':   round(float(row['Open']),  5),
+                'high':   round(float(row['High']),  5),
+                'low':    round(float(row['Low']),   5),
+                'close':  round(float(row['Close']), 5),
                 'volume': int(row.get('Volume', 0))
             })
         _candle_cache[cache_key] = {'data': candles, 'ts': now}
         return candles
     except Exception as e:
-        print(f'[Candles] {pair} {interval} error: {e}')
+        print(f'[Candles yfinance] {pair} {interval} error: {e}')
         return []
 
 def calc_ema(closes, period):
@@ -263,8 +303,9 @@ def get_chart_analysis(pair, current_price):
     FULL 5-timeframe chart analysis — wraps get_sage_chart_data.
     Safe to call sequentially. Candle cache (15min TTL) prevents redundant fetches.
     Wolf Scanner + Forex Scanner get identical real data as Sage Mode:
-    - Wilder RSI, EMA9/20/50/200, market structure (HH/HL/LH/LL)
-    - 16 candlestick patterns, real swing S/R, ADR, weekly range %, London levels
+    - Wilder RSI, EMA9/20/50/100/200, real ADX (Wilder), HH/HL trend structure
+    - Real ATR (SL sizing), 16 candlestick patterns, real swing S/R (min 2 touches)
+    - Market structure (HH/HL/LH/LL), ADR, weekly range %, London levels
     """
     sage = get_sage_chart_data(pair, current_price)
     da   = sage.get("daily",   {})
@@ -304,10 +345,15 @@ def get_chart_analysis(pair, current_price):
             "ema9":      da.get("ema9"),
             "ema20":     da.get("ema20"),
             "ema50":     da.get("ema50"),
+            "ema100":    da.get("ema100"),
             "ema200":    da.get("ema200"),
             "rsi":       da.get("rsi"),
             "macd_bias": da.get("macd_bias"),
             "atr":       da.get("atr"),
+            "adx":       da.get("adx"),
+            "adx_signal": da.get("adx_signal"),
+            "hh_hl_structure": da.get("hh_hl_structure"),
+            "hh_hl_strength":  da.get("hh_hl_strength"),
             "bb_upper":  da.get("bb_upper"),
             "bb_mid":    da.get("bb_mid"),
             "bb_lower":  da.get("bb_lower"),
@@ -324,7 +370,7 @@ def get_chart_analysis(pair, current_price):
     }
 
 def format_chart_analysis_for_prompt(ca):
-    """Full real chart data formatted for AI prompt — Wolf Scanner + Forex Scanner"""
+    """Full real chart data — Wolf Elite + Chart Analysis + Scenarios + Top3Day + Top3Swing"""
     if not ca:
         return "Chart data unavailable"
 
@@ -341,7 +387,7 @@ def format_chart_analysis_for_prompt(ca):
 
     lines = [
         sep,
-        f"REAL CHART DATA — {pair} @ {cp}",
+        f"REAL CHART DATA — {pair} @ {cp}  [TwelveData 35-day OHLC]",
         f"Overall: {ts.get('overall','?')} | Trend Strength: {ca.get('trend_strength','?')}",
         f"TF Alignment: {ts.get('alignment','?')} | ADR: {ca.get('adr','?')} | Weekly Range Used: {ca.get('weekly_range_pct','?')}%",
         f"Weekly High: {ca.get('weekly_high','?')} | Weekly Low: {ca.get('weekly_low','?')}",
@@ -351,13 +397,15 @@ def format_chart_analysis_for_prompt(ca):
         f"  52wk High={wk.get('high52','?')} | 52wk Low={wk.get('low52','?')}",
         f"DAILY: Trend={da.get('trend','?')} Structure={da.get('structure','?')} Phase={da.get('phase','?')}",
         f"  {da.get('phase_desc','')}",
-        f"  EMA9={da.get('ema9','?')} EMA20={da.get('ema20','?')} EMA50={da.get('ema50','?')} EMA200={da.get('ema200','?')}",
-        f"  RSI={da.get('rsi','?')} MACD={da.get('macd_bias','?')} ATR={da.get('atr','?')} vs200EMA={da.get('vs_ema200','?')}",
+        f"  EMA9={da.get('ema9','?')} EMA20={da.get('ema20','?')} EMA50={da.get('ema50','?')} EMA100={da.get('ema100','?')} EMA200={da.get('ema200','?')}",
+        f"  ADX={da.get('adx','?')} ({da.get('adx_signal','?')}) — >25=TRENDING trade it, <20=RANGING avoid or wait",
+        f"  HH/HL Structure={da.get('hh_hl_structure','?')} | Trend Confidence={da.get('hh_hl_strength','?')}%",
+        f"  RSI={da.get('rsi','?')} MACD={da.get('macd_bias','?')} ATR={da.get('atr','?')} vs200EMA={da.get('vs_ema200','?')} vs100EMA={da.get('vs_ema100','?')}",
         f"  BB: Upper={da.get('bb_upper','?')} Mid={da.get('bb_mid','?')} Lower={da.get('bb_lower','?')} Position={da.get('bb_position','?')}%",
         f"  Swing Highs: {da.get('swing_highs',[])} | Swing Lows: {da.get('swing_lows',[])}",
         f"  20d High={da.get('high20d','?')} | 20d Low={da.get('low20d','?')} | Last5={da.get('last5','?')}",
         f"H4: Trend={h4.get('trend','?')} Structure={h4.get('structure','?')} Phase={h4.get('phase','?')}",
-        f"  EMA9={h4.get('ema9','?')} EMA20={h4.get('ema20','?')} RSI={h4.get('rsi','?')} MACD={h4.get('macd_bias','?')}",
+        f"  EMA9={h4.get('ema9','?')} EMA20={h4.get('ema20','?')} RSI={h4.get('rsi','?')} MACD={h4.get('macd_bias','?')} ATR={h4.get('atr','?')}",
         f"  48h High={h4.get('high48h','?')} | 48h Low={h4.get('low48h','?')}",
         f"H1: Trend={h1.get('trend','?')} Structure={h1.get('structure','?')}",
         f"  EMA9={h1.get('ema9','?')} EMA20={h1.get('ema20','?')} RSI={h1.get('rsi','?')} MACD={h1.get('macd_bias','?')}",
@@ -368,9 +416,9 @@ def format_chart_analysis_for_prompt(ca):
     ]
 
     if sr:
-        lines.append("KEY S/R (from real swing highs/lows):")
+        lines.append("KEY S/R (real swing highs/lows — min 2 touches Volman rule):")
         for lv in sr[:6]:
-            lines.append(f"  {lv['type']}: {lv['price']} | {lv['distance_pips']} pips | {lv['note']}")
+            lines.append(f"  {lv['type']}: {lv['price']} | {lv['distance_pips']} pips | strength={lv.get('strength',1)} | {lv.get('note','')}")
 
     h1_sr = h1.get("sr", [])
     if h1_sr:
@@ -384,7 +432,7 @@ def format_chart_analysis_for_prompt(ca):
         [("M15",p) for p in ca.get("m15_patterns",[])]
     )
     if all_pats:
-        lines.append("CANDLESTICK PATTERNS:")
+        lines.append("CANDLESTICK PATTERNS (Steve Nison):")
         for tf, p in all_pats:
             lines.append(f"  [{tf}] {p['pattern']} ({p['bias']}) — {p['note']}")
 
@@ -439,67 +487,52 @@ def get_market_regime():
 
 def score_stock(ticker_sym):
     """
-    Real stock scoring engine — no estimates, no fakes.
-    Uses real yfinance OHLCV data:
-    - Wilder Smoothed RSI (same as TradingView/MT4)
-    - Real EMA 20/50/200 from daily closes
-    - Real swing high/low S/R levels
-    - Real volume ratio (today vs 20-day avg)
-    - Real ATR-based IV rank proxy
-    Returns 0-100 score + direction + all indicators
+    Real stock scoring engine — TwelveData first, yfinance fallback.
+    Calculates: EMA20/50/100/200, RSI(14), MACD, ATR, ADX, HH/HL structure, real S/R.
+    Returns 0-100 score + direction + all indicators — NO estimates.
     """
     try:
-        import yfinance as yf
-        t = yf.Ticker(ticker_sym)
-        h = t.history(period='6mo', interval='1d', timeout=8)
-        if h is None or h.empty or len(h) < 20:
+        # ── Fetch real OHLC from TwelveData (35 days) ──────────────
+        candles = get_candles(ticker_sym, '1d', '6mo')
+        if not candles or len(candles) < 20:
             return None
-        closes = [float(x) for x in h['Close'].tolist()]
-        highs  = [float(x) for x in h['High'].tolist()]
-        lows   = [float(x) for x in h['Low'].tolist()]
-        vols   = [float(x) for x in h['Volume'].tolist()]
+
+        closes = [c['close'] for c in candles]
+        highs  = [c['high']  for c in candles]
+        lows   = [c['low']   for c in candles]
         price  = round(closes[-1], 2)
 
         # ── Real EMAs ──────────────────────────────────────────────
-        def _ema(data, p):
-            if len(data) < p: return None
-            k = 2.0/(p+1); v = data[0]
-            for x in data[1:]: v = x*k + v*(1-k)
-            return round(v, 2)
-        e20  = _ema(closes, 20)
-        e50  = _ema(closes, 50)
-        e200 = _ema(closes[-200:] if len(closes) >= 200 else closes, min(200, len(closes)))
+        e20  = calc_ema(closes, 20)
+        e50  = calc_ema(closes, 50)
+        e100 = calc_ema(closes, min(100, len(closes)))
+        e200 = calc_ema(closes, min(200, len(closes)))
 
         # ── Wilder Smoothed RSI (14-period) ────────────────────────
-        rsi = None
-        if len(closes) >= 16:
-            diffs  = [closes[i]-closes[i-1] for i in range(1, len(closes))]
-            gains  = [max(d, 0) for d in diffs]
-            losses = [max(-d, 0) for d in diffs]
-            ag = sum(gains[:14])/14;  al = sum(losses[:14])/14
-            for i in range(14, len(gains)):
-                ag = (ag*13 + gains[i])/14
-                al = (al*13 + losses[i])/14
-            rsi = round(100 - (100/(1 + (ag/al if al > 0 else 1e9))), 1)
+        rsi = calc_rsi(closes)
 
         # ── Real MACD (EMA12 vs EMA26) ─────────────────────────────
-        macd_bias = None
-        if len(closes) >= 26:
-            e12 = _ema(closes[-50:], 12); e26 = _ema(closes[-50:], 26)
-            if e12 and e26: macd_bias = 'BULLISH' if e12 > e26 else 'BEARISH'
+        macd_bias = calc_macd(closes)[1]
+
+        # ── Full ADX (Wilder) ───────────────────────────────────────
+        adx = calc_adx(candles)
+        adx_signal = ("TRENDING" if adx and adx > 25 else "RANGING" if adx and adx < 20 else "WEAK") if adx else "UNKNOWN"
+
+        # ── HH/HL Trend Structure ────────────────────────────────────
+        trend_struct, trend_strength = detect_trend_structure(candles)
 
         # ── Volume ratio (today vs 20-day average) ─────────────────
-        vol_ratio = round(vols[-1] / (sum(vols[-21:-1])/20), 2) if len(vols) >= 21 else 1.0
+        vols = []
+        for c in candles:
+            try: vols.append(float(c.get('volume', 0)))
+            except: vols.append(0)
+        vol_ratio = round(vols[-1] / (sum(vols[-21:-1])/20), 2) if len(vols) >= 21 and sum(vols[-21:-1]) > 0 else 1.0
 
-        # ── ATR-based IV rank proxy ─────────────────────────────────
-        atr14 = None
-        if len(h) >= 15:
-            trs = [max(highs[i]-lows[i], abs(highs[i]-closes[i-1]), abs(lows[i]-closes[i-1]))
-                   for i in range(1, len(h))]
-            atr14 = round(sum(trs[-14:])/14, 2)
+        # ── ATR for SL sizing ───────────────────────────────────────
+        atr14 = calc_atr(candles)
         iv_rank = round((atr14/price)*100*10, 1) if (atr14 and price) else 30
 
-        # ── Real S/R from swing highs/lows ─────────────────────────
+        # ── Real S/R from swing highs/lows (min 2 touches = Volman rule) ──
         sr = []
         for i in range(2, len(highs)-2):
             if highs[i] > highs[i-1] and highs[i] > highs[i-2] and highs[i] > highs[i+1] and highs[i] > highs[i+2]:
@@ -508,8 +541,26 @@ def score_stock(ticker_sym):
             if lows[i] < lows[i-1] and lows[i] < lows[i-2] and lows[i] < lows[i+1] and lows[i] < lows[i+2]:
                 sr.append({'type':'SUPPORT','price':round(lows[i],2),
                            'distance_pips':round(abs(lows[i]-price),2),'strength':1})
-        sr.sort(key=lambda x: x['distance_pips'])
-        sr = sr[:6]
+        # Cluster nearby levels (count touches)
+        sr.sort(key=lambda x: x['price'])
+        clustered_sr = []
+        margin = price * 0.005
+        for lv in sr:
+            merged = False
+            for cl in clustered_sr:
+                if abs(lv['price'] - cl['price']) < margin:
+                    cl['strength'] += 1
+                    merged = True
+                    break
+            if not merged:
+                clustered_sr.append(dict(lv))
+        # Only keep levels with 2+ touches (Volman rule)
+        real_sr = [lv for lv in clustered_sr if lv['strength'] >= 2]
+        real_sr.sort(key=lambda x: x['distance_pips'])
+        if not real_sr:  # fallback: use top swing levels anyway
+            clustered_sr.sort(key=lambda x: x['distance_pips'])
+            real_sr = clustered_sr[:6]
+        sr = real_sr[:6]
 
         # ── Direction consensus ─────────────────────────────────────
         bull = sum([1 if (e20  and price > e20)  else 0,
@@ -521,8 +572,9 @@ def score_stock(ticker_sym):
         # ── Score 0-100 ─────────────────────────────────────────────
         score = 0
         if e200 and price > e200: score += 20
-        if e50  and price > e50:  score += 15
-        if e20  and price > e20:  score += 10
+        if e100 and price > e100: score += 10
+        if e50  and price > e50:  score += 10
+        if e20  and price > e20:  score += 5
         if rsi:
             if 45 <= rsi <= 65:   score += 15
             elif rsi < 30:        score += 10
@@ -530,15 +582,25 @@ def score_stock(ticker_sym):
         if macd_bias == 'BULLISH': score += 15
         if vol_ratio > 1.5:        score += 10
         if vol_ratio > 2.5:        score += 5
+        # ADX bonus: trending stocks score higher
+        if adx:
+            if adx > 35: score += 10
+            elif adx > 25: score += 5
+            elif adx < 20: score -= 10  # penalize ranging
 
         signals = []
         if e200 and price > e200:  signals.append(f'Above 200EMA ({e200})')
+        if e100 and price > e100:  signals.append(f'Above 100EMA ({e100})')
+        if adx:                    signals.append(f'ADX {adx} ({adx_signal})')
         if rsi:                    signals.append(f'RSI {rsi}')
         if macd_bias:              signals.append(f'MACD {macd_bias}')
         if vol_ratio > 1.5:        signals.append(f'Vol {vol_ratio}x avg')
+        if trend_struct != 'UNKNOWN': signals.append(f'{trend_struct} ({trend_strength}%)')
 
         near_earnings = False
         try:
+            import yfinance as yf
+            t = yf.Ticker(ticker_sym)
             cal = t.calendar
             if cal is not None and not cal.empty:
                 cols = cal.columns.tolist()
@@ -553,8 +615,11 @@ def score_stock(ticker_sym):
             'ticker': ticker_sym, 'price': price,
             'score': max(0, min(100, score)),
             'direction': direction, 'rsi': rsi,
-            'ema20': e20, 'ema50': e50, 'ema200': e200,
+            'ema20': e20, 'ema50': e50, 'ema100': e100, 'ema200': e200,
+            'adx': adx, 'adx_signal': adx_signal,
+            'hh_hl_structure': trend_struct, 'hh_hl_strength': trend_strength,
             'macd_bias': macd_bias, 'vol_ratio': vol_ratio,
+            'atr': atr14,
             'iv_rank': iv_rank, 'unusual_activity': round(vol_ratio, 1),
             'sr_levels': sr, 'signals': signals,
             'near_earnings': near_earnings
@@ -1310,8 +1375,11 @@ def forex_analyze():
             session_name, _ = get_session()
             if q:
                 current_price = float(q['price'])
-                live_ctx = f"\nLIVE PRICE: {pair} = {current_price} | H:{q['high']} L:{q['low']} | Change: {q.get('percent_change',0):+.2f}% | Session: {session_name}\n"
-
+                live_ctx = (f"\nLIVE PRICE: {pair} = {current_price} | H:{q['high']} L:{q['low']}"
+                            f" | Change: {q.get('percent_change',0):+.2f}% | Session: {session_name}\n"
+                            f"DATA SOURCE: TwelveData 35-day OHLC — EMA9/20/50/100/200, real ADX (Wilder),"
+                            f" HH/HL trend structure, ATR, real S/R zones (min 2 touches).\n"
+                            f"ADX RULE: ADX > 25 = trending (trade it). ADX < 20 = ranging (skip or wait).\n")
                 chart = get_chart_analysis(pair, current_price)
                 live_ctx += format_chart_analysis_for_prompt(chart)
 
@@ -1355,21 +1423,21 @@ def _run_forex_scan_job(job_id, scan_type):
         if scan_type == 'scenarios':
             prompt = f"""You are Wolf AI — professional forex trader. Today: {date_str}. Session: {session_name}.
 LIVE PRICES:\n{prices_str}\nNEWS (real headlines only — do NOT invent upcoming events like NFP/CPI/FOMC unless they appear in these headlines):\n{news_str}\n{chart_ctx}
-Using the REAL chart data above (actual EMA, RSI, MACD, swing S/R levels), find the 7 BEST trades. Only include pairs where 4+ timeframes align. Use the EXACT S/R levels from the chart data above. Give BOTH buy AND sell scenario for each trade.
+Using the REAL chart data above (TwelveData OHLC — EMA9/20/50/100/200, real ADX, HH/HL structure, ATR, swing S/R), find the 7 BEST trades. ADX RULE: only include pairs where ADX > 25 (trending) — skip or flag WAIT if ADX < 20 (ranging). Only include pairs where 4+ timeframes align. Use EXACT S/R levels and ATR values from chart data above for SL sizing. Give BOTH buy AND sell scenario for each trade.
 Respond ONLY in valid JSON (no markdown, no backticks):
 {{"week":"{date_str}","session":"{session_name}","market_theme":"string","dxy_direction":"BULLISH or BEARISH","risk_sentiment":"RISK-ON or RISK-OFF","trades":[{{"rank":1,"pair":"EUR/USD","live_price":"1.0380","overall_bias":"BEARISH","timeframe_alignment":{{"monthly":"BEARISH","weekly":"BEARISH","daily":"BEARISH","h4":"BEARISH","h1":"NEUTRAL","m15":"BEARISH"}},"aligned_count":5,"confidence":82,"primary_direction":"SELL","thesis":"3-4 sentence thesis using real chart data","key_resistance":"1.0400","key_support":"1.0340","buy_scenario":{{"trigger":"string","entry":"1.0410","stop_loss":"1.0380","tp1":"1.0450","tp2":"1.0500","tp3":"1.0550","probability":30}},"sell_scenario":{{"trigger":"string","entry":"1.0360","stop_loss":"1.0390","tp1":"1.0320","tp2":"1.0280","tp3":"1.0240","probability":70}},"best_session":"LONDON","key_news_this_week":"string","invalidation":"string"}}]}}"""
             max_tok = 5000
         elif scan_type == 'daily':
             prompt = f"""You are Wolf AI — professional intraday forex trader. Today: {date_str}. Session: {session_name}.
 LIVE PRICES:\n{prices_str}\nNEWS (real headlines only — do NOT invent events like NFP/CPI/FOMC unless in headlines above):\n{news_str}\n{chart_ctx}
-Using the REAL hourly chart data above (actual EMA, RSI, MACD, real S/R levels from swing highs/lows), find the 3 BEST day trades for today's session. Use EXACT price levels from the chart data.
+Using the REAL hourly chart data above (TwelveData OHLC — EMA9/20/50/100/200, real ADX, HH/HL structure, ATR, real S/R), find the 3 BEST day trades for today's session. ADX RULE: only pick pairs where ADX > 25. Use ATR for SL sizing. Use EXACT price levels from chart data.
 Respond ONLY in valid JSON (no markdown):
 {{"date":"{date_str}","session":"{session_name}","dxy_bias":"BULLISH or BEARISH","risk_environment":"RISK-ON or RISK-OFF","picks":[{{"rank":1,"pair":"EUR/USD","direction":"SELL","entry":"1.0390","stop_loss":"1.0420","tp1":"1.0350","tp2":"1.0310","tp3":"1.0270","rr_ratio":"1:2.5","confidence":85,"sharingan_score":5,"thesis":"2-3 sentence thesis using real chart data","confluences":["Price below EMA200 daily","RSI 42 bearish","Hourly resistance at 1.0400"],"best_window":"London Open 3-5AM EST","key_news":"derive from real news above only — no invented events","invalidation":"Break above 1.0430","buy_scenario":"string","sell_scenario":"string"}}]}}"""
             max_tok = 4000
         else:  # weekly
             prompt = f"""You are Wolf AI — professional swing trader. Today: {date_str}.
 LIVE PRICES:\n{prices_str}\nNEWS (real headlines only — do NOT invent events like NFP/CPI/FOMC unless in headlines above):\n{news_str}\n{chart_ctx}
-Using the REAL weekly and daily chart data above (actual EMA, RSI, 52-week range, real S/R levels), find the 3 BEST swing trades for this week (2-5 day holds). Use EXACT levels from real chart data.
+Using the REAL weekly and daily chart data above (TwelveData OHLC — EMA9/20/50/100/200, real ADX, HH/HL structure, ATR, 52-week range, real S/R), find the 3 BEST swing trades for this week (2-5 day holds). ADX RULE: only pick pairs where ADX > 25. Use ATR for SL sizing. Use EXACT levels from real chart data.
 Respond ONLY in valid JSON (no markdown):
 {{"week":"{date_str}","weekly_theme":"Main macro theme","dxy_outlook":"BULLISH or BEARISH","central_bank_focus":"Key CB event this week","picks":[{{"rank":1,"pair":"GBP/USD","direction":"SELL","entry_zone":"1.2630-1.2650","stop_loss":"1.2700","tp1":"1.2570","tp2":"1.2500","tp3":"1.2420","rr_ratio":"1:2.8","confidence":80,"sharingan_score":4,"hold_days":"3-4","fundamental":"string","technical":"string using real EMA/RSI data","confluences":["Weekly bearish","Daily below EMA200","RSI 45 bearish"],"key_events":"BOE minutes","key_risk":"Surprise hawkish BOE","buy_scenario":"string","sell_scenario":"string"}}]}}"""
             max_tok = 4000
@@ -1578,6 +1646,14 @@ def calculate_real_confidence(pair, direction, chart_data):
         if strong_levels:
             score += 7
 
+    # ── 6. ADX TREND STRENGTH BONUS (10 pts) ─────────────────
+    # Real Wilder ADX — same as Wolf Agent. Only trade confirmed trends.
+    adx = d.get('adx')
+    if adx is not None:
+        if adx > 35:   score += 10   # strong trend — high confidence
+        elif adx > 25: score += 5    # trending — trade it
+        elif adx < 20: score -= 15   # ranging — avoid, kills confidence
+
     # ── CLAMP to 0-100 ────────────────────────────────────────
     return max(0, min(100, score))
 
@@ -1598,7 +1674,10 @@ def _run_async_ai_job(job_id, prompt, max_tokens, pair=''):
                 session_name, _ = get_session()
                 if q:
                     current_price = float(q['price'])
-                    live_ctx = f"\nLIVE PRICE: {pair} = {current_price} | H:{q['high']} L:{q['low']} | Change: {q.get('percent_change',0):+.2f}% | Session: {session_name}\n"
+                    live_ctx = (f"\nLIVE PRICE: {pair} = {current_price} | H:{q['high']} L:{q['low']}"
+                                f" | Change: {q.get('percent_change',0):+.2f}% | Session: {session_name}\n"
+                                f"DATA: TwelveData 35-day OHLC — EMA9/20/50/100/200, real ADX, HH/HL structure, ATR, real S/R.\n"
+                                f"ADX RULE: >25=trending (trade), <20=ranging (wait/skip).\n")
                     chart = get_chart_analysis(pair, current_price)
                     live_ctx += format_chart_analysis_for_prompt(chart)
                 news = get_news(pair)
@@ -1797,7 +1876,7 @@ def run_byakugan_job(job_id, scan_filter, date_str, user_id):
         stocks_ctx = ''
         for s in top5:
             g=s.get('greeks') or {}
-            stocks_ctx += f"\n===\n{s['ticker']} ${s['price']} Score:{s['score']} {s['direction']}\nEMA20:{s['ema20']} EMA50:{s['ema50']} EMA200:{s['ema200']} RSI:{s['rsi']} MACD:{s['macd_bias']}\nIV:{s.get('iv_estimate','?')}% Vol:{s['vol_ratio']}x UOA:{s['unusual_activity']}x\nD:{g.get('delta','?')} G:{g.get('gamma','?')} T:{g.get('theta','?')} V:{g.get('vega','?')}\nSR:{[(l['type'],l['price']) for l in s['sr_levels'][:2]]}\nNEWS:{' | '.join([n['title'][:60] for n in s['news']]) if s['news'] else 'None'}\n==="
+            stocks_ctx += f"\n===\n{s['ticker']} ${s['price']} Score:{s['score']} {s['direction']}\nEMA20:{s['ema20']} EMA50:{s['ema50']} EMA100:{s.get('ema100','?')} EMA200:{s['ema200']} RSI:{s['rsi']} MACD:{s['macd_bias']}\nADX:{s.get('adx','?')} ({s.get('adx_signal','?')}) | Structure:{s.get('hh_hl_structure','?')} ({s.get('hh_hl_strength','?')}% confidence)\nATR:{s.get('atr','?')} IV:{s.get('iv_estimate','?')}% Vol:{s['vol_ratio']}x UOA:{s['unusual_activity']}x\nD:{g.get('delta','?')} G:{g.get('gamma','?')} T:{g.get('theta','?')} V:{g.get('vega','?')}\nSR:{[(l['type'],l['price'],l['strength']) for l in s['sr_levels'][:3]]}\nNEWS:{' | '.join([n['title'][:60] for n in s['news']]) if s['news'] else 'None'}\n==="
         prompt = f"""You are Byakugan — elite Wall Street options trader. Paul Tudor Jones + Tom Sosnoff + Jesse Livermore. Analyze so trader knows EXACTLY what to do tomorrow open.
 TODAY:{date_str} MARKET:SPY:{regime['spy_price']} ({regime['spy_change']:+.2f}%) VIX:{vix} {regime['fear_greed']} {regime['regime']} VIX STRATEGY:{vix_guide}
 {stocks_ctx}
@@ -1871,7 +1950,77 @@ def calc_atr(candles, period=14):
         trs.append(max(h-l, abs(h-pc), abs(l-pc)))
     return round(sum(trs[-period:])/period, 5)
 
-def calc_bollinger(closes, period=20, sd=2):
+def calc_adx(candles, period=14):
+    """
+    Full Wilder ADX formula — exact same as Wolf Agent.
+    > 25 = trending (trade it), < 20 = ranging (avoid or wait).
+    """
+    if not candles or len(candles) < period * 2:
+        return None
+    try:
+        plus_dm, minus_dm, tr_list = [], [], []
+        for i in range(1, len(candles)):
+            h,  l  = candles[i]['high'],     candles[i]['low']
+            ph, pl, pc = candles[i-1]['high'], candles[i-1]['low'], candles[i-1]['close']
+            up_move   = h - ph
+            down_move = pl - l
+            plus_dm.append(up_move   if up_move   > down_move and up_move   > 0 else 0)
+            minus_dm.append(down_move if down_move > up_move   and down_move > 0 else 0)
+            tr_list.append(max(h - l, abs(h - pc), abs(l - pc)))
+
+        def wilder_smooth(lst, p):
+            s = sum(lst[:p])
+            result = [s]
+            for x in lst[p:]:
+                result.append(result[-1] - result[-1] / p + x)
+            return result
+
+        tr_s  = wilder_smooth(tr_list,  period)
+        pdm_s = wilder_smooth(plus_dm,  period)
+        mdm_s = wilder_smooth(minus_dm, period)
+
+        dx_list = []
+        for i in range(len(tr_s)):
+            pdi = 100 * pdm_s[i] / tr_s[i] if tr_s[i] else 0
+            mdi = 100 * mdm_s[i] / tr_s[i] if tr_s[i] else 0
+            dx  = 100 * abs(pdi - mdi) / (pdi + mdi) if (pdi + mdi) else 0
+            dx_list.append(dx)
+
+        if len(dx_list) < period:
+            return None
+        adx = sum(dx_list[-period:]) / period
+        return round(adx, 1)
+    except:
+        return None
+
+def detect_trend_structure(candles):
+    """
+    BabyPips + Volman: real trend = HH+HL (bull) or LH+LL (bear).
+    Returns (structure, strength_pct).
+    """
+    if not candles or len(candles) < 10:
+        return 'UNKNOWN', 0
+    recent = candles[-20:]
+    highs = [c['high']  for c in recent]
+    lows  = [c['low']   for c in recent]
+    hh = sum(1 for i in range(1, len(highs)) if highs[i] > highs[i-1])
+    hl = sum(1 for i in range(1, len(lows))  if lows[i]  > lows[i-1])
+    lh = sum(1 for i in range(1, len(highs)) if highs[i] < highs[i-1])
+    ll = sum(1 for i in range(1, len(lows))  if lows[i]  < lows[i-1])
+    bull_score = hh + hl
+    bear_score = lh + ll
+    total = bull_score + bear_score
+    if total == 0:
+        return 'SIDEWAYS', 0
+    bull_pct = (bull_score / total) * 100
+    bear_pct = (bear_score / total) * 100
+    if bull_pct >= 60:
+        return 'UPTREND', round(bull_pct)
+    elif bear_pct >= 60:
+        return 'DOWNTREND', round(bear_pct)
+    return 'SIDEWAYS', round(max(bull_pct, bear_pct))
+
+
     if len(closes) < period: return None, None, None
     recent = closes[-period:]; mid = sum(recent)/period
     std = (sum((x-mid)**2 for x in recent)/period)**0.5
@@ -2158,10 +2307,13 @@ def get_sage_chart_data(pair, current_price):
             e9  = calc_ema(dc, 9)
             e20 = calc_ema(dc, 20)
             e50 = calc_ema(dc, 50)
+            e100= calc_ema(dc, min(100, len(dc)))
             e200= calc_ema(dc, min(200, len(dc)))
             d1_rsi  = calc_rsi(dc)
             d1_macd = calc_macd(dc)[1]
             d1_atr  = calc_atr(d1)
+            d1_adx  = calc_adx(d1)
+            d1_trend_struct, d1_trend_strength = detect_trend_structure(d1)
             d1_struct = detect_market_structure(d1[-30:])
             d1_adr  = calc_adr(d1, 10)
             # Price location relative to Bollinger
@@ -2180,14 +2332,19 @@ def get_sage_chart_data(pair, current_price):
             d1_trend = "BULLISH" if bull_signals >= 3 else "BEARISH" if bull_signals <= 1 else "MIXED"
             data["daily"] = {
                 "trend":    d1_trend,
-                "ema9":     e9,  "ema20": e20, "ema50": e50, "ema200": e200,
+                "ema9":     e9,  "ema20": e20, "ema50": e50, "ema100": e100, "ema200": e200,
                 "rsi":      d1_rsi,
                 "macd_bias": d1_macd,
                 "atr":      d1_atr,
+                "adx":      d1_adx,
+                "adx_signal": ("TRENDING" if d1_adx and d1_adx > 25 else "RANGING" if d1_adx and d1_adx < 20 else "WEAK") if d1_adx else "UNKNOWN",
+                "hh_hl_structure": d1_trend_struct,
+                "hh_hl_strength": d1_trend_strength,
                 "adr":      d1_adr,
                 "bb_upper": bbu, "bb_mid": bbm, "bb_lower": bbl,
                 "bb_position": bb_pos,
                 "vs_ema200": "ABOVE" if (e200 and current_price > e200) else "BELOW",
+                "vs_ema100": "ABOVE" if (e100 and current_price > e100) else "BELOW",
                 "structure": d1_struct["structure"],
                 "phase":    d1_struct["phase"],
                 "phase_desc": d1_struct["description"],
@@ -2331,10 +2488,14 @@ def format_sage_chart(d):
         "Trend={} | Structure={} | Phase={}".format(
             da.get("trend","?"), da.get("structure","?"), da.get("phase","?")),
         "Price Action: {}".format(da.get("phase_desc","?")),
-        "EMA9={} | EMA20={} | EMA50={} | EMA200={}".format(
-            da.get("ema9","?"), da.get("ema20","?"), da.get("ema50","?"), da.get("ema200","?")),
-        "RSI={} | MACD={} | ATR={} | vs200EMA={}".format(
-            da.get("rsi","?"), da.get("macd_bias","?"), da.get("atr","?"), da.get("vs_ema200","?")),
+        "EMA9={} | EMA20={} | EMA50={} | EMA100={} | EMA200={}".format(
+            da.get("ema9","?"), da.get("ema20","?"), da.get("ema50","?"), da.get("ema100","?"), da.get("ema200","?")),
+        "ADX={} ({}) | HH/HL Structure={} ({}% confidence)".format(
+            da.get("adx","?"), da.get("adx_signal","?"),
+            da.get("hh_hl_structure","?"), da.get("hh_hl_strength","?")),
+        "RSI={} | MACD={} | ATR={} | vs200EMA={} | vs100EMA={}".format(
+            da.get("rsi","?"), da.get("macd_bias","?"), da.get("atr","?"),
+            da.get("vs_ema200","?"), da.get("vs_ema100","?")),
         "Bollinger: Upper={} | Mid={} | Lower={} | Position in BB={}%".format(
             da.get("bb_upper","?"), da.get("bb_mid","?"), da.get("bb_lower","?"), da.get("bb_position","?")),
         "20d High={} | 20d Low={} | Last5={}".format(
@@ -2586,6 +2747,22 @@ def _run_sage_scanner_job(job_id, scan_type='forex', custom_list=None):
                 cd = get_sage_chart_data(instrument, cp)
                 da = cd.get("daily", {}); h4 = cd.get("h4", {}); wk = cd.get("weekly", {})
                 chart_str = format_sage_chart(cd)
+
+                # Real ADX and trend structure from computed data
+                real_adx = da.get("adx")
+                adx_signal = da.get("adx_signal", "UNKNOWN")
+                hh_hl = da.get("hh_hl_structure", "UNKNOWN")
+                ema100 = da.get("ema100")
+                atr_val = da.get("atr")
+
+                # Per-pair news risk check
+                news_warning = ""
+                try:
+                    pair_news = get_news(instrument)
+                    if pair_news:
+                        news_warning = pair_news[0]['title'][:80] if pair_news else ""
+                except: pass
+
                 verdict_prompt = (
                     'Analyze ' + instrument + ' at ' + str(cp) + '. '
                     'Real chart data:\n' + chart_str + '\n\n'
@@ -2597,17 +2774,25 @@ def _run_sage_scanner_job(job_id, scan_type='forex', custom_list=None):
                     '"market_structure":"UPTREND or DOWNTREND or RANGING",'
                     '"abc_position":"IMPULSE or CORRECTION or CONSOLIDATION",'
                     '"direction":"UP or DOWN or SIDEWAYS",'
-                    '"reason":"max 15 words using real S/R and EMA data",'
+                    '"reason":"max 15 words using real S/R, EMA100, ADX data",'
                     '"entry":"' + str(cp) + '",'
-                    '"sl":"nearest real S/R level",'
+                    '"sl":"ATR-based SL from real ATR=' + str(atr_val) + '",'
                     '"tp1":"next real S/R level",'
-                    '"key_pattern":"candlestick pattern or none"}'
+                    '"key_pattern":"candlestick pattern or none",'
+                    '"adx_note":"ADX=' + str(real_adx) + ' ' + adx_signal + '"}'
                 )
                 raw = call_claude(verdict_prompt, max_tokens=400)
                 parsed = parse_json_response(raw)
                 if parsed and parsed.get("verdict") in ["BUY","SELL"]:
                     parsed["pair"] = instrument
                     parsed["price"] = cp
+                    parsed["adx"] = real_adx
+                    parsed["adx_signal"] = adx_signal
+                    parsed["hh_hl_structure"] = hh_hl
+                    parsed["ema100"] = ema100
+                    parsed["atr"] = atr_val
+                    if news_warning:
+                        parsed["news_warning"] = news_warning
                     results.append(parsed)
             except Exception as pe:
                 print("[SageScanner] {} error: {}".format(instrument, pe))
@@ -2829,8 +3014,9 @@ def _run_ai_infra_job(job_id, scan_filter, date_str):
 ---
 {s['ticker']} | ${s['price']} | Signal:{s.get('signal','WATCH')} | Score:{s['score']}/100
 Category:{s.get('category','')} | AI Role:{s.get('ai_role','')}
-EMA20:{s.get('ema20','?')} EMA50:{s.get('ema50','?')} EMA200:{s.get('ema200','?')}
-RSI:{s.get('rsi','?')} MACD:{s.get('macd_bias','?')} Volume:{s.get('vol_ratio','?')}x
+EMA20:{s.get('ema20','?')} EMA50:{s.get('ema50','?')} EMA100:{s.get('ema100','?')} EMA200:{s.get('ema200','?')}
+ADX:{s.get('adx','?')} ({s.get('adx_signal','?')}) | Structure:{s.get('hh_hl_structure','?')} ({s.get('hh_hl_strength','?')}% confidence)
+ATR:{s.get('atr','?')} | RSI:{s.get('rsi','?')} MACD:{s.get('macd_bias','?')} Volume:{s.get('vol_ratio','?')}x
 52W HIGH:${s.get('week52_high','?')} CURRENT:${s['price']} 52W LOW:${s.get('week52_low','?')}
 Discount from high:{s.get('vs_52w_high','?')}% | Analyst target:${s.get('analyst_target','?')} Upside:{s.get('upside_pct','?')}% Rating:{s.get('analyst_rating','?')} ({s.get('num_analysts','?')} analysts)
 Market cap:{s.get('market_cap','?')} P/E:{s.get('pe_ratio','?')} Rev growth:{s.get('revenue_growth','?')}
@@ -2840,9 +3026,10 @@ News:{' | '.join([n['title'][:60] for n in s.get('news',[])]) or 'None'}
 Peter Lynch + Druckenmiller + Cathie Wood methodology applied to AI picks & shovels.
 TODAY:{date_str} | SPY:${regime['spy_price']} ({regime.get('spy_change',0):+.2f}%) VIX:{vix} {regime['fear_greed']} REGIME:{regime['regime']} | FILTER:{scan_filter}
 
-REAL STOCK DATA FROM YFINANCE:
+REAL STOCK DATA (TwelveData candles — 35 days OHLC, computed indicators):
 {stocks_ctx}
 
+ADX RULE: Only recommend BUY if ADX > 25 (trending). Flag RANGING if ADX < 20.
 For each stock give the EXACT reason to buy or avoid NOW based on AI infrastructure role, value vs fair value, specific catalyst, and time horizon.
 
 Respond ONLY in valid JSON (no markdown):
@@ -2861,17 +3048,23 @@ Respond ONLY in valid JSON (no markdown):
         for pick in result.get('picks', []):
             match = next((s for s in top5 if s['ticker']==pick.get('ticker','')), None)
             if match:
-                pick['real_score']     = match['score']
-                pick['real_rsi']       = match['rsi']
-                pick['real_vol_ratio'] = match['vol_ratio']
-                pick['real_signals']   = match['signals']
-                pick['sr_levels']      = match['sr_levels']
-                pick['news']           = match['news']
-                pick['ema20']          = match.get('ema20')
-                pick['ema50']          = match.get('ema50')
-                pick['ema200']         = match.get('ema200')
-                pick['macd_bias']      = match.get('macd_bias')
-                pick['near_earnings']  = match.get('near_earnings', False)
+                pick['real_score']        = match['score']
+                pick['real_rsi']          = match['rsi']
+                pick['real_vol_ratio']    = match['vol_ratio']
+                pick['real_signals']      = match['signals']
+                pick['sr_levels']         = match['sr_levels']
+                pick['news']              = match['news']
+                pick['ema20']             = match.get('ema20')
+                pick['ema50']             = match.get('ema50')
+                pick['ema100']            = match.get('ema100')
+                pick['ema200']            = match.get('ema200')
+                pick['adx']               = match.get('adx')
+                pick['adx_signal']        = match.get('adx_signal')
+                pick['hh_hl_structure']   = match.get('hh_hl_structure')
+                pick['hh_hl_strength']    = match.get('hh_hl_strength')
+                pick['atr']               = match.get('atr')
+                pick['macd_bias']         = match.get('macd_bias')
+                pick['near_earnings']     = match.get('near_earnings', False)
                 if match.get('week52_high'):              pick['week52_high']   = str(match['week52_high'])
                 if match.get('week52_low'):               pick['week52_low']    = str(match['week52_low'])
                 if match.get('vs_52w_high') is not None:  pick['vs_52w_high']   = match['vs_52w_high']
