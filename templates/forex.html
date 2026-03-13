@@ -2356,27 +2356,6 @@ function updateCBPanel(text){
 // ══════════════════════════════════════════════════════════════════════
 let _spyLoaded = false;
 
-function updateSPYSession(){
-  const now = new Date();
-  const est = new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
-  const totalMins = est.getHours()*60 + est.getMinutes();
-  const londonStart = 3*60, londonEnd = 8*60;
-  let pct = 0, statusTxt = '';
-  if(totalMins < londonStart){
-    pct = 0; statusTxt = 'Pre-London · Starts 3:00 AM EST';
-  } else if(totalMins >= londonEnd){
-    pct = 100; statusTxt = 'London Closed · NYSE Opens 9:30 AM EST';
-  } else {
-    pct = Math.round(((totalMins - londonStart) / (londonEnd - londonStart)) * 100);
-    const minsLeft = londonEnd - totalMins;
-    statusTxt = 'London LIVE · ' + minsLeft + ' min until 8AM signal lock';
-  }
-  const bar = document.getElementById('spy-progress-bar');
-  const stat = document.getElementById('spy-session-status');
-  if(bar) bar.style.width = pct + '%';
-  if(stat) stat.textContent = statusTxt;
-}
-
 // ══ SPY SESSION + PHASE MANAGER ══════════════════════════════════════
 function updateSPYSession(){
   const now    = new Date();
