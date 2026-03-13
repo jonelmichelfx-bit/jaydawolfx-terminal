@@ -1140,6 +1140,7 @@ async function fetchAllPrices(){
         PRICES[pair]={
           p:parseFloat(q.price).toFixed(pair.includes('JPY')?3:5),
           c:parseFloat(q.change).toFixed(pair.includes('JPY')?3:5),
+          o:parseFloat(q.open||q.price).toFixed(pair.includes('JPY')?3:5),
           pct:parseFloat(q.percent_change).toFixed(2),
           h:parseFloat(q.high).toFixed(pair.includes('JPY')?3:5),
           l:parseFloat(q.low).toFixed(pair.includes('JPY')?3:5),
@@ -2439,13 +2440,14 @@ async function loadSPY(){
       const high    = parseFloat(q.h || price);
       const low     = parseFloat(q.l || price);
 
-      // JPY pairs: 1 pip = 0.01
-      const pips    = Math.round(change * 100);
+      // JPY pairs: 1 pip = 0.01 | use price vs daily open for full session move
+      const dayMove = price - parseFloat(q.o || q.p);
+      const pips    = Math.round(dayMove * 100);
       const pipAbs  = Math.abs(pips);
       const isUp    = pips > 0;
 
-      // London open = current price minus today's change
-      const londonOpenPrice = (price - change).toFixed(3);
+      // London open = daily open price
+      const londonOpenPrice = parseFloat(q.o || q.p).toFixed(3);
 
       // Update live stat boxes
       document.getElementById('spy-eurjpy-now').textContent  = price.toFixed(3);
@@ -2664,12 +2666,13 @@ async function loadSPYAnalysis(){
               : 'MARKET CLOSED — Prep for tomorrow';
 
   const q        = PRICES['EUR/JPY'] || {};
-  const pips     = Math.round(parseFloat(q.c||0) * 100);
-  const pipAbs   = Math.abs(pips);
   const price    = parseFloat(q.p||0);
   const high     = parseFloat(q.h||price);
   const low      = parseFloat(q.l||price);
-  const londonOpen = (price - parseFloat(q.c||0)).toFixed(3);
+  const dayOpen  = parseFloat(q.o||price);
+  const pips     = Math.round((price - dayOpen) * 100);
+  const pipAbs   = Math.abs(pips);
+  const londonOpen = dayOpen.toFixed(3);
 
   // RSI proxy (range-based)
   const range = high - low;
