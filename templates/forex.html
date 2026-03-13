@@ -2180,7 +2180,7 @@ function renderScenarios(data,box){
 async function loadGuaranteed(){
   const btn=document.getElementById('guaranteed-btn');
   const box=document.getElementById('guaranteed-box');
-  btn.disabled=true;btn.textContent='⏳ SCANNING TODAY'S SETUPS...';
+  btn.disabled=true;btn.textContent='⏳ SCANNING TOP 3 DAY SETUPS...';
   box.innerHTML=createStepLoader('var(--gold)','WOLF AI — TOP 3 DAY TRADES',[
     'Fetching live prices + OHLC data...',
     'Computing ADX + ATR per pair...',
