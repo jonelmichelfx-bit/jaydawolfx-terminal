@@ -383,23 +383,94 @@ input::placeholder{color:var(--text-dim);}
 .ai-output,.an-body,.sc-body,.tf-body{font-size:14px;line-height:2;}
 .pick-thesis,.pick-entry,.pick-sl,.pick-tp{font-size:13px;}
 .ps-v{font-size:14px;}
+
+/* ── ERROR CARD ──────────────────────────────────────────────────────────── */
+.err-card{background:rgba(255,51,85,0.05);border:1px solid rgba(255,51,85,0.3);border-radius:4px;
+  padding:20px 24px;text-align:center;}
+.err-icon{font-size:22px;margin-bottom:8px;}
+.err-title{font-family:var(--head);font-size:11px;letter-spacing:3px;color:var(--red);margin-bottom:6px;}
+.err-msg{font-size:12px;color:var(--text-mid);margin-bottom:14px;line-height:1.7;}
+.err-retry{padding:8px 20px;background:rgba(255,51,85,0.1);border:1px solid rgba(255,51,85,0.4);
+  border-radius:3px;color:var(--red);font-family:var(--mono);font-size:10px;letter-spacing:2px;
+  cursor:pointer;transition:all 0.2s;}
+.err-retry:hover{background:rgba(255,51,85,0.2);}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────────────────── */
+.empty-state{text-align:center;padding:32px 24px;}
+.es-icon{font-size:28px;margin-bottom:10px;opacity:0.5;}
+.es-title{font-family:var(--head);font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:8px;}
+.es-body{font-size:12px;color:var(--text-dim);line-height:1.8;max-width:360px;margin:0 auto;}
+
+/* ── LOAD STEPS ──────────────────────────────────────────────────────────── */
+.load-steps{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:220px;}
+.ls-step{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:1px;color:var(--text-dim);transition:color 0.3s;}
+.ls-step.active{color:var(--text-mid);}
+.ls-step.done{color:var(--green);}
+.ls-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background 0.3s;}
+.ls-step.active .ls-dot{background:var(--orange);box-shadow:0 0 6px var(--orange);animation:pulse 1s ease-in-out infinite;}
+.ls-step.done .ls-dot{background:var(--green);}
+
 /* ── MOBILE RESPONSIVE ────────────────────────────────────────────────────── */
 @media(max-width:768px){
-  body{overflow-y:auto!important;}
-  .sidebar{width:100%!important;min-width:unset!important;height:auto!important;flex-direction:row!important;flex-wrap:wrap!important;padding:8px!important;gap:6px!important;border-right:none!important;border-bottom:1px solid var(--border)!important;}
-  .main{width:100%!important;min-width:unset!important;}
-  .container{flex-direction:column!important;}
-  .pair-grid{grid-template-columns:repeat(3,1fr)!important;}
+  /* unlock body scroll */
+  html,body{height:auto!important;overflow:visible!important;overflow-x:hidden!important;}
+  body::after,body::before{display:none;}
+
+  /* stack layout vertically */
+  .workspace{flex-direction:column!important;overflow:visible!important;}
+  .main-area{overflow:visible!important;}
+
+  /* sidebar goes full width, horizontal scroll for pair buttons */
+  .sidebar{width:100%!important;min-width:unset!important;height:auto!important;
+    flex-direction:column!important;border-right:none!important;border-bottom:1px solid var(--border)!important;}
+  .pair-grid{grid-template-columns:repeat(4,1fr)!important;}
+  .pstats{grid-template-columns:repeat(4,1fr)!important;}
+  .lvl-grid{grid-template-columns:repeat(3,1fr)!important;}
+
+  /* nav */
+  .nav{padding:0 10px!important;gap:8px!important;height:48px!important;min-height:48px!important;}
+  .logo{font-size:12px!important;letter-spacing:2px!important;}
+  .nav-tabs{gap:0!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;}
+  .ntab{font-size:9px!important;padding:5px 6px!important;white-space:nowrap!important;}
+  .clock{display:none!important;}
+
+  /* tabs */
   .tab-bar{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;flex-wrap:nowrap!important;}
   .tab-btn{font-size:10px!important;padding:10px 8px!important;white-space:nowrap!important;}
-  .ntab{font-size:10px!important;padding:6px 8px!important;}
-  .ps-v{font-size:18px!important;}
-  .pick-name{font-size:15px!important;}
-  .price-large,.sc-val{font-size:26px!important;}
-  .grid-3,.grid-4{grid-template-columns:1fr!important;}
-  .lv-box,.calc-grid{grid-template-columns:1fr 1fr!important;}
-  button{min-height:40px!important;}
-  .ai-output,.an-body{font-size:14px!important;line-height:1.9!important;}
+  .tab-pane{padding:12px!important;}
+
+  /* cards */
+  .scenario-wrap{grid-template-columns:1fr!important;}
+  .pick-card .pk-lvls{grid-template-columns:1fr 1fr 1fr!important;}
+  .tracker-stats{grid-template-columns:repeat(3,1fr)!important;}
+  .ind-grid{grid-template-columns:1fr 1fr!important;}
+  .form-grid{grid-template-columns:1fr 1fr!important;}
+  .g2{grid-template-columns:1fr!important;}
+  .calc-grid{grid-template-columns:1fr 1fr!important;}
+
+  /* price card */
+  .pc-price{font-size:30px!important;}
+  .sc-val{font-size:26px!important;}
+  .ps-v{font-size:13px!important;}
+
+  /* buttons */
+  button,input,select{min-height:38px!important;}
+  .big-btn{font-size:11px!important;letter-spacing:2px!important;}
+  .analyze-btn{font-size:11px!important;}
+
+  /* text */
+  .ai-output,.an-body,.tf-ds,.pk-body{font-size:13px!important;line-height:1.8!important;}
+
+  /* spy tier grid */
+  .spy-tier-grid{grid-template-columns:1fr!important;}
+  .spy-hero{grid-template-columns:1fr 1fr!important;}
+}
+@media(max-width:480px){
+  .pair-grid{grid-template-columns:repeat(3,1fr)!important;}
+  .pstats{grid-template-columns:1fr 1fr!important;}
+  .tracker-stats{grid-template-columns:1fr 1fr!important;}
+  .pick-card .pk-lvls{grid-template-columns:1fr 1fr!important;}
+  .logo{font-size:11px!important;}
 }
 </style>
 </head>
@@ -412,7 +483,6 @@ input::placeholder{color:var(--text-dim);}
     <a href="/forex-wolf" class="ntab" style="color:var(--gold);border-color:rgba(255,215,0,0.3);">🐺 WOLF PICKS</a>
     <a href="/wolf-elite" class="ntab">📈 ELITE</a>
     <a href="/sage-mode" class="ntab" style="color:var(--orange);border-color:rgba(255,102,0,0.3);">🔮 SAGE MODE</a>
-    <a href="/wolf-agent" class="ntab" style="color:var(--gold);border-color:rgba(232,160,20,0.4);font-weight:700;">🐺 WOLF AGENT</a>
     <a href="/legends" class="ntab" style="color:#a855f7;border-color:rgba(168,85,247,0.3);">⚡ LEGENDS</a>
     <a href="/education" class="ntab" style="color:var(--green);border-color:rgba(0,255,153,0.3);">🎓 ACADEMY</a>
     <a href="/pricing" class="ntab">PLANS</a>
@@ -1126,6 +1196,48 @@ async function callAI(prompt,maxTokens=2000){
 }
 
 // Safe fetch wrapper for all AI endpoints — always returns JSON or throws clean error
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function showError(box, message, retryFn) {
+  const safeMsg = message || 'Something went wrong. Please try again.';
+  // Clean up known raw error prefixes
+  const display = safeMsg.replace(/^Error:\s*/i,'').replace(/^Server error \d+ — /,'');
+  box.innerHTML = `<div class="err-card">
+    <div class="err-icon">⚠️</div>
+    <div class="err-title">SCAN ERROR</div>
+    <div class="err-msg">${display}</div>
+    ${retryFn ? `<button class="err-retry" onclick="(${retryFn.toString()})()">↺ TRY AGAIN</button>` : ''}
+  </div>`;
+}
+
+function showEmpty(box, title, body) {
+  box.innerHTML = `<div class="empty-state">
+    <div class="es-icon">🐺</div>
+    <div class="es-title">${title || 'NO SETUPS DETECTED'}</div>
+    <div class="es-body">${body || 'Market conditions are not favorable right now. ADX may be below 25 on most pairs — wait for a trending session (London or NY open).'}</div>
+  </div>`;
+}
+
+// ── STEP LOADER — animated steps for heavy scans ──────────────────────────────
+function createStepLoader(color, title, steps) {
+  const stepsHtml = steps.map((s,i) =>
+    `<div class="ls-step ${i===0?'active':''}" id="ls-${i}">
+      <span class="ls-dot"></span><span>${s}</span>
+    </div>`
+  ).join('');
+  return `<div class="load-ctr">
+    <div class="spinner" style="border-top-color:${color}"></div>
+    <div class="load-txt" style="color:${color}">${title}</div>
+    <div class="load-steps">${stepsHtml}</div>
+  </div>`;
+}
+
+function advanceStep(stepIndex) {
+  const prev = document.getElementById(`ls-${stepIndex-1}`);
+  const curr = document.getElementById(`ls-${stepIndex}`);
+  if(prev){ prev.classList.remove('active'); prev.classList.add('done'); }
+  if(curr){ curr.classList.add('active'); }
+}
+
 async function safeFetch(url, body){
   const res=await fetch(url,{
     method:'POST',
@@ -1362,7 +1474,7 @@ What Invalidates: [what cancels this scenario]
     const text=await callAI(prompt,2500);
     parseDisplay(text);
   }catch(e){
-    document.getElementById('ai-full').innerHTML=`<span style="color:var(--red);font-size:12px;">Error: ${e.message}</span>`;
+    document.getElementById('ai-full').innerHTML=`<div class="err-card"><div class="err-icon">⚠️</div><div class="err-title">ANALYSIS ERROR</div><div class="err-msg">${e.message.replace(/^Error: /,'')}</div><button class="err-retry" onclick="runAnalysis()">↺ TRY AGAIN</button></div>`;
   }
   btn.disabled=false;btn.textContent='🐺 DEEP ANALYSIS';analyzing=false;
 }
@@ -1762,7 +1874,7 @@ R:R: [improved ratio]`;
       <div class="cr-body">${fmt(text)}</div>
     </div>`;
   }catch(e){
-    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+    showError(box, e.message);
   }
   btn.disabled=false;btn.textContent='🧮 ANALYZE MY TRADE';
 }
@@ -1803,7 +1915,7 @@ Pairs To Avoid: [too risky right now]`;
     const text=await callAI(prompt,2500);
     renderConflict(text,box);
   }catch(e){
-    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+    showError(box, e.message);
   }
   btn.disabled=false;btn.textContent='⚔️ REFRESH CONFLICT ANALYSIS';
 }
@@ -1943,7 +2055,10 @@ function delTrade(id){
 }
 
 // ── POLL HELPER — used by all 3 scanner tabs ─────────────────────────────────
-async function pollScanJob(jobId, stepEl){
+async function pollScanJob(jobId, stepEl, stepTriggers){
+  // stepTriggers: array of poll counts at which to advance the step indicator
+  // e.g. [2,5,10,15] means advance step at poll #2, #5, #10, #15
+  const triggers = stepTriggers || [];
   for(let i=0;i<90;i++){
     await new Promise(r=>setTimeout(r,2000));
     const r=await fetch('/api/forex-scan-poll/'+jobId);
@@ -1951,6 +2066,9 @@ async function pollScanJob(jobId, stepEl){
     if(d.status==='done') return d;
     if(d.status==='error') throw new Error(d.error||'Scan failed');
     if(stepEl && d.step) stepEl.textContent=d.step;
+    // advance visual step dots based on poll count
+    const trigIdx = triggers.indexOf(i+1);
+    if(trigIdx !== -1) advanceStep(trigIdx+1);
   }
   throw new Error('Scan timed out — try again');
 }
@@ -1959,20 +2077,22 @@ async function pollScanJob(jobId, stepEl){
 async function loadScenarios(){
   const btn=document.getElementById('scenario-btn');
   const box=document.getElementById('scenario-box');
-  btn.disabled=true;btn.textContent='⏳ SCANNING LIVE PRICES + NEWS...';
-  const stepTxt=document.createElement('div');
-  stepTxt.style.cssText='font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;';
-  stepTxt.textContent='Fetching live prices...';
-  box.innerHTML='';
-  const wrap=document.createElement('div');wrap.className='load-ctr';
-  wrap.innerHTML=`<div class="spinner" style="border-top-color:var(--cyan)"></div><div class="load-txt" style="color:var(--cyan)">WOLF AI — TOP-DOWN ANALYSIS ALL PAIRS...</div>`;
-  wrap.appendChild(stepTxt);box.appendChild(wrap);
+  btn.disabled=true;btn.textContent='⏳ SCANNING ALL PAIRS...';
+  box.innerHTML=createStepLoader('var(--cyan)','WOLF AI — SCENARIOS SCANNER',[
+    'Fetching TwelveData OHLC candles...',
+    'Computing ADX + EMA100 + HH/HL structure...',
+    'Checking news risk per pair...',
+    'Running top-down MTF alignment...',
+    'AI generating BUY + SELL scenarios...'
+  ]);
   try{
     const init=await safeFetch('/api/forex-scenarios',{});
-    const data= init.job_id ? await pollScanJob(init.job_id, stepTxt) : init;
-    renderScenarios(data,box);
+    const data= init.job_id ? await pollScanJob(init.job_id, null, [1,2,3,4]) : init;
+    if(!data.trades||data.trades.length===0){
+      showEmpty(box,'NO SCENARIOS FOUND','No pairs had 4+ timeframes aligned right now. Market may be ranging — ADX below 25 on most pairs. Best time to scan: London open (3AM EST) or NY open (8AM EST).');
+    } else { renderScenarios(data,box); }
   }catch(e){
-    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+    showError(box, e.message, loadScenarios);
   }
   btn.disabled=false;btn.textContent='⚡ REFRESH — LIVE DATA + AI RESEARCH';
 }
@@ -2060,19 +2180,21 @@ function renderScenarios(data,box){
 async function loadGuaranteed(){
   const btn=document.getElementById('guaranteed-btn');
   const box=document.getElementById('guaranteed-box');
-  btn.disabled=true;btn.textContent='⏳ SCANNING LIVE PRICES...';
-  const stepTxt=document.createElement('div');
-  stepTxt.style.cssText='font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;';
-  stepTxt.textContent='Fetching live prices...';
-  const wrap=document.createElement('div');wrap.className='load-ctr';
-  wrap.innerHTML=`<div class="spinner" style="border-top-color:var(--gold)"></div><div class="load-txt" style="color:var(--gold)">WOLF AI — SCANNING ALL PAIRS WITH LIVE DATA...</div>`;
-  wrap.appendChild(stepTxt);box.innerHTML='';box.appendChild(wrap);
+  btn.disabled=true;btn.textContent='⏳ SCANNING TODAY'S SETUPS...';
+  box.innerHTML=createStepLoader('var(--gold)','WOLF AI — TOP 3 DAY TRADES',[
+    'Fetching live prices + OHLC data...',
+    'Computing ADX + ATR per pair...',
+    'Scoring intraday confluence...',
+    'AI selecting best 3 setups for today...'
+  ]);
   try{
     const init=await safeFetch('/api/forex-daily-picks',{});
-    const data= init.job_id ? await pollScanJob(init.job_id, stepTxt) : init;
-    renderGuaranteed(data,box,'DAY');
+    const data= init.job_id ? await pollScanJob(init.job_id, null, [1,2,3]) : init;
+    if(!data.picks||data.picks.length===0){
+      showEmpty(box,'NO DAY TRADES TODAY','ADX is below 25 on most pairs — market is ranging. No high-probability intraday setups. Check back at London open (3AM EST) or NY open (8AM EST).');
+    } else { renderGuaranteed(data,box,'DAY'); }
   }catch(e){
-    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+    showError(box, e.message, loadGuaranteed);
   }
   btn.disabled=false;btn.textContent='🏆 REFRESH TOP 3 GUARANTEED';
 }
@@ -2080,19 +2202,21 @@ async function loadGuaranteed(){
 async function loadSwings(){
   const btn=document.getElementById('swing-btn');
   const box=document.getElementById('swing-box');
-  btn.disabled=true;btn.textContent='⏳ RESEARCHING LIVE MARKETS...';
-  const stepTxt=document.createElement('div');
-  stepTxt.style.cssText='font-size:9px;color:var(--text-dim);margin-top:5px;letter-spacing:1px;';
-  stepTxt.textContent='Fetching live prices...';
-  const wrap=document.createElement('div');wrap.className='load-ctr';
-  wrap.innerHTML=`<div class="spinner" style="border-top-color:var(--purple)"></div><div class="load-txt" style="color:var(--purple)">WOLF AI — WEEKLY SWING RESEARCH WITH LIVE DATA...</div>`;
-  wrap.appendChild(stepTxt);box.innerHTML='';box.appendChild(wrap);
+  btn.disabled=true;btn.textContent='⏳ RESEARCHING SWING SETUPS...';
+  box.innerHTML=createStepLoader('var(--purple)','WOLF AI — TOP 3 SWING TRADES',[
+    'Fetching weekly + daily OHLC data...',
+    'Computing ADX + EMA100 + HH/HL structure...',
+    'Scanning 52-week range context...',
+    'AI selecting best 3 swing setups...'
+  ]);
   try{
     const init=await safeFetch('/api/forex-weekly-picks',{});
-    const data= init.job_id ? await pollScanJob(init.job_id, stepTxt) : init;
-    renderGuaranteed(data,box,'SWING');
+    const data= init.job_id ? await pollScanJob(init.job_id, null, [1,2,3]) : init;
+    if(!data.picks||data.picks.length===0){
+      showEmpty(box,'NO SWING SETUPS THIS WEEK','No pairs showed strong weekly structure alignment. Market may be consolidating. Swing trades require ADX > 25 on the daily and weekly charts.');
+    } else { renderGuaranteed(data,box,'SWING'); }
   }catch(e){
-    box.innerHTML=`<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+    showError(box, e.message, loadSwings);
   }
   btn.disabled=false;btn.textContent='📈 REFRESH TOP 3 SWING TRADES';
 }
@@ -2797,7 +2921,7 @@ async function loadNews(){
     });
     feedBox.innerHTML = html;
   }catch(e){
-    feedBox.innerHTML = `<div style="color:var(--red);padding:20px;font-size:12px;">Error: ${e.message}</div>`;
+    showError(feedBox, e.message, loadNews);
   }
 }
 

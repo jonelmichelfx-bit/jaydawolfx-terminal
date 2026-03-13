@@ -88,6 +88,8 @@ from scanner import scanner_bp
 app.register_blueprint(scanner_bp)
 from forex import forex_bp
 app.register_blueprint(forex_bp)
+from wolf_agent import wolf_bp
+app.register_blueprint(wolf_bp)
 
 with app.app_context():
     db.create_all()
