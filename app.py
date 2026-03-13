@@ -1362,6 +1362,124 @@ def spy_chart():
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/london-signal', methods=['GET'])
+@login_required
+def london_signal():
+    """
+    EUR/JPY London session analysis.
+    Fetches 1h candles, finds 3AM-8AM EST window,
+    calculates full London session pip move + direction.
+    This determines SPY bias for the 9:30AM open.
+    """
+    try:
+        from datetime import datetime, timezone, timedelta
+
+        candles = get_candles('EUR/JPY', '1h', '5d')
+        if not candles or len(candles) < 8:
+            return jsonify({'error': 'Not enough EUR/JPY candle data'}), 500
+
+        now_utc = datetime.now(timezone.utc)
+        today = now_utc.date()
+
+        # London session: 3AM-8AM EST = 8AM-1PM UTC
+        london_open_utc  = 8   # hour
+        london_close_utc = 13  # hour
+
+        # Parse candle times
+        def parse_candle_time(ct):
+            for fmt in ['%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d']:
+                try:
+                    return datetime.strptime(ct[:16], fmt[:len(ct[:16])]).replace(tzinfo=timezone.utc)
+                except:
+                    continue
+            return None
+
+        # Find today's or most recent London session candles
+        # If before 8AM UTC today, use yesterday's London session
+        if now_utc.hour < london_open_utc:
+            session_date = today - timedelta(days=1)
+        else:
+            session_date = today
+
+        london_candles = []
+        for c in candles:
+            ct = parse_candle_time(c['time'])
+            if ct is None:
+                continue
+            if ct.date() == session_date and london_open_utc <= ct.hour < london_close_utc:
+                london_candles.append({'candle': c, 'hour': ct.hour})
+
+        # If no candles found for session_date, try previous day
+        if not london_candles:
+            session_date = session_date - timedelta(days=1)
+            for c in candles:
+                ct = parse_candle_time(c['time'])
+                if ct is None:
+                    continue
+                if ct.date() == session_date and london_open_utc <= ct.hour < london_close_utc:
+                    london_candles.append({'candle': c, 'hour': ct.hour})
+
+        if not london_candles:
+            return jsonify({'error': 'London session candles not found'}), 500
+
+        london_candles.sort(key=lambda x: x['hour'])
+
+        # London open = open of first candle (3AM EST / 8AM UTC)
+        # London close = close of last candle before 8AM EST / 1PM UTC
+        london_open_price  = london_candles[0]['candle']['open']
+        london_close_price = london_candles[-1]['candle']['close']
+        london_high = max(c['candle']['high'] for c in london_candles)
+        london_low  = min(c['candle']['low']  for c in london_candles)
+
+        # pip move for JPY pairs: 1 pip = 0.01
+        pip_move = round((london_close_price - london_open_price) * 100)
+        total_range_pips = round((london_high - london_low) * 100)
+
+        # Direction and SPY bias
+        if pip_move >= 15:
+            direction = 'BULLISH'
+            spy_bias = 'BUY CALLS'
+            bias_color = 'green'
+            signal_strength = 'STRONG' if pip_move >= 40 else 'MODERATE' if pip_move >= 25 else 'WEAK'
+            summary = f'EUR/JPY climbed {pip_move} pips during London. Risk-on sentiment. Institutions were buying risk assets. SPY likely opens UP.'
+        elif pip_move <= -15:
+            direction = 'BEARISH'
+            spy_bias = 'BUY PUTS'
+            bias_color = 'red'
+            signal_strength = 'STRONG' if pip_move <= -40 else 'MODERATE' if pip_move <= -25 else 'WEAK'
+            summary = f'EUR/JPY dropped {abs(pip_move)} pips during London. Risk-off sentiment. Institutions were fleeing to JPY safety. SPY likely opens DOWN.'
+        else:
+            direction = 'FLAT'
+            spy_bias = 'WAIT — NO SIGNAL'
+            bias_color = 'gold'
+            signal_strength = 'NONE'
+            summary = f'EUR/JPY was flat during London ({pip_move:+d} pips). No clear institutional bias. Wait for SPY direction after 9:45AM before trading.'
+
+        # Current price for live context
+        q = get_price('EUR/JPY')
+        current_price = round(float(q['price']), 3) if q else london_close_price
+
+        return jsonify({
+            'session_date': str(session_date),
+            'london_open_price':  round(london_open_price, 3),
+            'london_close_price': round(london_close_price, 3),
+            'london_high': round(london_high, 3),
+            'london_low':  round(london_low, 3),
+            'pip_move': pip_move,
+            'total_range_pips': total_range_pips,
+            'direction': direction,
+            'spy_bias': spy_bias,
+            'bias_color': bias_color,
+            'signal_strength': signal_strength,
+            'summary': summary,
+            'current_price': current_price,
+            'candles_used': len(london_candles),
+            'session_hours': f'3AM-8AM EST ({london_open_utc}:00-{london_close_utc}:00 UTC)',
+        })
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/forex-analyze', methods=['POST'])
 @login_required
 def forex_analyze():
