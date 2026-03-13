@@ -918,9 +918,16 @@ input::placeholder{color:var(--text-dim);}
         <!-- SESSION TIMELINE -->
         <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;">🕐 SESSION TIMELINE — YOUR DAILY WORKFLOW</div>
         <div style="background:rgba(10,20,32,0.5);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <div style="font-size:9px;letter-spacing:2px;color:#00cfff;" id="spy-session-label">CALCULATING SESSION...</div>
-            <div style="font-size:10px;color:var(--text-dim);" id="spy-session-status">—</div>
+          <!-- Current time + phase -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div>
+              <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px;">CURRENT TIME (EST)</div>
+              <div id="spy-current-time" style="font-family:var(--mono);font-size:22px;font-weight:bold;color:var(--text);">--:-- --</div>
+            </div>
+            <div style="text-align:right;">
+              <div id="spy-session-label" style="font-size:11px;letter-spacing:2px;color:#00cfff;">CALCULATING...</div>
+              <div id="spy-session-status" style="font-size:11px;color:var(--text-mid);margin-top:4px;">—</div>
+            </div>
           </div>
           <div class="spy-corr-bar"><div class="spy-corr-fill" id="spy-progress-bar" style="width:0%;background:linear-gradient(90deg,rgba(0,207,255,0.5),#00cfff);"></div></div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-top:8px;">
@@ -947,19 +954,44 @@ input::placeholder{color:var(--text-dim);}
           </div>
         </div>
 
+        <!-- EUR/JPY EMA100 TREND STRIP -->
+        <div style="background:rgba(10,20,32,0.6);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:3px;">EUR/JPY vs EMA100 (H1)</div>
+            <div id="ema100-label" style="font-family:var(--head);font-size:13px;letter-spacing:2px;color:var(--text-dim);">Loading...</div>
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px;">EMA100 LEVEL</div>
+            <div id="ema100-value" style="font-family:var(--mono);font-size:14px;font-weight:bold;color:var(--text);">—</div>
+          </div>
+          <div style="flex:1;min-width:180px;">
+            <div id="ema100-context" style="font-size:11px;color:var(--text-mid);line-height:1.6;">—</div>
+          </div>
+        </div>
+
+        <!-- NYSE SESSION STATUS (shown when market is open) -->
+        <div id="session-action-box" style="display:none;padding:12px 16px;border-radius:6px;margin-bottom:14px;border:1px solid var(--border);background:rgba(10,20,32,0.5);">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:6px;">📍 WHAT TO DO RIGHT NOW</div>
+          <div id="session-action-msg" style="font-size:12px;color:var(--text-mid);line-height:1.7;"></div>
+        </div>
+
         <!-- LONDON SESSION SIGNAL — MAIN BOX -->
         <div id="london-signal-box" style="background:rgba(10,20,32,0.7);border:1px solid rgba(0,207,255,0.3);border-radius:6px;padding:16px;margin-bottom:14px;">
           <div style="font-size:9px;letter-spacing:2px;color:#00cfff;margin-bottom:12px;">📡 LONDON SESSION RESULT — 3AM to 8AM EST</div>
-          <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+
+          <!-- Direction badge + pip display -->
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
             <div id="london-direction-badge" style="font-family:var(--head);font-size:28px;letter-spacing:4px;padding:12px 24px;border-radius:4px;background:rgba(255,215,0,0.1);border:1px solid var(--gold);color:var(--gold);">
               LOADING...
             </div>
             <div>
-              <div id="london-pip-display" style="font-family:var(--mono);font-size:22px;font-weight:bold;color:var(--text);">— pips</div>
-              <div id="london-range-display" style="font-size:10px;color:var(--text-dim);margin-top:3px;">London range: —</div>
+              <div id="london-pip-display" style="font-family:var(--mono);font-size:22px;font-weight:bold;color:var(--text);">— pips net</div>
+              <div id="london-range-display" style="font-size:10px;color:var(--text-dim);margin-top:3px;">Session range: —</div>
               <div id="london-strength-display" style="font-size:10px;letter-spacing:2px;margin-top:3px;color:var(--gold);">— SIGNAL</div>
             </div>
           </div>
+
+          <!-- OHLC price boxes -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
             <div style="text-align:center;padding:8px;background:rgba(0,0,0,0.3);border-radius:4px;border:1px solid var(--border);">
               <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px;">3AM OPEN</div>
@@ -978,6 +1010,36 @@ input::placeholder{color:var(--text-dim);}
               <div id="london-low-price" style="font-family:var(--mono);font-size:14px;font-weight:bold;color:var(--green);">—</div>
             </div>
           </div>
+
+          <!-- IMPULSE + RETRACEMENT BREAKDOWN -->
+          <div id="london-structure-box" style="background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:10px;display:none;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;">📐 SESSION STRUCTURE BREAKDOWN</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+              <div style="text-align:center;padding:6px;background:rgba(0,0,0,0.2);border-radius:4px;">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">IMPULSE MOVE</div>
+                <div id="london-impulse-val" style="font-family:var(--mono);font-size:15px;font-weight:bold;">—</div>
+                <div id="london-impulse-range" style="font-size:9px;color:var(--text-dim);margin-top:2px;">— → —</div>
+              </div>
+              <div style="text-align:center;padding:6px;background:rgba(0,0,0,0.2);border-radius:4px;">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">RETRACEMENT</div>
+                <div id="london-retrace-val" style="font-family:var(--mono);font-size:15px;font-weight:bold;">—</div>
+                <div id="london-retrace-range" style="font-size:9px;color:var(--text-dim);margin-top:2px;">— → —</div>
+              </div>
+              <div style="text-align:center;padding:6px;background:rgba(0,0,0,0.2);border-radius:4px;">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">NET RESULT</div>
+                <div id="london-net-val" style="font-family:var(--mono);font-size:15px;font-weight:bold;">—</div>
+                <div id="london-overall-read" style="font-size:9px;color:var(--text-dim);margin-top:2px;">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- HOURLY KEY LEVELS -->
+          <div id="london-levels-box" style="margin-bottom:10px;display:none;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;">⚡ HOURLY LEVELS — STRUCTURE INSIDE LONDON</div>
+            <div id="london-levels-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+          </div>
+
+          <!-- SPY verdict -->
           <div id="london-spy-verdict" style="padding:12px 16px;border-radius:4px;font-size:12px;line-height:1.7;color:var(--text-mid);">
             Loading London session data...
           </div>
@@ -2391,62 +2453,91 @@ let _spyLoaded = false;
 // ══ SPY SESSION + PHASE MANAGER ══════════════════════════════════════
 function updateSPYSession(){
   const now    = new Date();
-  const estStr = now.toLocaleString('en-US',{timeZone:'America/New_York'});
-  const est    = new Date(estStr);
-  const h      = est.getHours();
-  const m      = est.getMinutes();
+  const estStr = now.toLocaleString('en-US',{timeZone:'America/New_York', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
+  const estObj = new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const h      = estObj.getHours();
+  const m      = estObj.getMinutes();
   const total  = h * 60 + m;
 
-  // Time markers in minutes from midnight EST
-  const londonOpen  = 3*60;    // 3:00 AM
-  const londonClose = 8*60;    // 8:00 AM
-  const preMarket   = 8*60;    // 8:00 AM
-  const nyOpen      = 9*60+30; // 9:30 AM
-  const nyClose     = 16*60;   // 4:00 PM
+  // Show current time
+  const timeEl = document.getElementById('spy-current-time');
+  if(timeEl) timeEl.textContent = estStr;
+
+  const londonOpen  = 3*60;
+  const londonClose = 8*60;
+  const nyOpen      = 9*60+30;
+  const nyClose     = 16*60;
 
   let pct = 0, sessionLabel = '', sessionStatus = '';
-  let currentPhase = 'other'; // london, premarket, open, session
+  let currentPhase = 'other';
 
-  // Highlight active phase
   const phases = ['phase-london','phase-premarket','phase-open','phase-session'];
   phases.forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.style.background = 'rgba(10,20,32,0.4)';
+    if(el){ el.style.background='rgba(10,20,32,0.4)'; el.style.border='1px solid transparent'; }
   });
 
+  const actionBox = document.getElementById('session-action-box');
+  const actionMsg = document.getElementById('session-action-msg');
+
   if(total < londonOpen){
-    pct = 0; sessionLabel = 'PRE-LONDON'; sessionStatus = 'London opens at 3:00 AM EST';
-    currentPhase = 'other';
+    pct = 0;
+    sessionLabel = 'PRE-LONDON';
+    sessionStatus = 'London opens at 3:00 AM EST — ' + (londonOpen - total) + ' min away';
+    currentPhase  = 'other';
+    if(actionBox) actionBox.style.display = 'none';
+
   } else if(total >= londonOpen && total < londonClose){
-    pct = Math.round(((total - londonOpen)/(londonClose - londonOpen))*40); // 0-40%
     const minsLeft = londonClose - total;
-    sessionLabel = '🟢 LONDON SESSION LIVE'; sessionStatus = minsLeft + ' min until 8AM pre-market';
-    currentPhase = 'london';
+    pct = Math.round(((total - londonOpen)/(londonClose - londonOpen))*40);
+    sessionLabel = '🟢 LONDON SESSION LIVE';
+    sessionStatus = minsLeft + ' min left — EUR/JPY is building the signal NOW';
+    currentPhase  = 'london';
     const el = document.getElementById('phase-london');
     if(el){ el.style.background='rgba(0,207,255,0.12)'; el.style.border='1px solid rgba(0,207,255,0.4)'; }
-  } else if(total >= preMarket && total < nyOpen){
-    pct = 40 + Math.round(((total - preMarket)/(nyOpen - preMarket))*30); // 40-70%
+    if(actionBox){ actionBox.style.display='block'; actionBox.style.borderColor='rgba(0,207,255,0.3)'; }
+    if(actionMsg) actionMsg.innerHTML = 'London is live right now. Watch EUR/JPY direction — the pip move being built RIGHT NOW is what will determine SPY direction at 9:30AM open. Do not trade SPY yet. Monitor and wait for London to close at 8AM EST.';
+
+  } else if(total >= londonClose && total < nyOpen){
     const minsLeft = nyOpen - total;
-    sessionLabel = '⚡ PRE-MARKET — WATCH DIVERGENCE'; sessionStatus = minsLeft + ' min to NYSE open · Check EUR/JPY vs SPY';
-    currentPhase = 'premarket';
+    pct = 40 + Math.round(((total - londonClose)/(nyOpen - londonClose))*30);
+    sessionLabel = '⚡ PRE-MARKET — FINAL PREP';
+    sessionStatus = minsLeft + ' min to NYSE open — confirm signal before entering';
+    currentPhase  = 'premarket';
     const el = document.getElementById('phase-premarket');
     if(el){ el.style.background='rgba(255,215,0,0.1)'; el.style.border='1px solid rgba(255,215,0,0.4)'; }
+    if(actionBox){ actionBox.style.display='block'; actionBox.style.borderColor='rgba(255,215,0,0.3)'; }
+    if(actionMsg) actionMsg.innerHTML = 'London closed. The signal above shows what EUR/JPY did 3AM–8AM. NYSE opens in <strong>' + minsLeft + ' minutes</strong>. Check: is SPY pre-market moving the SAME direction as the London signal? If yes — high probability trade at open. If diverging — wait 15 min after open to confirm.';
+
   } else if(total >= nyOpen && total < nyClose){
-    pct = 70 + Math.round(((total - nyOpen)/(nyClose - nyOpen))*30); // 70-100%
     const minsFromOpen = total - nyOpen;
-    sessionLabel = '🔥 NYSE OPEN — EXECUTE 0DTE'; sessionStatus = minsFromOpen + ' min since open';
-    currentPhase = 'session';
+    const hoursOpen = Math.floor(minsFromOpen/60);
+    const minsRem   = minsFromOpen % 60;
+    const openStr   = hoursOpen > 0 ? hoursOpen + 'h ' + minsRem + 'min' : minsRem + ' min';
+    pct = 70 + Math.round(((total - nyOpen)/(nyClose - nyOpen))*30);
+    sessionLabel = '🔥 NYSE OPEN — SESSION LIVE';
+    sessionStatus = 'Open ' + openStr + ' ago · Check if SPY followed the London signal';
+    currentPhase  = 'session';
     const el = document.getElementById('phase-open');
     if(el){ el.style.background='rgba(0,255,153,0.1)'; el.style.border='1px solid rgba(0,255,153,0.4)'; }
     const el2 = document.getElementById('phase-session');
     if(el2){ el2.style.background='rgba(0,255,153,0.06)'; el2.style.border='1px solid rgba(0,255,153,0.25)'; }
+    if(actionBox){ actionBox.style.display='block'; actionBox.style.borderColor='rgba(0,255,153,0.3)'; }
+    if(actionMsg) actionMsg.innerHTML = 'NYSE has been open <strong>' + openStr + '</strong>. The London signal above shows EUR/JPY direction from 3AM–8AM EST — SPY should have followed that bias. '
+      + 'Check the <strong>Divergence Detector</strong> below to see if SPY confirmed or rejected the London signal. '
+      + (minsFromOpen < 30 ? 'Still early — if you have not entered yet, wait for the 9:45AM candle close to confirm direction.' : 'If SPY followed the signal, any pullbacks to support are continuation entries. If SPY rejected it, do not force a trade today.');
+
   } else {
-    pct = 100; sessionLabel = 'MARKET CLOSED'; sessionStatus = 'NYSE closed · Prep for tomorrow';
-    currentPhase = 'other';
+    pct = 100;
+    sessionLabel = 'MARKET CLOSED';
+    sessionStatus = 'NYSE closed · London opens at 3:00 AM EST tomorrow';
+    currentPhase  = 'other';
+    if(actionBox){ actionBox.style.display='block'; actionBox.style.borderColor='rgba(255,215,0,0.2)'; }
+    if(actionMsg) actionMsg.innerHTML = 'Market is closed. Review what EUR/JPY did during London today and whether SPY followed. Set your alarm for 3AM EST tomorrow to watch London open in real time.';
   }
 
-  const bar = document.getElementById('spy-progress-bar');
-  const lbl = document.getElementById('spy-session-label');
+  const bar  = document.getElementById('spy-progress-bar');
+  const lbl  = document.getElementById('spy-session-label');
   const stat = document.getElementById('spy-session-status');
   if(bar)  bar.style.width = pct + '%';
   if(lbl)  lbl.textContent = sessionLabel;
@@ -2523,6 +2614,47 @@ async function loadSPY(){
     if(highEl)  highEl.textContent  = d.london_high;
     if(lowEl)   lowEl.textContent   = d.london_low;
 
+    // STRUCTURE BREAKDOWN — impulse + retracement
+    const structBox = document.getElementById('london-structure-box');
+    if(structBox && d.impulse_pips > 0){
+      structBox.style.display = 'block';
+      const impColor = d.impulse_direction === 'BULL' ? 'var(--green)' : 'var(--red)';
+      const retColor = d.impulse_direction === 'BULL' ? 'var(--red)' : 'var(--green)';
+      const impArrow = d.impulse_direction === 'BULL' ? '▲ +' : '▼ -';
+      const retPctColor = d.retrace_pct >= 70 ? 'var(--orange)' : d.retrace_pct >= 50 ? 'var(--gold)' : 'var(--text-dim)';
+
+      const impValEl   = document.getElementById('london-impulse-val');
+      const impRngEl   = document.getElementById('london-impulse-range');
+      const retValEl   = document.getElementById('london-retrace-val');
+      const retRngEl   = document.getElementById('london-retrace-range');
+      const netValEl   = document.getElementById('london-net-val');
+      const overallEl  = document.getElementById('london-overall-read');
+
+      if(impValEl){ impValEl.textContent = impArrow + d.impulse_pips + ' pips'; impValEl.style.color = impColor; }
+      if(impRngEl) impRngEl.textContent  = d.impulse_start + ' → ' + d.impulse_end;
+      if(retValEl){ retValEl.innerHTML   = '<span style="color:' + retPctColor + ';">' + d.retrace_pips + ' pips (' + d.retrace_pct + '%)</span>'; }
+      if(retRngEl) retRngEl.textContent  = d.retrace_start + ' → ' + d.retrace_end;
+      if(netValEl){ netValEl.textContent = (d.net_pips >= 0 ? '+' : '') + d.net_pips + ' pips'; netValEl.style.color = dirColor; }
+      if(overallEl){ overallEl.textContent = d.overall_read; overallEl.style.color = dirColor; }
+    }
+
+    // KEY LEVELS (hourly structure)
+    const levelsBox  = document.getElementById('london-levels-box');
+    const levelsList = document.getElementById('london-levels-list');
+    if(levelsBox && levelsList && d.key_levels && d.key_levels.length > 0){
+      levelsBox.style.display = 'block';
+      levelsList.innerHTML = d.key_levels.map(lv => {
+        const lc = lv.direction === 'BULL' ? 'var(--green)' : 'var(--red)';
+        const la = lv.direction === 'BULL' ? '▲' : '▼';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:5px 8px;background:rgba(0,0,0,0.2);border-radius:3px;border-left:2px solid ' + lc + ';">'
+          + '<span style="font-size:9px;color:var(--text-dim);min-width:100px;">' + lv.hour + '</span>'
+          + '<span style="font-family:var(--mono);font-size:12px;color:var(--text);min-width:60px;">' + lv.level + '</span>'
+          + '<span style="color:' + lc + ';font-size:11px;font-weight:bold;">' + la + ' ' + (lv.move_pips > 0 ? '+' : '') + lv.move_pips + ' pips</span>'
+          + '<span style="font-size:9px;color:var(--text-dim);margin-left:auto;">H:' + lv.high + ' L:' + lv.low + '</span>'
+          + '</div>';
+      }).join('');
+    }
+
     // SPY verdict box
     if(verdictEl){
       let verdictBg, verdictBorder, verdictIcon, action, detail;
@@ -2568,6 +2700,26 @@ async function loadSPY(){
     window._londonPips  = pips;
     window._londonIsUp  = isUp;
     window._londonFlat  = isFlat;
+
+    // EMA100 trend display
+    const ema100El  = document.getElementById('ema100-value');
+    const ema100Lbl = document.getElementById('ema100-label');
+    const ema100Ctx = document.getElementById('ema100-context');
+    if(d.ema100 && ema100El){
+      const isUp100 = d.ema100_trend === 'UPTREND';
+      const trendColor = isUp100 ? 'var(--green)' : 'var(--red)';
+      ema100El.textContent = d.ema100;
+      if(ema100Lbl){
+        ema100Lbl.textContent = isUp100 ? '▲ ABOVE EMA100 — UPTREND' : '▼ BELOW EMA100 — DOWNTREND';
+        ema100Lbl.style.color = trendColor;
+      }
+      if(ema100Ctx){
+        const londonAligned = (isUp100 && isBull) || (!isUp100 && isBear);
+        ema100Ctx.innerHTML = londonAligned
+          ? '<span style="color:' + trendColor + ';">✅ London signal ALIGNED with EMA100 trend — higher probability trade.</span> Price ' + (isUp100 ? 'above' : 'below') + ' EMA100 confirms ' + (isUp100 ? 'bullish' : 'bearish') + ' bias.'
+          : '<span style="color:var(--orange);">⚠️ London signal is AGAINST the EMA100 trend.</span> Price ' + (isUp100 ? 'above' : 'below') + ' EMA100 = ' + (isUp100 ? 'uptrend' : 'downtrend') + ' but London went ' + d.direction + '. Lower conviction — wait for extra confirmation.';
+      }
+    }
 
     // EUR/JPY live price
     const ejNow = document.getElementById('spy-eurjpy-now');

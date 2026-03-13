@@ -1424,40 +1424,158 @@ def london_signal():
 
         london_candles.sort(key=lambda x: x['hour'])
 
+        candle_list = [c['candle'] for c in london_candles]
+
         # London open = open of first candle (3AM EST / 8AM UTC)
         # London close = close of last candle before 8AM EST / 1PM UTC
-        london_open_price  = london_candles[0]['candle']['open']
-        london_close_price = london_candles[-1]['candle']['close']
-        london_high = max(c['candle']['high'] for c in london_candles)
-        london_low  = min(c['candle']['low']  for c in london_candles)
+        london_open_price  = candle_list[0]['open']
+        london_close_price = candle_list[-1]['close']
+        london_high = max(c['high'] for c in candle_list)
+        london_low  = min(c['low']  for c in candle_list)
 
-        # pip move for JPY pairs: 1 pip = 0.01
-        pip_move = round((london_close_price - london_open_price) * 100)
-        total_range_pips = round((london_high - london_low) * 100)
+        # ── IMPULSE + RETRACEMENT ANALYSIS ─────────────────────────────────
+        # Walk through candles to find:
+        #   - The biggest directional push (impulse)
+        #   - Any retracement after that push
+        #   - Net direction = overall London bias
 
-        # Direction and SPY bias
-        if pip_move >= 15:
-            direction = 'BULLISH'
-            spy_bias = 'BUY CALLS'
-            bias_color = 'green'
-            signal_strength = 'STRONG' if pip_move >= 40 else 'MODERATE' if pip_move >= 25 else 'WEAK'
-            summary = f'EUR/JPY climbed {pip_move} pips during London. Risk-on sentiment. Institutions were buying risk assets. SPY likely opens UP.'
-        elif pip_move <= -15:
+        pip = 100  # JPY: 1 pip = 0.01, so * 100
+
+        # Running high/low tracking
+        run_high = candle_list[0]['open']
+        run_low  = candle_list[0]['open']
+
+        impulse_direction = None  # 'BULL' or 'BEAR'
+        impulse_start     = candle_list[0]['open']
+        impulse_end       = candle_list[0]['open']
+        impulse_pips      = 0
+
+        retrace_start = None
+        retrace_end   = None
+        retrace_pips  = 0
+
+        # Phase 1: find the first significant move (impulse)
+        IMPULSE_THRESHOLD = 20  # pips needed to call it an impulse
+        for c in candle_list:
+            high_move = round((c['high'] - candle_list[0]['open']) * pip)
+            low_move  = round((c['low']  - candle_list[0]['open']) * pip)
+            if abs(high_move) > abs(low_move) and high_move > IMPULSE_THRESHOLD:
+                if impulse_direction is None:
+                    impulse_direction = 'BULL'
+                    impulse_start = candle_list[0]['open']
+            if abs(low_move) > abs(high_move) and abs(low_move) > IMPULSE_THRESHOLD:
+                if impulse_direction is None:
+                    impulse_direction = 'BEAR'
+                    impulse_start = candle_list[0]['open']
+
+        # More precise: find the extreme point (max high or min low) vs open
+        bull_extreme = max(c['high'] for c in candle_list)
+        bear_extreme = min(c['low']  for c in candle_list)
+        bull_impulse = round((bull_extreme - london_open_price) * pip)
+        bear_impulse = round((london_open_price - bear_extreme) * pip)
+
+        if bull_impulse >= bear_impulse:
+            impulse_direction = 'BULL'
+            impulse_pips      = bull_impulse
+            impulse_start     = london_open_price
+            impulse_end       = round(bull_extreme, 3)
+            # Retracement = from extreme back to close
+            retrace_pips = round((bull_extreme - london_close_price) * pip)
+            retrace_start = round(bull_extreme, 3)
+            retrace_end   = round(london_close_price, 3)
+        else:
+            impulse_direction = 'BEAR'
+            impulse_pips      = bear_impulse
+            impulse_start     = london_open_price
+            impulse_end       = round(bear_extreme, 3)
+            # Retracement = from extreme back up to close
+            retrace_pips = round((london_close_price - bear_extreme) * pip)
+            retrace_start = round(bear_extreme, 3)
+            retrace_end   = round(london_close_price, 3)
+
+        retrace_pct = round((retrace_pips / impulse_pips) * 100) if impulse_pips > 0 else 0
+
+        # Net pip move (open to close) — TRUE direction
+        net_pips = round((london_close_price - london_open_price) * pip)
+
+        # ── KEY LEVELS BROKEN ───────────────────────────────────────────────
+        # Find hourly candle closes as structure levels, flag which ones were broken
+        key_levels = []
+        prev_close = london_open_price
+        for i, c in enumerate(candle_list):
+            hour_label = f"{8 + i}:00 UTC ({3 + i}AM EST)"
+            level = round(c['close'], 3)
+            move  = round((c['close'] - prev_close) * pip)
+            if abs(move) >= 10:  # only meaningful moves
+                key_levels.append({
+                    'hour': hour_label,
+                    'level': level,
+                    'move_pips': move,
+                    'direction': 'BULL' if move > 0 else 'BEAR',
+                    'high': round(c['high'], 3),
+                    'low':  round(c['low'],  3),
+                })
+            prev_close = c['close']
+
+        # ── OVERALL DIRECTION & SPY BIAS ────────────────────────────────────
+        # Use NET move (open to close) + impulse direction for true bias
+        # If retrace > 70% of impulse = warning (structure unclear)
+        direction_raw = net_pips
+
+        if impulse_direction == 'BEAR' and retrace_pct < 70:
+            # Clear bear — impulse down, retrace partial
             direction = 'BEARISH'
-            spy_bias = 'BUY PUTS'
-            bias_color = 'red'
-            signal_strength = 'STRONG' if pip_move <= -40 else 'MODERATE' if pip_move <= -25 else 'WEAK'
-            summary = f'EUR/JPY dropped {abs(pip_move)} pips during London. Risk-off sentiment. Institutions were fleeing to JPY safety. SPY likely opens DOWN.'
+            overall_read = f'Bear impulse: -{impulse_pips} pips ↓ | Retraced: +{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → OVERALL DOWN'
+        elif impulse_direction == 'BULL' and retrace_pct < 70:
+            # Clear bull — impulse up, retrace partial
+            direction = 'BULLISH'
+            overall_read = f'Bull impulse: +{impulse_pips} pips ↑ | Retraced: -{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → OVERALL UP'
+        elif retrace_pct >= 70 and net_pips >= 15:
+            direction = 'BULLISH'
+            overall_read = f'Impulse: +{impulse_pips} pips | Deep retrace: {retrace_pct}% but net still +{net_pips} pips → Weak bullish bias — confirm at open'
+        elif retrace_pct >= 70 and net_pips <= -15:
+            direction = 'BEARISH'
+            overall_read = f'Impulse: -{impulse_pips} pips | Deep retrace: {retrace_pct}% but net still {net_pips} pips → Weak bearish bias — confirm at open'
         else:
             direction = 'FLAT'
+            overall_read = f'Impulse: {impulse_pips} pips | Retrace: {retrace_pct}% | Net: {net_pips:+d} pips → No clear bias — wait for SPY to show direction first'
+
+        if direction == 'BULLISH':
+            spy_bias = 'BUY CALLS'
+            bias_color = 'green'
+            signal_strength = 'STRONG' if impulse_pips >= 50 and retrace_pct < 50 else 'MODERATE' if impulse_pips >= 30 else 'WEAK'
+        elif direction == 'BEARISH':
+            spy_bias = 'BUY PUTS'
+            bias_color = 'red'
+            signal_strength = 'STRONG' if impulse_pips >= 50 and retrace_pct < 50 else 'MODERATE' if impulse_pips >= 30 else 'WEAK'
+        else:
             spy_bias = 'WAIT — NO SIGNAL'
             bias_color = 'gold'
             signal_strength = 'NONE'
-            summary = f'EUR/JPY was flat during London ({pip_move:+d} pips). No clear institutional bias. Wait for SPY direction after 9:45AM before trading.'
+
+        total_range_pips = round((london_high - london_low) * pip)
+
+        # pip_move for backwards compat
+        pip_move = net_pips
 
         # Current price for live context
         q = get_price('EUR/JPY')
         current_price = round(float(q['price']), 3) if q else london_close_price
+
+        # EMA100 from H1 candles — trend direction
+        ema100 = None
+        ema100_trend = 'UNKNOWN'
+        try:
+            h1_candles = get_candles('EUR/JPY', '1h', '5d')
+            if h1_candles and len(h1_candles) >= 10:
+                closes = [c['close'] for c in h1_candles]
+                period = min(100, len(closes))
+                k = 2.0 / (period + 1)
+                ema = closes[0]
+                for c in closes[1:]: ema = c * k + ema * (1 - k)
+                ema100 = round(ema, 3)
+                ema100_trend = 'UPTREND' if current_price > ema100 else 'DOWNTREND'
+        except: pass
 
         return jsonify({
             'session_date': str(session_date),
@@ -1466,13 +1584,25 @@ def london_signal():
             'london_high': round(london_high, 3),
             'london_low':  round(london_low, 3),
             'pip_move': pip_move,
+            'net_pips': net_pips,
             'total_range_pips': total_range_pips,
             'direction': direction,
             'spy_bias': spy_bias,
             'bias_color': bias_color,
             'signal_strength': signal_strength,
-            'summary': summary,
+            'overall_read': overall_read,
+            'impulse_direction': impulse_direction,
+            'impulse_pips': impulse_pips,
+            'impulse_start': round(impulse_start, 3),
+            'impulse_end': impulse_end,
+            'retrace_pips': retrace_pips,
+            'retrace_pct': retrace_pct,
+            'retrace_start': retrace_start,
+            'retrace_end': retrace_end,
+            'key_levels': key_levels,
             'current_price': current_price,
+            'ema100': ema100,
+            'ema100_trend': ema100_trend,
             'candles_used': len(london_candles),
             'session_hours': f'3AM-8AM EST ({london_open_utc}:00-{london_close_utc}:00 UTC)',
         })
