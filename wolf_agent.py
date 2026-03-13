@@ -1,16 +1,7 @@
 """
-WOLF AGENT v2.0 — JayDaWolfX Terminal
-Professional chart reading. Real data. No fluff.
-
-0DTE METHOD: Opening Range Breakout + VWAP + Prev Day Levels + 100 EMA
-FOREX METHOD: Trend + S/R zones + EMA stack + Volman buildup
-STOCKS METHOD: Same as forex with daily structure
-
-Trained on:
-- Bob Volman — Understanding Price Action
-- BabyPips — School of Pipsology  
-- Fidelity — Identifying Chart Patterns
-- ORB / VWAP 0DTE methodology (professional intraday)
+WOLF AGENT - JayDaWolfX Terminal
+Real chart reading engine. No price prediction. Just structure, S/R, EMA, pattern.
+Trained on: Volman (Price Action), BabyPips (Technical Analysis), Fidelity (Chart Patterns)
 """
 
 import os, json, time, threading, requests
@@ -18,342 +9,361 @@ from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request, render_template
 from anthropic import Anthropic
 
-wolf_bp  = Blueprint('wolf', __name__)
-client   = Anthropic()
+wolf_bp = Blueprint('wolf', __name__)
 
 TWELVE_DATA_KEY = os.environ.get('TWELVE_DATA_API_KEY', '')
-NEWS_API_KEY    = os.environ.get('NEWS_API_KEY', '')
+NEWS_API_KEY = os.environ.get('NEWS_API_KEY', '')
 
+# ─── Job store ──────────────────────────────────────────────────────────────
 _wolf_jobs = {}
 
+# ─── Instruments to scan ────────────────────────────────────────────────────
 FOREX_PAIRS = [
-    'EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD',
-    'USD/CHF','NZD/USD','EUR/GBP','GBP/JPY','EUR/JPY',
-    'AUD/JPY','EUR/CAD','GBP/CAD','USD/MXN'
+    'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD',
+    'USD/CAD', 'USD/CHF', 'NZD/USD', 'EUR/GBP',
+    'GBP/JPY', 'EUR/JPY', 'AUD/JPY', 'EUR/CAD',
+    'GBP/CAD', 'USD/MXN'
 ]
-STOCKS      = ['SPY','QQQ','AAPL','MSFT','NVDA','TSLA','AMZN','META','AMD','GOOGL']
-ODTE_SYMS   = ['SPY','QQQ']
+STOCKS = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META', 'AMD', 'GOOGL']
+OPTIONS_INSTRUMENTS = ['SPY', 'QQQ', 'SPX']  # 0DTE targets
 
-# ─── DATA FETCHING ────────────────────────────────────────────────────────────
+# ─── TwelveData helpers ──────────────────────────────────────────────────────
+
+def td_symbol(pair):
+    """Convert EUR/USD to EUR/USD format TwelveData understands."""
+    return pair.replace('/', '/')
 
 def fetch_ohlc(symbol, interval='1day', outputsize=35):
+    """Fetch real OHLC candles from TwelveData."""
     try:
-        url = (f"https://api.twelvedata.com/time_series"
-               f"?symbol={symbol}&interval={interval}"
-               f"&outputsize={outputsize}&apikey={TWELVE_DATA_KEY}")
-        r = requests.get(url, timeout=12)
+        # TwelveData uses different format for forex vs stocks
+        sym = symbol.replace('/', '')  # EURUSD for forex
+        if '/' in symbol:
+            url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&outputsize={outputsize}&apikey={TWELVE_DATA_KEY}"
+        else:
+            url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&outputsize={outputsize}&apikey={TWELVE_DATA_KEY}"
+
+        r = requests.get(url, timeout=10)
         data = r.json()
+
         if 'values' not in data:
             return None
+
         candles = []
-        for v in reversed(data['values']):
+        for v in reversed(data['values']):  # oldest first
             candles.append({
-                'date':   v['datetime'],
-                'open':   float(v['open']),
-                'high':   float(v['high']),
-                'low':    float(v['low']),
-                'close':  float(v['close']),
+                'date': v['datetime'],
+                'open':  float(v['open']),
+                'high':  float(v['high']),
+                'low':   float(v['low']),
+                'close': float(v['close']),
                 'volume': float(v.get('volume', 0))
             })
         return candles
-    except:
+    except Exception as e:
         return None
 
-def fetch_price(symbol):
+def fetch_current_price(symbol):
+    """Get real-time quote."""
     try:
-        r = requests.get(
-            f"https://api.twelvedata.com/price?symbol={symbol}&apikey={TWELVE_DATA_KEY}",
-            timeout=5)
-        return float(r.json().get('price', 0)) or None
+        url = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={TWELVE_DATA_KEY}"
+        r = requests.get(url, timeout=5)
+        data = r.json()
+        return float(data.get('price', 0))
     except:
         return None
 
-# ─── TECHNICAL CALCULATIONS ──────────────────────────────────────────────────
+# ─── Technical Analysis Engine ──────────────────────────────────────────────
 
 def calc_ema(closes, period):
+    """Calculate EMA from close prices."""
     if len(closes) < period:
         return []
-    k   = 2.0 / (period + 1)
+    k = 2.0 / (period + 1)
     ema = [sum(closes[:period]) / period]
-    for p in closes[period:]:
-        ema.append(p * k + ema[-1] * (1 - k))
+    for price in closes[period:]:
+        ema.append(price * k + ema[-1] * (1 - k))
     return ema
 
-def calc_vwap(candles):
-    """VWAP for intraday candles — uses all candles provided as single session."""
-    total_tp_vol = 0
-    total_vol    = 0
-    for c in candles:
-        tp  = (c['high'] + c['low'] + c['close']) / 3
-        vol = c['volume'] if c['volume'] > 0 else 1
-        total_tp_vol += tp * vol
-        total_vol    += vol
-    return total_tp_vol / total_vol if total_vol > 0 else None
-
 def calc_atr(candles, period=14):
+    """Average True Range for SL sizing."""
     if len(candles) < period + 1:
         return None
     trs = []
     for i in range(1, len(candles)):
-        h, l, pc = candles[i]['high'], candles[i]['low'], candles[i-1]['close']
-        trs.append(max(h - l, abs(h - pc), abs(l - pc)))
+        h = candles[i]['high']
+        l = candles[i]['low']
+        pc = candles[i-1]['close']
+        tr = max(h - l, abs(h - pc), abs(l - pc))
+        trs.append(tr)
     if len(trs) < period:
         return None
-    return round(sum(trs[-period:]) / period, 5)
+    atr = sum(trs[-period:]) / period
+    return round(atr, 5)
 
 def calc_adx(candles, period=14):
+    """ADX for trend strength. >25 = trending, <20 = ranging."""
     if len(candles) < period * 2:
         return None
     try:
         plus_dm, minus_dm, tr_list = [], [], []
         for i in range(1, len(candles)):
-            h, l   = candles[i]['high'], candles[i]['low']
+            h, l = candles[i]['high'], candles[i]['low']
             ph, pl, pc = candles[i-1]['high'], candles[i-1]['low'], candles[i-1]['close']
-            up   = h - ph
-            down = pl - l
-            plus_dm.append(up   if up   > down and up   > 0 else 0)
-            minus_dm.append(down if down > up   and down > 0 else 0)
+            up_move = h - ph
+            down_move = pl - l
+            plus_dm.append(up_move if up_move > down_move and up_move > 0 else 0)
+            minus_dm.append(down_move if down_move > up_move and down_move > 0 else 0)
             tr_list.append(max(h - l, abs(h - pc), abs(l - pc)))
 
         def smooth(lst, p):
-            s = sum(lst[:p]); r = [s]
-            for x in lst[p:]: r.append(r[-1] - r[-1]/p + x)
-            return r
+            s = sum(lst[:p])
+            result = [s]
+            for x in lst[p:]:
+                result.append(result[-1] - result[-1]/p + x)
+            return result
 
-        trs  = smooth(tr_list, period)
-        pdms = smooth(plus_dm, period)
-        mdms = smooth(minus_dm, period)
-        dx   = []
-        for i in range(len(trs)):
-            pdi = 100 * pdms[i] / trs[i] if trs[i] else 0
-            mdi = 100 * mdms[i] / trs[i] if trs[i] else 0
-            dx.append(100 * abs(pdi - mdi) / (pdi + mdi) if (pdi + mdi) else 0)
-        if len(dx) < period:
+        tr_s = smooth(tr_list, period)
+        pdm_s = smooth(plus_dm, period)
+        mdm_s = smooth(minus_dm, period)
+
+        dx_list = []
+        for i in range(len(tr_s)):
+            pdi = 100 * pdm_s[i] / tr_s[i] if tr_s[i] else 0
+            mdi = 100 * mdm_s[i] / tr_s[i] if tr_s[i] else 0
+            dx = 100 * abs(pdi - mdi) / (pdi + mdi) if (pdi + mdi) else 0
+            dx_list.append(dx)
+
+        if len(dx_list) < period:
             return None
-        return round(sum(dx[-period:]) / period, 1)
+        adx = sum(dx_list[-period:]) / period
+        return round(adx, 1)
     except:
         return None
 
-def calc_rsi(closes, period=14):
-    if len(closes) < period + 1:
-        return None
-    gains, losses = [], []
-    for i in range(1, len(closes)):
-        d = closes[i] - closes[i-1]
-        gains.append(max(d, 0))
-        losses.append(max(-d, 0))
-    if len(gains) < period:
-        return None
-    avg_g = sum(gains[:period]) / period
-    avg_l = sum(losses[:period]) / period
-    for g, l in zip(gains[period:], losses[period:]):
-        avg_g = (avg_g * (period - 1) + g) / period
-        avg_l = (avg_l * (period - 1) + l) / period
-    if avg_l == 0:
-        return 100
-    rs = avg_g / avg_l
-    return round(100 - 100 / (1 + rs), 1)
-
-def detect_opening_range(candles_15m):
-    """
-    Opening Range = first 2 candles of session (15m = first 30 min).
-    Returns ORB high, ORB low, and midpoint.
-    """
-    if not candles_15m or len(candles_15m) < 2:
-        return None
-    orb_high = max(c['high']  for c in candles_15m[:2])
-    orb_low  = min(c['low']   for c in candles_15m[:2])
-    return {
-        'high': round(orb_high, 4),
-        'low':  round(orb_low,  4),
-        'mid':  round((orb_high + orb_low) / 2, 4),
-        'width': round(orb_high - orb_low, 4)
-    }
-
 def find_sr_zones(candles, sensitivity=0.003):
-    """Real S/R from pivot highs/lows. Min 2 touches = valid zone."""
+    """
+    Find REAL S/R zones using pivot highs/lows with minimum 2 touches.
+    Volman principle: only trade levels that have been TESTED at least twice.
+    """
     if len(candles) < 10:
         return [], []
 
-    pivots_high, pivots_low = [], []
-    lb = 3
-    for i in range(lb, len(candles) - lb):
-        is_ph = all(candles[i]['high'] >= candles[j]['high']
-                    for j in range(i-lb, i+lb+1) if j != i)
-        is_pl = all(candles[i]['low']  <= candles[j]['low']
-                    for j in range(i-lb, i+lb+1) if j != i)
-        if is_ph: pivots_high.append({'price': candles[i]['high'], 'date': candles[i]['date']})
-        if is_pl: pivots_low.append( {'price': candles[i]['low'],  'date': candles[i]['date']})
+    # Find pivot highs (local max) and pivot lows (local min)
+    pivots_high = []
+    pivots_low = []
+    lookback = 3
 
-    cp     = candles[-1]['close']
-    margin = cp * sensitivity
+    for i in range(lookback, len(candles) - lookback):
+        h = candles[i]['high']
+        l = candles[i]['low']
 
-    def cluster(pivots):
-        zones, used = [], set()
+        is_ph = all(candles[i]['high'] >= candles[j]['high'] for j in range(i-lookback, i+lookback+1) if j != i)
+        is_pl = all(candles[i]['low'] <= candles[j]['low'] for j in range(i-lookback, i+lookback+1) if j != i)
+
+        if is_ph:
+            pivots_high.append({'price': h, 'date': candles[i]['date'], 'idx': i})
+        if is_pl:
+            pivots_low.append({'price': l, 'date': candles[i]['date'], 'idx': i})
+
+    current_price = candles[-1]['close']
+    margin = current_price * sensitivity
+
+    def cluster_levels(pivots):
+        """Group nearby pivots into zones, count touches."""
+        if not pivots:
+            return []
+        zones = []
+        used = set()
+
         for i, p in enumerate(pivots):
-            if i in used: continue
-            cluster = [p['price']]; dates = [p['date']]; used.add(i)
+            if i in used:
+                continue
+            cluster = [p['price']]
+            dates = [p['date']]
+            used.add(i)
+
             for j, q in enumerate(pivots):
                 if j not in used and abs(p['price'] - q['price']) <= margin * 2:
-                    cluster.append(q['price']); dates.append(q['date']); used.add(j)
-            # Relaxed: allow single-touch zones too (but mark them WEAK)
-            strength = 'STRONG' if len(cluster) >= 3 else 'MODERATE' if len(cluster) == 2 else 'WEAK'
-            zones.append({
-                'price':    round(sum(cluster) / len(cluster), 5),
-                'touches':  len(cluster),
-                'last_touch': max(dates),
-                'strength': strength
-            })
-        return sorted(zones, key=lambda z: abs(z['price'] - cp))
+                    cluster.append(q['price'])
+                    dates.append(q['date'])
+                    used.add(j)
 
-    R = cluster(pivots_high)
-    S = cluster(pivots_low)
-    return [z for z in S if z['price'] < cp][:5], [z for z in R if z['price'] > cp][:5]
+            if len(cluster) >= 2:  # MINIMUM 2 TOUCHES - Volman rule
+                zone_price = sum(cluster) / len(cluster)
+                zones.append({
+                    'price': round(zone_price, 5),
+                    'touches': len(cluster),
+                    'last_touch': max(dates),
+                    'strength': 'STRONG' if len(cluster) >= 3 else 'MODERATE'
+                })
 
-def detect_trend(candles):
-    if len(candles) < 10: return 'UNKNOWN', 50
-    recent = candles[-20:]
-    highs  = [c['high']  for c in recent]
-    lows   = [c['low']   for c in recent]
+        return sorted(zones, key=lambda z: abs(z['price'] - current_price))
+
+    resistance_zones = cluster_levels(pivots_high)
+    support_zones = cluster_levels(pivots_low)
+
+    # Filter: above price = resistance, below = support
+    resistances = [z for z in resistance_zones if z['price'] > current_price][:4]
+    supports = [z for z in support_zones if z['price'] < current_price][:4]
+
+    return supports, resistances
+
+def detect_trend_structure(candles):
+    """
+    BabyPips + Volman: real trend = higher highs + higher lows (bull) 
+    or lower highs + lower lows (bear). No indicator needed.
+    """
+    if len(candles) < 10:
+        return 'UNKNOWN', 0
+
+    recent = candles[-20:]  # Last 20 candles
+    highs = [c['high'] for c in recent]
+    lows = [c['low'] for c in recent]
+
+    # Count HH/HL vs LH/LL transitions
     hh = sum(1 for i in range(1, len(highs)) if highs[i] > highs[i-1])
-    hl = sum(1 for i in range(1, len(lows))  if lows[i]  > lows[i-1])
+    hl = sum(1 for i in range(1, len(lows)) if lows[i] > lows[i-1])
     lh = sum(1 for i in range(1, len(highs)) if highs[i] < highs[i-1])
-    ll = sum(1 for i in range(1, len(lows))  if lows[i]  < lows[i-1])
-    bull = hh + hl; bear = lh + ll; total = bull + bear
-    if total == 0: return 'SIDEWAYS', 0
-    bp = (bull / total) * 100; brp = (bear / total) * 100
-    if bp  >= 55: return 'UPTREND',   round(bp)
-    if brp >= 55: return 'DOWNTREND', round(brp)
-    return 'SIDEWAYS', round(max(bp, brp))
+    ll = sum(1 for i in range(1, len(lows)) if lows[i] < lows[i-1])
 
-def detect_candlestick_pattern(candles):
-    """Detect key candlestick patterns from last 3 candles."""
-    if len(candles) < 3:
-        return 'NONE'
-    c1, c2, c3 = candles[-3], candles[-2], candles[-1]
-    body3  = abs(c3['close'] - c3['open'])
-    range3 = c3['high'] - c3['low']
-    body2  = abs(c2['close'] - c2['open'])
+    bull_score = hh + hl
+    bear_score = lh + ll
+    total = bull_score + bear_score
 
-    # Doji
-    if range3 > 0 and body3 / range3 < 0.1:
-        return 'DOJI — indecision'
-    # Engulfing bull
-    if (c2['close'] < c2['open'] and c3['close'] > c3['open']
-            and c3['open'] <= c2['close'] and c3['close'] >= c2['open']):
-        return 'BULLISH ENGULFING — reversal signal'
-    # Engulfing bear
-    if (c2['close'] > c2['open'] and c3['close'] < c3['open']
-            and c3['open'] >= c2['close'] and c3['close'] <= c2['open']):
-        return 'BEARISH ENGULFING — reversal signal'
-    # Hammer (long lower wick, small body near top)
-    lower_wick = min(c3['open'], c3['close']) - c3['low']
-    upper_wick = c3['high'] - max(c3['open'], c3['close'])
-    if range3 > 0 and lower_wick / range3 > 0.55 and body3 / range3 < 0.35:
-        return 'HAMMER — bullish reversal'
-    if range3 > 0 and upper_wick / range3 > 0.55 and body3 / range3 < 0.35:
-        return 'SHOOTING STAR — bearish reversal'
-    # Strong bullish bar
-    if c3['close'] > c3['open'] and body3 / range3 > 0.7 if range3 > 0 else False:
-        return 'STRONG BULL BAR — momentum'
-    if c3['close'] < c3['open'] and body3 / range3 > 0.7 if range3 > 0 else False:
-        return 'STRONG BEAR BAR — momentum'
-    return 'NONE'
+    if total == 0:
+        return 'SIDEWAYS', 0
 
-def score_trend(candles):
-    if not candles or len(candles) < 20: return 0
+    bull_pct = (bull_score / total) * 100
+    bear_pct = (bear_score / total) * 100
+
+    if bull_pct >= 60:
+        return 'UPTREND', round(bull_pct)
+    elif bear_pct >= 60:
+        return 'DOWNTREND', round(bear_pct)
+    else:
+        return 'SIDEWAYS', round(max(bull_pct, bear_pct))
+
+def score_pair_for_trend(candles):
+    """
+    Score a pair 0-100 for trend quality.
+    High ADX + clear structure + price away from EMA center = trending.
+    """
+    if not candles or len(candles) < 30:
+        return 0
+
     closes = [c['close'] for c in candles]
-    adx    = calc_adx(candles) or 0
-    trend, strength = detect_trend(candles)
-    ema100 = calc_ema(closes, min(100, len(closes)))
+    adx = calc_adx(candles) or 0
+    trend, strength = detect_trend_structure(candles)
+
+    ema100 = calc_ema(closes, 100)
     ema_score = 0
     if ema100:
-        pct = abs(closes[-1] - ema100[-1]) / ema100[-1] * 100
-        ema_score = min(pct * 5, 25)
-    adx_score = min(adx, 50)
-    str_score = strength * 0.25
-    if trend == 'SIDEWAYS': return int(adx_score * 0.3)
-    return int(min(adx_score + str_score + ema_score, 100))
+        current = closes[-1]
+        ema_val = ema100[-1]
+        # Price far from EMA = trending, at EMA = ranging
+        pct_away = abs(current - ema_val) / ema_val * 100
+        ema_score = min(pct_away * 5, 30)  # max 30 pts
 
-def check_news(symbol):
+    adx_score = min(adx, 50)  # max 50 pts
+    structure_score = strength * 0.2  # max 20 pts (0-100% * 0.2)
+
+    if trend == 'SIDEWAYS':
+        return int(adx_score * 0.3)  # Penalize sideways hard
+
+    total = adx_score + structure_score + ema_score
+    return int(min(total, 100))
+
+# ─── News Check ──────────────────────────────────────────────────────────────
+
+def check_news_risk(symbol):
+    """
+    Check NewsAPI for high-impact news in the next 24 hours.
+    Returns warning string if risk found, else None.
+    """
     try:
-        if not NEWS_API_KEY: return None
-        kws = ['NFP','CPI','Fed','FOMC','rate decision','jobs report','inflation','GDP','earnings']
-        sym_clean = symbol.split('/')[0]
-        url = (f"https://newsapi.org/v2/everything?q={sym_clean}&sortBy=publishedAt"
-               f"&pageSize=5&apiKey={NEWS_API_KEY}")
-        arts = requests.get(url, timeout=5).json().get('articles', [])
-        hits = []
-        for a in arts:
-            t = (a.get('title','') + ' ' + a.get('description','')).lower()
-            for kw in kws:
-                if kw.lower() in t:
-                    hits.append(kw); break
-        if hits: return f"⚠️ HIGH IMPACT NEWS: {', '.join(set(hits[:2]))} — trade with extra caution"
+        if not NEWS_API_KEY:
+            return None
+
+        # Extract currency/stock from symbol
+        terms = symbol.replace('/', ' ').replace('USD', 'dollar').replace('EUR', 'euro')
+        terms = terms.replace('GBP', 'pound').replace('JPY', 'yen')
+
+        # Check for economic events keywords
+        economic_keywords = ['NFP', 'CPI', 'Fed', 'FOMC', 'interest rate', 'jobs report',
+                           'inflation', 'GDP', 'retail sales', 'earnings']
+
+        url = (f"https://newsapi.org/v2/everything?q={symbol[:3]}+forex+OR+{symbol[:3]}+economy"
+               f"&sortBy=publishedAt&pageSize=5&apiKey={NEWS_API_KEY}")
+        r = requests.get(url, timeout=5)
+        articles = r.json().get('articles', [])
+
+        high_impact = []
+        for a in articles:
+            title = (a.get('title', '') + ' ' + a.get('description', '')).lower()
+            for kw in economic_keywords:
+                if kw.lower() in title:
+                    high_impact.append(kw)
+                    break
+
+        if high_impact:
+            return f"⚠️ HIGH IMPACT NEWS RISK: {', '.join(set(high_impact[:2]))} found in recent news — trade with caution or avoid"
         return None
     except:
         return None
 
-# ─── WOLF SYSTEM PROMPT ──────────────────────────────────────────────────────
+# ─── Wolf Agent Claude Prompt ────────────────────────────────────────────────
 
-WOLF_SYSTEM = """You are WOLF AGENT — JayDaWolfX's professional AI chart reader and market analyst.
+WOLF_SYSTEM_PROMPT = """You are WOLF AGENT — a professional market analyst and chart reader trained in:
+- Bob Volman's Price Action (Forex Price Action Scalping / Understanding Price Action)
+- BabyPips School of Pipsology (Technical Analysis, S/R, Candlesticks, Trend)  
+- Fidelity Chart Patterns (Double Top/Bottom, H&S, Triangles, Flags, Wedges)
+- 0DTE Options (SPY/QQQ directional plays, credit spreads at S/R)
 
-You read REAL price data and give professional trading signals. You are trained in:
+YOUR MISSION:
+Read the REAL price data provided. Analyze market structure. Give a professional trading signal.
 
-== FOREX & STOCK CHART READING ==
-- Bob Volman Price Action: S/R zones from real pivot tests, buildup before breakout, double pressure, false breaks
-- BabyPips: HH/HL trend structure, candlestick patterns, EMA as trend filter, volume confirmation
-- Fidelity: Double tops/bottoms, H&S, flags, triangles, wedges — only valid on candle CLOSE beyond level
-- 100 EMA = primary trend filter (above = bullish bias, below = bearish bias)
-- RSI: Overbought >70 (watch for reversal), oversold <30 (watch for bounce)
+STRICT RULES — NO EXCEPTIONS:
+1. ZERO price prediction. You read what IS happening, not what WILL happen.
+2. Only recommend BUY if price is ABOVE the 100 EMA and in uptrend structure
+3. Only recommend SELL if price is BELOW the 100 EMA and in downtrend structure
+4. S/R zones are only valid if they have 2+ REAL price touches (provided in data)
+5. Signal requires: trend + EMA alignment + price at tested S/R zone + no high-impact news
+6. If ANY condition is missing → signal = WAIT, never force a trade
+7. SL = beyond the nearest S/R zone + ATR buffer (never arbitrary)
+8. TP1 = next S/R zone, TP2 = next zone after that, TP3 = major swing high/low
 
-== 0DTE OPTIONS METHOD (ORB + VWAP) ==
-This is how professional 0DTE traders read the chart:
+VOLMAN PRINCIPLES TO APPLY:
+- Buildup at S/R (consolidation before break) = HIGH CONFIDENCE entry
+- Price shooting through S/R with no buildup = SKIP (false break risk)
+- False break (wick through level, close back inside) = trap, do NOT enter
+- Double pressure (both bulls and bears same direction) = strongest moves
+- EMA 100 is your trend FILTER, not your entry trigger
 
-1. PRE-MARKET BIAS: Check if price is above/below previous day's close. Above = bullish bias. Below = bearish.
-2. KEY LEVELS to mark BEFORE open:
-   - Previous Day High (PDH) and Previous Day Low (PDL) — most important levels
-   - Pre-market high/low if available
-   - Major weekly/monthly S/R from daily chart
-3. OPENING RANGE (ORB): First 15-30 minutes after 9:30 AM ET forms the range
-   - ORB High and ORB Low = the day's key breakout levels
-   - DO NOT trade during the first 15 minutes — wait for range to form
-4. VWAP: Volume-weighted average price
-   - Price above VWAP = bullish intraday bias → look for CALL setups
-   - Price below VWAP = bearish intraday bias → look for PUT setups
-   - VWAP + ORB agreement = highest probability setup
-5. ENTRY TRIGGERS:
-   - CALL: Price breaks AND closes ABOVE ORB High + price above VWAP + price above 100 EMA daily
-   - PUT: Price breaks AND closes BELOW ORB Low + price below VWAP + price below 100 EMA daily
-   - Best entry window: 9:45 AM – 11:30 AM ET (after range established, before lunch chop)
-   - Second entry window: 2:00 PM – 3:30 PM ET (afternoon trend resumption)
-6. RETEST ENTRY (higher probability, lower risk):
-   - Wait for price to break ORB, then pull back and RETEST the broken level
-   - If level holds, enter in direction of original breakout
-   - This confirms the level flipped from resistance to support (or vice versa)
-7. STRIKE SELECTION:
-   - Strong trending day: ATM (at-the-money) for maximum gamma
-   - Retest entry: Slightly OTM for better R/R
-   - Never go deep OTM — too much decay risk
-8. PROFIT TARGET: 50-100% gain on the option, or 1x-2x the ORB width measured from entry
-9. STOP LOSS: 50% loss on the option, OR price closes back inside the ORB
+BABYPIPS PRINCIPLES:
+- Higher highs + higher lows = uptrend confirmed
+- Lower highs + lower lows = downtrend confirmed  
+- Price at 50% retracement of last swing = higher probability bounce
+- Volume spike at S/R = confirmation (if available)
+- ADX > 25 = trending, < 20 = ranging (don't trade ranging pairs)
 
-== SIGNAL RELAXATION RULES ==
-Do NOT be overly strict. Give a signal when you see a REASONABLE setup:
-- If 2 out of 3 conditions align (trend + EMA + level), give a signal with MEDIUM confidence
-- If all 3 align, give HIGH confidence
-- Only say WAIT if: price is in middle of range with no clear setup, OR high-impact news in <2 hours
-- A WEAK/MODERATE S/R level is still worth noting — just lower the confidence
-- Don't require perfect buildup — if the level is right and trend is right, signal it
+FIDELITY PATTERNS:
+- Pattern NOT valid until price CLOSES beyond the level (no wick entries)
+- Double top/bottom at tested S/R = high probability reversal
+- Bull/bear flag = continuation after pullback to 38-50% retracement
+- Ascending/descending triangle at S/R = compression before breakout
+- H&S neckline break = strongest reversal signal
 
-== ANALYSIS STYLE ==
-Read the chart like a professional. Be concise. Tell me:
-1. Where price IS right now (above/below what key level)
-2. What the overall bias is (bull/bear/neutral)
-3. What the cleanest trade setup looks like
-4. Exact entry, stop, targets
+0DTE OPTIONS RULES (SPY/QQQ only):
+- Only enter AFTER opening range established (9:45-10:15 AM ET)
+- Use previous day high/low as key S/R levels
+- BUY CALLS: price above premarket high + above 100 EMA + ADX > 25
+- BUY PUTS: price below premarket low + below 100 EMA + ADX > 25
+- Strike: ATM for strong trend, OTM when waiting for retest
+- NEVER trade 0DTE when: news in 2 hours, ADX < 20, price in middle of range
+- Best 0DTE entry: 10:15-11:00 AM ET window after direction confirmed
 
-RESPOND ONLY IN THIS JSON (no text outside):
+RESPOND ONLY IN THIS EXACT JSON FORMAT — no text outside the JSON:
 {
   "signal": "BUY" | "SELL" | "WAIT",
   "confidence": "HIGH" | "MEDIUM" | "LOW",
@@ -364,271 +374,296 @@ RESPOND ONLY IN THIS JSON (no text outside):
   "tp2": 0.0,
   "tp3": 0.0,
   "risk_reward": "1:2.0",
-  "ema100_status": "price ABOVE/BELOW 100 EMA at [value]",
-  "trend_structure": "brief structure description",
-  "key_level": "specific price level and why it matters",
+  "ema100_status": "price above/below 100 EMA — exact value",
+  "trend_structure": "exact structure observed from price data",
+  "key_level": "nearest S/R zone with touch count and type",
   "pattern_detected": "pattern name or NONE",
-  "candlestick": "pattern name or NONE",
-  "rsi_reading": "RSI value and what it means",
-  "vwap_status": "price above/below VWAP at [value] or N/A",
-  "orb_status": "ORB high/low values and current price position or N/A",
-  "analysis": "3-4 sentence professional chart read. What the chart is SHOWING right now.",
-  "news_warning": null,
-  "option_play": null | {
-    "type": "CALL" | "PUT",
-    "strike": "ATM or OTM",
-    "entry_trigger": "exact trigger description",
-    "profit_target": "% gain target",
-    "stop": "exit condition",
-    "best_window": "time window",
-    "rationale": "why this setup"
-  }
+  "buildup_present": true | false,
+  "analysis": "2-3 sentence professional chart reading based ONLY on data provided. No predictions.",
+  "news_warning": null | "warning string",
+  "option_play": null | {"type": "CALL/PUT", "strike_guidance": "ATM/OTM", "rationale": "..."}
 }"""
 
-def run_analysis(symbol, candles_daily, candles_intraday, current_price,
-                 supports, resistances, trend, adx, ema100_val, atr, rsi,
-                 vwap, orb, news, is_0dte=False):
-    """Feed real structured data to Wolf Agent for chart reading."""
+def run_wolf_analysis(symbol, candles, current_price, supports, resistances,
+                      trend, trend_strength, adx, ema100_val, atr, news_warning, is_option=False):
+    """Feed real data to Claude for chart analysis. No prediction, pure reading."""
 
-    closes = [c['close'] for c in candles_daily]
-    H30    = round(max(c['high']  for c in candles_daily), 5)
-    L30    = round(min(c['low']   for c in candles_daily), 5)
-    rng    = H30 - L30
-    pos    = round((current_price - L30) / rng * 100, 1) if rng > 0 else 50
+    # Build data payload
+    recent_candles = candles[-10:]  # Last 10 candles for Claude to read
+    candle_summary = []
+    for c in recent_candles:
+        body = abs(c['close'] - c['open'])
+        wick_up = c['high'] - max(c['open'], c['close'])
+        wick_dn = min(c['open'], c['close']) - c['low']
+        direction = 'BULL' if c['close'] > c['open'] else 'BEAR'
+        candle_summary.append({
+            'date': c['date'],
+            'O': round(c['open'], 5), 'H': round(c['high'], 5),
+            'L': round(c['low'], 5),  'C': round(c['close'], 5),
+            'direction': direction,
+            'body_size': round(body, 5),
+            'upper_wick': round(wick_up, 5),
+            'lower_wick': round(wick_dn, 5)
+        })
 
-    # Last 5 candles for structure reading
-    last5 = candles_daily[-5:]
-    candle_data = [{
-        'date': c['date'], 'O': round(c['open'],5), 'H': round(c['high'],5),
-        'L': round(c['low'],5), 'C': round(c['close'],5),
-        'direction': 'BULL' if c['close'] > c['open'] else 'BEAR',
-        'body': round(abs(c['close']-c['open']),5)
-    } for c in last5]
+    # 30-day high/low for context
+    highs_30 = [c['high'] for c in candles]
+    lows_30 = [c['low'] for c in candles]
+    high_30d = round(max(highs_30), 5) if highs_30 else 0
+    low_30d = round(min(lows_30), 5) if lows_30 else 0
+    mid_30d = round((high_30d + low_30d) / 2, 5)
 
-    prev_day = candles_daily[-2] if len(candles_daily) >= 2 else None
-    pdh = round(prev_day['high'],  4) if prev_day else None
-    pdl = round(prev_day['low'],   4) if prev_day else None
-    pdc = round(prev_day['close'], 4) if prev_day else None
+    # Price position
+    price_pct = round(((current_price - low_30d) / (high_30d - low_30d) * 100) if (high_30d - low_30d) > 0 else 50, 1)
 
-    # Intraday last 8 candles (if available)
-    intraday_str = 'NOT AVAILABLE'
-    if candles_intraday and len(candles_intraday) >= 4:
-        last_intra = candles_intraday[-8:]
-        intraday_str = json.dumps([{
-            'time': c['date'][-8:], 'O': round(c['open'],3),
-            'H': round(c['high'],3), 'L': round(c['low'],3),
-            'C': round(c['close'],3)
-        } for c in last_intra])
-
-    msg = f"""INSTRUMENT: {symbol}  |  TYPE: {'0DTE OPTIONS TARGET' if is_0dte else 'FOREX/STOCK'}
+    user_message = f"""SYMBOL: {symbol}
 CURRENT PRICE: {current_price}
-30-DAY RANGE: High={H30} | Low={L30} | Price at {pos}% of range
+30-DAY RANGE: High={high_30d} | Low={low_30d} | Mid={mid_30d}
+PRICE POSITION: {price_pct}% of 30-day range (0%=low, 100%=high)
 
-=== KEY EMAs ===
-100 EMA: {round(ema100_val,5) if ema100_val else 'N/A'}
-Price vs 100 EMA: {'ABOVE ✅' if ema100_val and current_price > ema100_val else 'BELOW ⚠️' if ema100_val else 'UNKNOWN'}
+100 EMA: {round(ema100_val, 5) if ema100_val else 'NOT AVAILABLE'}
+PRICE vs 100 EMA: {'ABOVE' if ema100_val and current_price > ema100_val else 'BELOW' if ema100_val else 'UNKNOWN'}
+ADX (Trend Strength): {adx if adx else 'NOT AVAILABLE'} {'(TRENDING)' if adx and adx > 25 else '(RANGING/WEAK)' if adx else ''}
+ATR (Volatility): {atr}
 
-=== INDICATORS ===
-ADX: {adx} ({'TRENDING 🔥' if adx and adx >= 25 else 'WEAK/RANGING' if adx else 'N/A'})
-RSI(14): {rsi} ({'OVERBOUGHT' if rsi and rsi >= 70 else 'OVERSOLD' if rsi and rsi <= 30 else 'NEUTRAL' if rsi else 'N/A'})
-ATR: {atr}
+TREND STRUCTURE: {trend} ({trend_strength}% score)
 
-=== INTRADAY VWAP & ORB ===
-VWAP: {round(vwap,4) if vwap else 'N/A'}  |  Price vs VWAP: {'ABOVE 🟢' if vwap and current_price > vwap else 'BELOW 🔴' if vwap else 'N/A'}
-Opening Range: {json.dumps(orb) if orb else 'N/A (use daily structure)'}
-Price vs ORB: {'ABOVE ORB HIGH 🟢' if orb and current_price > orb['high'] else 'BELOW ORB LOW 🔴' if orb and current_price < orb['low'] else 'INSIDE RANGE ⚪' if orb else 'N/A'}
+REAL SUPPORT ZONES (minimum 2 touches each):
+{json.dumps(supports[:3], indent=2) if supports else 'None found in 30-day data'}
 
-=== PREVIOUS DAY LEVELS ===
-Prev Day High (PDH): {pdh}  |  Prev Day Low (PDL): {pdl}  |  Prev Day Close: {pdc}
-Price vs Prev Close: {'ABOVE — bullish pre-bias' if pdc and current_price > pdc else 'BELOW — bearish pre-bias' if pdc else 'N/A'}
+REAL RESISTANCE ZONES (minimum 2 touches each):
+{json.dumps(resistances[:3], indent=2) if resistances else 'None found in 30-day data'}
 
-=== TREND STRUCTURE (30-day) ===
-{trend[0]} — strength {trend[1]}%
+LAST 10 CANDLES (newest last):
+{json.dumps(candle_summary, indent=2)}
 
-=== SUPPORT ZONES (real pivot clusters) ===
-{json.dumps(supports[:3]) if supports else 'None detected in range'}
+NEWS RISK: {news_warning if news_warning else 'NONE DETECTED'}
 
-=== RESISTANCE ZONES (real pivot clusters) ===
-{json.dumps(resistances[:3]) if resistances else 'None detected in range'}
+{'OPTIONS CONTEXT: This is a 0DTE options analysis request for SPY/QQQ. Apply 0DTE rules.' if is_option else ''}
 
-=== LAST 5 DAILY CANDLES ===
-{json.dumps(candle_data, indent=2)}
+TASK: Read this data like a professional chart analyst. Apply Volman, BabyPips, and Fidelity principles.
+Give me the trade signal based purely on what this data shows. No forecasting. No fluff."""
 
-=== RECENT INTRADAY (15min) ===
-{intraday_str}
-
-NEWS RISK: {news if news else 'NONE DETECTED ✅'}
-{"=== 0DTE CONTEXT ===" if is_0dte else ""}
-{"Apply full ORB + VWAP methodology. Identify the ATM strike and entry window." if is_0dte else ""}
-
-READ THIS CHART. Give me the professional signal."""
-
-    resp = client.messages.create(
+    client = Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+    response = client.messages.create(
         model="claude-opus-4-6",
-        max_tokens=1200,
-        system=WOLF_SYSTEM,
-        messages=[{"role": "user", "content": msg}]
+        max_tokens=1000,
+        system=WOLF_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_message}]
     )
 
-    raw = resp.content[0].text.strip()
+    raw = response.content[0].text.strip()
+
+    # Parse JSON
     try:
-        clean = raw
-        if '```' in clean:
-            clean = clean.split('```')[1]
-            if clean.startswith('json'): clean = clean[4:]
-        result = json.loads(clean.strip())
-        result.update({
-            'symbol':        symbol,
-            'current_price': current_price,
-            'atr':           atr,
-            'adx':           adx,
-            'rsi':           rsi,
-            'vwap':          round(vwap, 4) if vwap else None,
-            'orb':           orb,
-            'pdh':           pdh,
-            'pdl':           pdl,
-            'timestamp':     datetime.now().strftime('%Y-%m-%d %H:%M UTC')
-        })
+        # Strip any markdown fences
+        if '```' in raw:
+            raw = raw.split('```')[1]
+            if raw.startswith('json'):
+                raw = raw[4:]
+        result = json.loads(raw.strip())
+        result['symbol'] = symbol
+        result['current_price'] = current_price
+        result['atr'] = atr
+        result['adx'] = adx
+        result['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
         return result
     except Exception as e:
         return {
-            'symbol': symbol, 'signal': 'ERROR', 'error': str(e),
-            'current_price': current_price,
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M UTC')
+            'symbol': symbol,
+            'signal': 'ERROR',
+            'error': f'Parse error: {str(e)}',
+            'raw': raw[:200],
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
         }
 
-# ─── MAIN JOB ─────────────────────────────────────────────────────────────────
+# ─── Main Wolf Scan Job ──────────────────────────────────────────────────────
 
-def wolf_job(job_id, scan_type):
+def wolf_scan_job(job_id, scan_type='all'):
+    """
+    Full Wolf Agent scan:
+    1. Find top 3 trending forex pairs
+    2. Analyze top 3 trending stocks  
+    3. Best 0DTE options setup
+    4. Give clean signals for each
+    """
     job = _wolf_jobs[job_id]
-    results = {
-        'forex':   [],
-        'stocks':  [],
-        'options': [],
-        'scan_time':     datetime.now().strftime('%Y-%m-%d %H:%M UTC'),
-        'market_session': get_session()
-    }
 
     try:
-        # ── FOREX ──────────────────────────────────────────────────────────
+        results = {
+            'forex': [],
+            'stocks': [],
+            'options': [],
+            'scan_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'),
+            'market_session': get_market_session()
+        }
+
+        # ── PHASE 1: Scan forex pairs for trending ──────────────────────────
         if scan_type in ('all', 'forex'):
-            job['step'] = '🔍 Scanning 14 forex pairs...'
-            scored = []
+            job['step'] = '🔍 Scanning 14 forex pairs for trends...'
+            scored_forex = []
+
             for pair in FOREX_PAIRS:
-                c = fetch_ohlc(pair, '1day', 35)
-                if c and len(c) >= 20:
-                    score = score_trend(c)
-                    t, _  = detect_trend(c)
-                    scored.append({'pair': pair, 'score': score, 'trend': t, 'candles': c})
-                time.sleep(0.25)
+                candles = fetch_ohlc(pair, interval='1day', outputsize=35)
+                if candles and len(candles) >= 20:
+                    score = score_pair_for_trend(candles)
+                    trend, strength = detect_trend_structure(candles)
+                    adx = calc_adx(candles)
+                    if trend != 'SIDEWAYS' and score > 40:
+                        scored_forex.append({
+                            'pair': pair, 'score': score,
+                            'trend': trend, 'adx': adx, 'candles': candles
+                        })
+                time.sleep(0.3)  # Rate limit
 
-            top = sorted(scored, key=lambda x: x['score'], reverse=True)[:3]
-            job['step'] = f'📊 Analyzing top {len(top)} forex pairs...'
+            # Top 3 trending pairs
+            top_forex = sorted(scored_forex, key=lambda x: x['score'], reverse=True)[:3]
 
-            for item in top:
+            job['step'] = f'✅ Found {len(top_forex)} trending pairs. Running deep analysis...'
+
+            for item in top_forex:
                 pair = item['pair']
-                job['step'] = f'📊 Reading {pair} chart...'
-                c1d  = item['candles']
-                c15m = fetch_ohlc(pair, '15min', 30) or []
-                price = fetch_price(pair) or c1d[-1]['close']
-                closes = [c['close'] for c in c1d]
-                ema100 = calc_ema(closes, min(100, len(closes)))
-                atr    = calc_atr(c1d)
-                adx    = calc_adx(c1d)
-                rsi    = calc_rsi(closes)
-                trend  = detect_trend(c1d)
-                S, R   = find_sr_zones(c1d)
-                vwap   = calc_vwap(c15m) if c15m else None
-                orb    = detect_opening_range(c15m) if c15m else None
-                news   = check_news(pair)
-                sig    = run_analysis(pair, c1d, c15m, price, S, R, trend,
-                                      adx, ema100[-1] if ema100 else None,
-                                      atr, rsi, vwap, orb, news, False)
-                sig['trend_score'] = item['score']
-                results['forex'].append(sig)
+                candles = item['candles']
+                job['step'] = f'📊 Analyzing {pair}...'
+
+                closes = [c['close'] for c in candles]
+                current_price = fetch_current_price(pair) or closes[-1]
+                ema100_list = calc_ema(closes, 100)
+                ema100_val = ema100_list[-1] if ema100_list else None
+                atr = calc_atr(candles)
+                adx = item['adx']
+                trend, strength = detect_trend_structure(candles)
+                supports, resistances = find_sr_zones(candles)
+                news = check_news_risk(pair)
+
+                analysis = run_wolf_analysis(
+                    pair, candles, current_price, supports, resistances,
+                    trend, strength, adx, ema100_val, atr, news, is_option=False
+                )
+                analysis['trend_score'] = item['score']
+                results['forex'].append(analysis)
                 time.sleep(1)
 
-        # ── STOCKS ─────────────────────────────────────────────────────────
+        # ── PHASE 2: Scan stocks ─────────────────────────────────────────────
         if scan_type in ('all', 'stocks'):
-            job['step'] = '📈 Scanning stocks...'
-            scored = []
-            for sym in STOCKS:
-                c = fetch_ohlc(sym, '1day', 35)
-                if c and len(c) >= 20:
-                    score = score_trend(c)
-                    t, _  = detect_trend(c)
-                    scored.append({'sym': sym, 'score': score, 'trend': t, 'candles': c})
-                time.sleep(0.25)
+            job['step'] = '📈 Scanning stocks for trends...'
+            scored_stocks = []
 
-            top = sorted(scored, key=lambda x: x['score'], reverse=True)[:3]
-            job['step'] = f'📊 Analyzing top {len(top)} stocks...'
+            for stock in STOCKS:
+                candles = fetch_ohlc(stock, interval='1day', outputsize=35)
+                if candles and len(candles) >= 20:
+                    score = score_pair_for_trend(candles)
+                    trend, _ = detect_trend_structure(candles)
+                    adx = calc_adx(candles)
+                    if trend != 'SIDEWAYS' and score > 35:
+                        scored_stocks.append({
+                            'symbol': stock, 'score': score,
+                            'trend': trend, 'adx': adx, 'candles': candles
+                        })
+                time.sleep(0.3)
 
-            for item in top:
-                sym = item['sym']
-                job['step'] = f'📊 Reading {sym} chart...'
-                c1d  = item['candles']
-                c15m = fetch_ohlc(sym, '15min', 30) or []
-                price = fetch_price(sym) or c1d[-1]['close']
-                closes = [c['close'] for c in c1d]
-                ema100 = calc_ema(closes, min(100, len(closes)))
-                atr    = calc_atr(c1d)
-                adx    = calc_adx(c1d)
-                rsi    = calc_rsi(closes)
-                trend  = detect_trend(c1d)
-                S, R   = find_sr_zones(c1d)
-                vwap   = calc_vwap(c15m) if c15m else None
-                orb    = detect_opening_range(c15m) if c15m else None
-                news   = check_news(sym)
-                sig    = run_analysis(sym, c1d, c15m, price, S, R, trend,
-                                      adx, ema100[-1] if ema100 else None,
-                                      atr, rsi, vwap, orb, news, False)
-                sig['trend_score'] = item['score']
-                results['stocks'].append(sig)
+            top_stocks = sorted(scored_stocks, key=lambda x: x['score'], reverse=True)[:3]
+            job['step'] = f'✅ Found {len(top_stocks)} trending stocks. Analyzing...'
+
+            for item in top_stocks:
+                symbol = item['symbol']
+                candles = item['candles']
+                job['step'] = f'📊 Analyzing {symbol}...'
+
+                closes = [c['close'] for c in candles]
+                current_price = fetch_current_price(symbol) or closes[-1]
+                ema100_list = calc_ema(closes, 100)
+                ema100_val = ema100_list[-1] if ema100_list else None
+                atr = calc_atr(candles)
+                adx = item['adx']
+                trend, strength = detect_trend_structure(candles)
+                supports, resistances = find_sr_zones(candles)
+                news = check_news_risk(symbol)
+
+                analysis = run_wolf_analysis(
+                    symbol, candles, current_price, supports, resistances,
+                    trend, strength, adx, ema100_val, atr, news, is_option=False
+                )
+                analysis['trend_score'] = item['score']
+                results['stocks'].append(analysis)
                 time.sleep(1)
 
-        # ── 0DTE OPTIONS ───────────────────────────────────────────────────
+        # ── PHASE 3: 0DTE Options ─────────────────────────────────────────────
         if scan_type in ('all', 'options'):
-            for sym in ODTE_SYMS:
-                job['step'] = f'⚡ 0DTE analysis: {sym}...'
-                c1d  = fetch_ohlc(sym, '1day', 35) or []
-                c15m = fetch_ohlc(sym, '15min', 40) or []
-                if not c1d: continue
-                price  = fetch_price(sym) or c1d[-1]['close']
-                closes = [c['close'] for c in c1d]
-                ema100 = calc_ema(closes, min(100, len(closes)))
-                atr    = calc_atr(c1d)
-                adx    = calc_adx(c1d)
-                rsi    = calc_rsi(closes)
-                trend  = detect_trend(c1d)
-                S, R   = find_sr_zones(c1d)
-                vwap   = calc_vwap(c15m) if c15m else calc_vwap(c1d[-5:])
-                orb    = detect_opening_range(c15m) if c15m else None
-                news   = check_news(sym)
-                sig    = run_analysis(sym, c1d, c15m, price, S, R, trend,
-                                      adx, ema100[-1] if ema100 else None,
-                                      atr, rsi, vwap, orb, news, True)
-                sig['instrument_type'] = '0DTE'
-                results['options'].append(sig)
+            job['step'] = '⚡ Analyzing 0DTE options setups (SPY/QQQ)...'
+
+            for opt_sym in OPTIONS_INSTRUMENTS[:2]:  # SPY and QQQ
+                job['step'] = f'⚡ 0DTE setup for {opt_sym}...'
+
+                # Use 15min candles for intraday 0DTE context
+                candles_15m = fetch_ohlc(opt_sym, interval='15min', outputsize=40)
+                candles_1d = fetch_ohlc(opt_sym, interval='1day', outputsize=35)
+
+                if not candles_1d:
+                    continue
+
+                closes_1d = [c['close'] for c in candles_1d]
+                current_price = fetch_current_price(opt_sym) or closes_1d[-1]
+                ema100_list = calc_ema(closes_1d, 100)
+                ema100_val = ema100_list[-1] if ema100_list else None
+                atr = calc_atr(candles_1d)
+                adx = calc_adx(candles_1d)
+                trend, strength = detect_trend_structure(candles_1d)
+                supports, resistances = find_sr_zones(candles_1d)
+
+                # Add previous day levels as critical 0DTE S/R
+                prev_day = candles_1d[-2] if len(candles_1d) >= 2 else None
+                if prev_day:
+                    supports.insert(0, {
+                        'price': round(prev_day['low'], 3),
+                        'touches': 1,
+                        'last_touch': prev_day['date'],
+                        'strength': 'PREV-DAY-LOW',
+                        'note': 'Previous Day Low'
+                    })
+                    resistances.insert(0, {
+                        'price': round(prev_day['high'], 3),
+                        'touches': 1,
+                        'last_touch': prev_day['date'],
+                        'strength': 'PREV-DAY-HIGH',
+                        'note': 'Previous Day High'
+                    })
+
+                news = check_news_risk(opt_sym)
+
+                analysis = run_wolf_analysis(
+                    opt_sym, candles_1d, current_price, supports, resistances,
+                    trend, strength, adx, ema100_val, atr, news, is_option=True
+                )
+                analysis['instrument_type'] = '0DTE'
+                results['options'].append(analysis)
                 time.sleep(1)
 
         job['status'] = 'done'
         job['result'] = results
-        job['step']   = '✅ Wolf Agent complete'
+        job['step'] = '✅ Wolf Agent analysis complete'
 
     except Exception as e:
         job['status'] = 'error'
-        job['error']  = str(e)
-        job['step']   = f'❌ {str(e)}'
+        job['error'] = str(e)
+        job['step'] = f'❌ Error: {str(e)}'
 
-def get_session():
-    h = datetime.utcnow().hour
-    if h < 7:   return 'ASIA SESSION'
-    if h < 12:  return 'LONDON SESSION'
-    if h < 13:  return 'LONDON/NY OVERLAP'
-    if h < 17:  return 'NEW YORK SESSION'
-    return 'AFTER HOURS'
+def get_market_session():
+    """Returns current trading session."""
+    now = datetime.utcnow()
+    hour = now.hour
+    if 22 <= hour or hour < 7:
+        return 'ASIA'
+    elif 7 <= hour < 12:
+        return 'LONDON'
+    elif 13 <= hour < 17:
+        return 'NEW YORK'
+    elif 12 <= hour < 13:
+        return 'LONDON/NY OVERLAP'
+    else:
+        return 'AFTER HOURS'
 
-# ─── ROUTES ──────────────────────────────────────────────────────────────────
+# ─── Routes ──────────────────────────────────────────────────────────────────
 
 @wolf_bp.route('/wolf-agent')
 def wolf_agent_page():
@@ -638,19 +673,33 @@ def wolf_agent_page():
 def wolf_scan():
     data = request.get_json() or {}
     scan_type = data.get('scan_type', 'all')
-    job_id = f"wolf_{int(time.time()*1000)}"
-    _wolf_jobs[job_id] = {'status': 'running', 'step': '🐺 Initializing...', 'result': None}
-    threading.Thread(target=wolf_job, args=(job_id, scan_type), daemon=True).start()
+
+    job_id = f"wolf_{int(time.time() * 1000)}"
+    _wolf_jobs[job_id] = {
+        'status': 'running',
+        'step': '🐺 Wolf Agent initializing...',
+        'result': None
+    }
+
+    t = threading.Thread(target=wolf_scan_job, args=(job_id, scan_type), daemon=True)
+    t.start()
+
     return jsonify({'job_id': job_id, 'status': 'starting'})
 
 @wolf_bp.route('/api/wolf-poll/<job_id>')
 def wolf_poll(job_id):
     job = _wolf_jobs.get(job_id)
-    if not job: return jsonify({'status': 'not_found'}), 404
+    if not job:
+        return jsonify({'status': 'not_found'}), 404
+
     if job['status'] == 'done':
-        r = job['result']; del _wolf_jobs[job_id]
-        return jsonify({'status': 'done', 'result': r})
+        result = job['result']
+        del _wolf_jobs[job_id]
+        return jsonify({'status': 'done', 'result': result})
+
     if job['status'] == 'error':
-        e = job.get('error','Unknown'); del _wolf_jobs[job_id]
-        return jsonify({'status': 'error', 'error': e})
-    return jsonify({'status': 'running', 'step': job.get('step','Processing...')})
+        error = job.get('error', 'Unknown error')
+        del _wolf_jobs[job_id]
+        return jsonify({'status': 'error', 'error': error})
+
+    return jsonify({'status': 'running', 'step': job.get('step', 'Processing...')})
