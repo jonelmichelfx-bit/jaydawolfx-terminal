@@ -347,12 +347,55 @@ BABYPIPS PRINCIPLES:
 - Volume spike at S/R = confirmation (if available)
 - ADX > 25 = trending, < 20 = ranging (don't trade ranging pairs)
 
-FIDELITY PATTERNS:
-- Pattern NOT valid until price CLOSES beyond the level (no wick entries)
-- Double top/bottom at tested S/R = high probability reversal
-- Bull/bear flag = continuation after pullback to 38-50% retracement
-- Ascending/descending triangle at S/R = compression before breakout
-- H&S neckline break = strongest reversal signal
+FIDELITY CHART PATTERN SKILLS (FULL — from Kirkpatrick CMT):
+
+PATTERN RULES (APPLY TO ALL):
+- A pattern is NOT complete until price CLOSES beyond the breakout level — wick entries are traps
+- Patterns are fractal — they work on any timeframe
+- Always apply a confirmation filter before acting on any breakout
+- FALSE BREAKOUT: price breaks level but immediately returns inside — DO NOT chase
+- FAILED BREAKOUT (TRAP): false breakout + price then breaks opposite direction — this IS your entry
+- Protective stop: place just outside the breakout bar, opposite side
+
+MULTI-BAR REVERSAL PATTERNS:
+- DOUBLE TOP: Two peaks at same resistance separated by a trough. Valid ONLY on close below the neckline (trough). Target = height of pattern subtracted from neckline breakout price.
+- DOUBLE BOTTOM: Two troughs at same support separated by a peak. Valid on close above neckline. Target = height added to neckline breakout. 
+- TRIPLE TOP/BOTTOM: Three touches at exact same level = strongest confirmation. Same target method. Best triple bottom performance after sustained decline.
+- HEAD & SHOULDERS (TOP): Left shoulder + higher head + right shoulder at same level. LOWEST FAILURE RATE of all patterns. Pattern ONLY complete on CLOSE below neckline. Target = distance from head to neckline, projected down from breakout. Throwback to neckline after break = second entry.
+- INVERSE H&S: Identical but inverted at bottoms. Valid on neckline break upward.
+- RECTANGLE: Horizontal support + resistance bounding price. Many false breakouts — always confirm close. "Shortfall" (price fails to reach opposite boundary) = early signal of true breakout direction. Target = height of rectangle added/subtracted from breakout.
+- CUP & HANDLE: Rounded bottom (not V-shaped) + small handle (flag pattern). Complete on break above both lips. Target = cup depth added to breakout price.
+- PIPE BOTTOM: Two tall bars at end of downtrend. Second bar closes upper half of range. Most reliable on weekly data. Target = taller bar height added to top.
+
+TRIANGLE PATTERNS:
+- SYMMETRICAL TRIANGLE: Converging upper + lower trendlines. Each trendline touched minimum TWICE. Best performance on upward breakout. Target = pattern height from breakout.
+- ASCENDING TRIANGLE: Horizontal resistance + rising support. Breaks more commonly UPWARD. Above-average downside performance if it breaks down. Target = height from breakout.
+- DESCENDING TRIANGLE: Horizontal support + falling resistance. Breaks more commonly DOWNWARD. Above-average performance on upside break. Target = height from breakout.
+- RISING WEDGE: Both trendlines slope UP. Need 5 touches minimum (3 on one side, 2 on other). Bearish — breaks DOWN from climax peak. Below-average performance. Target = lowest trough in pattern.
+- FALLING WEDGE: Both trendlines slope DOWN. Need 5 touches. Bullish — breaks UP. Target = height added to breakout.
+
+CANDLESTICK PATTERNS (use WITH trend context — alone they are weak):
+- DOJI: Open = close, equal wicks. Indecision only. NOT a signal alone — needs S/R context.
+- HARAMI: Large body + small opposite body COMPLETELY INSIDE large body. Can break either way — wait for confirmation.
+- HAMMER (at bottom): Long lower wick, small body at top of candle. Potential reversal at support. Below-average alone.
+- HANGING MAN (at top): Same shape as hammer but at resistance. Below-average alone. Needs confirmation.
+- SHOOTING STAR: Long upper wick, small body at bottom at resistance. Potential reversal down. Average performance.
+- ENGULFING BULL: Small black candle + large white candle COMPLETELY engulfs it. At support in downtrend = strongest reversal signal.
+- ENGULFING BEAR: Small white candle + large black candle engulfs it. At resistance in uptrend = strong sell.
+- DARK CLOUD COVER: White candle + black candle that opens above white high then closes below white midpoint. Bearish reversal.
+- PIERCING LINE: Black candle + white candle that opens below black low then closes above black midpoint. Bullish reversal.
+
+SHORT-TERM PATTERNS:
+- FLAG/PENNANT: After sharp move (the flagpole), small consolidation slightly OPPOSITE the trend. Target = flagpole height added to breakout from flag. Continuation pattern — trade WITH the prior trend.
+- NARROW RANGE (NR4): Day 4 range is narrower than days 1-3. Low volatility compression = breakout imminent. Buy on break above NR4 high, sell on break below NR4 low.
+- INSIDE BAR: Second bar completely inside first bar range. Same compression signal as NR4. Buy on break above inside bar close, sell on break below.
+- GAP TRADING: Profitable on breakouts from S/R. Explosion gap pivot method: gap occurs → wait for throwback → if throwback COVERS the gap = skip, invalid. If throwback STOPS before gap = pivot low formed → enter above gap bar high. Protective stop initially at gap low.
+
+PATTERN TARGET CALCULATIONS:
+- All H&S/Double/Triple: measure height of pattern, project from breakout level
+- All Triangles/Wedges: measure height at widest point, add to breakout
+- Flags/Pennants: measure entire flagpole, add to flag breakout point
+- Cup & Handle: measure cup depth, add to breakout above lip
 
 0DTE OPTIONS RULES (SPY/QQQ only):
 - Only enter AFTER opening range established (9:45-10:15 AM ET)
@@ -382,6 +425,61 @@ RESPOND ONLY IN THIS EXACT JSON FORMAT — no text outside the JSON:
   "analysis": "2-3 sentence professional chart reading based ONLY on data provided. No predictions.",
   "news_warning": null | "warning string",
   "option_play": null | {"type": "CALL/PUT", "strike_guidance": "ATM/OTM", "rationale": "..."}
+}"""
+
+WOLF_WEEKLY_PROMPT = """You are WOLF AGENT performing a WEEKLY MARKET OUTLOOK — the professional trader's Friday ritual.
+
+You have been trained on:
+- Fidelity Chart Patterns (all 20+ patterns with target calculation methods)
+- Bob Volman Price Action (buildup, false breaks, double pressure)
+- BabyPips Technical Analysis (top-down framework, confluence, S/R)
+- ICT / Institutional thinking (liquidity, previous week highs/lows, session bias)
+
+YOUR FRAMEWORK (apply in this exact order):
+1. RETROSPECTIVE: What happened last week? Was it a trend week or range week? What was the narrative (technical break OR news catalyst)?
+2. TOP-DOWN: Weekly structure → Daily pattern → H4 entry zone. Use 100 EMA as macro filter.
+3. INDICATORS: ADX (>25 = trend, <20 = ranging). RSI zone. Price vs 50/200 MA.
+4. PATTERN DETECTION: Look for any completing patterns on weekly or daily timeframe from the full Fidelity library.
+5. GAMEPLAN: Specific entry trigger + level + stop + target. Not vague — real prices from the data.
+6. RISK SENTIMENT: Is market risk-on (AUD/NZD rising, stocks up) or risk-off (JPY/Gold/USD rising)?
+
+STRICT RULES:
+- Only use the REAL price data provided. No invented levels.
+- S/R zones only valid with 2+ real touches from the provided data.
+- Pattern must be CONFIRMED by price — no wick entries.
+- Give a GAMEPLAN with real numbers, not "wait and see" vagueness.
+- If ADX < 20, say ranging and reduce position size recommendation.
+
+RESPOND ONLY IN THIS EXACT JSON FORMAT:
+{
+  "symbol": "string",
+  "week_reviewed": "YYYY-MM-DD to YYYY-MM-DD",
+  "last_week_move_pips": 0,
+  "last_week_direction": "BULLISH | BEARISH | RANGE",
+  "last_week_narrative": "1-2 sentence story of what happened last week — was it a trend break, range, news-driven?",
+  "key_level_broken": "price level that broke last week or NONE",
+  "key_level_held": "price level that held last week or NONE",
+  "current_trend": "UPTREND | DOWNTREND | RANGING",
+  "ema100_status": "price above/below 100 EMA — exact value",
+  "adx_reading": 0,
+  "adx_signal": "TRENDING | RANGING",
+  "pattern_detected": "pattern name + timeframe or NONE",
+  "pattern_target": "price target from pattern or N/A",
+  "key_support": 0.0,
+  "key_resistance": 0.0,
+  "upcoming_news_risk": "any high-impact events this week or NONE",
+  "risk_sentiment": "RISK-ON | RISK-OFF | NEUTRAL",
+  "gameplan": {
+    "bias": "BULLISH | BEARISH | WAIT",
+    "entry_trigger": "specific condition that must be met before entering",
+    "entry_zone": {"low": 0.0, "high": 0.0},
+    "stop_loss": 0.0,
+    "tp1": 0.0,
+    "tp2": 0.0,
+    "tp3": 0.0,
+    "invalidation": "what makes this gameplan wrong"
+  },
+  "wolf_verdict": "1 punchy sentence. The Wolf's final read on this pair for the week."
 }"""
 
 def run_wolf_analysis(symbol, candles, current_price, supports, resistances,
@@ -476,6 +574,185 @@ Give me the trade signal based purely on what this data shows. No forecasting. N
             'raw': raw[:200],
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
         }
+
+def run_weekly_analysis(symbol, candles_daily, candles_weekly, current_price,
+                        supports, resistances, trend, trend_strength, adx, ema100_val, atr, news_warning):
+    """Run weekly outlook analysis using Claude with real data."""
+
+    # Last week's candles (most recent 5 daily candles)
+    last_week = candles_daily[-6:-1] if len(candles_daily) >= 6 else candles_daily[:-1]
+    this_week = candles_daily[-5:] if len(candles_daily) >= 5 else candles_daily
+
+    # Weekly move calculation
+    pip = 100 if any(x in symbol for x in ['JPY', 'HUF', 'KRW']) else 10000
+    if symbol in ['SPY', 'QQQ', 'SPX'] or not ('/' in symbol):
+        pip = 1  # stocks — use dollars not pips
+
+    week_open = last_week[0]['open'] if last_week else candles_daily[0]['open']
+    week_close = last_week[-1]['close'] if last_week else candles_daily[-1]['close']
+    last_week_pips = round((week_close - week_open) * pip)
+    last_week_dir = 'BULLISH' if last_week_pips > 0 else 'BEARISH' if last_week_pips < 0 else 'RANGE'
+
+    # 30-day range
+    highs = [c['high'] for c in candles_daily]
+    lows  = [c['low']  for c in candles_daily]
+    high_30 = round(max(highs), 5)
+    low_30  = round(min(lows),  5)
+    price_pct = round(((current_price - low_30) / (high_30 - low_30) * 100) if (high_30 - low_30) > 0 else 50, 1)
+
+    # Weekly candle summaries
+    def summarize(candles, label):
+        out = []
+        for c in candles[-6:]:
+            body = abs(c['close'] - c['open'])
+            direction = 'BULL' if c['close'] > c['open'] else 'BEAR'
+            out.append(f"{c['date']} | {direction} | O:{round(c['open'],5)} H:{round(c['high'],5)} L:{round(c['low'],5)} C:{round(c['close'],5)} | body:{round(body,5)}")
+        return label + '\n' + '\n'.join(out)
+
+    last_week_summary = summarize(last_week, 'LAST WEEK CANDLES:')
+    this_week_summary = summarize(this_week, 'THIS WEEK CANDLES (so far):')
+
+    user_message = f"""WEEKLY MARKET OUTLOOK REQUEST
+SYMBOL: {symbol}
+CURRENT PRICE: {current_price}
+30-DAY RANGE: High={high_30} | Low={low_30} | Price at {price_pct}% of range
+
+100 EMA: {round(ema100_val, 5) if ema100_val else 'N/A'}
+PRICE vs 100 EMA: {'ABOVE' if ema100_val and current_price > ema100_val else 'BELOW' if ema100_val else 'UNKNOWN'}
+ADX: {adx if adx else 'N/A'} {'(TRENDING)' if adx and adx > 25 else '(RANGING)' if adx else ''}
+ATR: {atr}
+TREND STRUCTURE: {trend} ({trend_strength}% score)
+
+REAL SUPPORT ZONES (2+ touches each):
+{json.dumps(supports[:3], indent=2) if supports else 'None found'}
+
+REAL RESISTANCE ZONES (2+ touches each):
+{json.dumps(resistances[:3], indent=2) if resistances else 'None found'}
+
+{last_week_summary}
+
+{this_week_summary}
+
+NEWS RISK: {news_warning if news_warning else 'NONE DETECTED'}
+
+TASK: Apply the full weekly outlook framework. Read last week's price action narrative, find any completing patterns, and give me a real gameplan for next week with specific price levels."""
+
+    client = Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+    response = client.messages.create(
+        model="claude-opus-4-6",
+        max_tokens=1200,
+        system=WOLF_WEEKLY_PROMPT,
+        messages=[{"role": "user", "content": user_message}]
+    )
+
+    raw = response.content[0].text.strip()
+    try:
+        if '```' in raw:
+            raw = raw.split('```')[1]
+            if raw.startswith('json'):
+                raw = raw[4:]
+        result = json.loads(raw.strip())
+        result['symbol'] = symbol
+        result['current_price'] = current_price
+        result['last_week_pips'] = last_week_pips
+        result['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+        return result
+    except Exception as e:
+        return {
+            'symbol': symbol, 'signal': 'ERROR',
+            'error': f'Parse error: {str(e)}', 'raw': raw[:200],
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+        }
+
+
+def wolf_weekly_job(job_id):
+    """
+    Weekly Outlook job:
+    1. Scan all pairs/stocks for trend quality
+    2. Pick top 3 forex + top 2 stocks
+    3. Run weekly retrospective + next-week gameplan for each
+    """
+    job = _wolf_jobs[job_id]
+    try:
+        results = {'forex': [], 'stocks': [], 'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M UTC')}
+
+        # ── FOREX: find top 3 trending ───────────────────────────────────────
+        job['step'] = '🔍 Scanning forex pairs for weekly trends...'
+        scored_forex = []
+        for pair in FOREX_PAIRS:
+            candles = fetch_ohlc(pair, interval='1day', outputsize=40)
+            if candles and len(candles) >= 20:
+                score = score_pair_for_trend(candles)
+                trend, strength = detect_trend_structure(candles)
+                adx = calc_adx(candles)
+                if trend != 'SIDEWAYS' and score > 35:
+                    scored_forex.append({'pair': pair, 'score': score, 'trend': trend, 'adx': adx, 'candles': candles})
+            time.sleep(0.3)
+
+        top_forex = sorted(scored_forex, key=lambda x: x['score'], reverse=True)[:3]
+        job['step'] = f'✅ Top {len(top_forex)} trending pairs found. Building weekly outlooks...'
+
+        for item in top_forex:
+            pair  = item['pair']
+            candles = item['candles']
+            job['step'] = f'📅 Weekly outlook: {pair}...'
+            closes = [c['close'] for c in candles]
+            current_price = fetch_current_price(pair) or closes[-1]
+            ema100_val = (calc_ema(closes, 100) or [None])[-1]
+            atr   = calc_atr(candles)
+            adx   = item['adx']
+            trend, strength = detect_trend_structure(candles)
+            supports, resistances = find_sr_zones(candles)
+            news  = check_news_risk(pair)
+            analysis = run_weekly_analysis(pair, candles, [], current_price, supports, resistances,
+                                           trend, strength, adx, ema100_val, atr, news)
+            analysis['trend_score'] = item['score']
+            results['forex'].append(analysis)
+            time.sleep(1)
+
+        # ── STOCKS: top 2 trending ───────────────────────────────────────────
+        job['step'] = '📈 Scanning stocks for weekly trends...'
+        scored_stocks = []
+        for stock in STOCKS:
+            candles = fetch_ohlc(stock, interval='1day', outputsize=40)
+            if candles and len(candles) >= 20:
+                score = score_pair_for_trend(candles)
+                trend, _ = detect_trend_structure(candles)
+                adx = calc_adx(candles)
+                if trend != 'SIDEWAYS' and score > 35:
+                    scored_stocks.append({'symbol': stock, 'score': score, 'trend': trend, 'adx': adx, 'candles': candles})
+            time.sleep(0.3)
+
+        top_stocks = sorted(scored_stocks, key=lambda x: x['score'], reverse=True)[:2]
+        job['step'] = f'✅ Top {len(top_stocks)} trending stocks. Building weekly outlooks...'
+
+        for item in top_stocks:
+            symbol  = item['symbol']
+            candles = item['candles']
+            job['step'] = f'📅 Weekly outlook: {symbol}...'
+            closes = [c['close'] for c in candles]
+            current_price = fetch_current_price(symbol) or closes[-1]
+            ema100_val = (calc_ema(closes, 100) or [None])[-1]
+            atr   = calc_atr(candles)
+            adx   = item['adx']
+            trend, strength = detect_trend_structure(candles)
+            supports, resistances = find_sr_zones(candles)
+            news  = check_news_risk(symbol)
+            analysis = run_weekly_analysis(symbol, candles, [], current_price, supports, resistances,
+                                           trend, strength, adx, ema100_val, atr, news)
+            analysis['trend_score'] = item['score']
+            results['stocks'].append(analysis)
+            time.sleep(1)
+
+        job['status'] = 'done'
+        job['result'] = results
+        job['step'] = '✅ Weekly outlook complete'
+
+    except Exception as e:
+        job['status'] = 'error'
+        job['error'] = str(e)
+        job['step'] = f'❌ Error: {str(e)}'
+
 
 # ─── Main Wolf Scan Job ──────────────────────────────────────────────────────
 
@@ -702,4 +979,34 @@ def wolf_poll(job_id):
         del _wolf_jobs[job_id]
         return jsonify({'status': 'error', 'error': error})
 
+    return jsonify({'status': 'running', 'step': job.get('step', 'Processing...')})
+
+
+@wolf_bp.route('/api/wolf-weekly', methods=['POST'])
+def wolf_weekly():
+    """Start a weekly outlook job. Top trending pairs only."""
+    job_id = f"weekly_{int(time.time() * 1000)}"
+    _wolf_jobs[job_id] = {
+        'status': 'running',
+        'step': '📅 Wolf Weekly Outlook starting...',
+        'result': None
+    }
+    t = threading.Thread(target=wolf_weekly_job, args=(job_id,), daemon=True)
+    t.start()
+    return jsonify({'job_id': job_id, 'status': 'starting'})
+
+
+@wolf_bp.route('/api/wolf-weekly-poll/<job_id>')
+def wolf_weekly_poll(job_id):
+    job = _wolf_jobs.get(job_id)
+    if not job:
+        return jsonify({'status': 'not_found'}), 404
+    if job['status'] == 'done':
+        result = job['result']
+        del _wolf_jobs[job_id]
+        return jsonify({'status': 'done', 'result': result})
+    if job['status'] == 'error':
+        error = job.get('error', 'Unknown error')
+        del _wolf_jobs[job_id]
+        return jsonify({'status': 'error', 'error': error})
     return jsonify({'status': 'running', 'step': job.get('step', 'Processing...')})

@@ -1522,23 +1522,28 @@ def london_signal():
         # If retrace > 70% of impulse = warning (structure unclear)
         direction_raw = net_pips
 
-        if impulse_direction == 'BEAR' and retrace_pct < 70:
-            # Clear bear — impulse down, retrace partial
+        # FIX: direction is determined by DOMINANT IMPULSE, not net pips.
+        # If London dropped 76 pips then retraced 54, that is a BEARISH session.
+        # The retracement only affects confidence level, never the direction label.
+        if impulse_direction == 'BEAR':
             direction = 'BEARISH'
-            overall_read = f'Bear impulse: -{impulse_pips} pips ↓ | Retraced: +{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → OVERALL DOWN'
-        elif impulse_direction == 'BULL' and retrace_pct < 70:
-            # Clear bull — impulse up, retrace partial
+            if retrace_pct < 50:
+                overall_read = f'Bear impulse: -{impulse_pips} pips ↓ | Retraced: +{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → DOWNTREND — strong bias'
+            elif retrace_pct < 70:
+                overall_read = f'Bear impulse: -{impulse_pips} pips ↓ | Moderate retrace: +{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → DOWNTREND — moderate bias'
+            else:
+                overall_read = f'Bear impulse: -{impulse_pips} pips ↓ | Deep retrace: +{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → DOWNTREND (weak — deep retrace, confirm at 9:30 open)'
+        elif impulse_direction == 'BULL':
             direction = 'BULLISH'
-            overall_read = f'Bull impulse: +{impulse_pips} pips ↑ | Retraced: -{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → OVERALL UP'
-        elif retrace_pct >= 70 and net_pips >= 15:
-            direction = 'BULLISH'
-            overall_read = f'Impulse: +{impulse_pips} pips | Deep retrace: {retrace_pct}% but net still +{net_pips} pips → Weak bullish bias — confirm at open'
-        elif retrace_pct >= 70 and net_pips <= -15:
-            direction = 'BEARISH'
-            overall_read = f'Impulse: -{impulse_pips} pips | Deep retrace: {retrace_pct}% but net still {net_pips} pips → Weak bearish bias — confirm at open'
+            if retrace_pct < 50:
+                overall_read = f'Bull impulse: +{impulse_pips} pips ↑ | Retraced: -{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → UPTREND — strong bias'
+            elif retrace_pct < 70:
+                overall_read = f'Bull impulse: +{impulse_pips} pips ↑ | Moderate retrace: -{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → UPTREND — moderate bias'
+            else:
+                overall_read = f'Bull impulse: +{impulse_pips} pips ↑ | Deep retrace: -{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → UPTREND (weak — deep retrace, confirm at 9:30 open)'
         else:
             direction = 'FLAT'
-            overall_read = f'Impulse: {impulse_pips} pips | Retrace: {retrace_pct}% | Net: {net_pips:+d} pips → No clear bias — wait for SPY to show direction first'
+            overall_read = f'No clear impulse detected | Net: {net_pips:+d} pips → No London bias — wait for SPY to show direction first'
 
         if direction == 'BULLISH':
             spy_bias = 'BUY CALLS'

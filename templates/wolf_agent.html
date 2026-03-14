@@ -189,6 +189,49 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:1px;background
   .levels-grid{grid-template-columns:repeat(2,1fr);}
   .indicator-row{grid-template-columns:1fr 1fr;}
 }
+
+/* ── WEEKLY OUTLOOK STYLES ── */
+.wtab-btn{font-family:'Barlow Condensed',sans-serif;font-size:.68rem;letter-spacing:2px;padding:9px 16px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);cursor:pointer;transition:.15s;}
+.wtab-btn.on,.wtab-btn:hover{background:var(--cyan-dim);color:var(--cyan);border-color:var(--cyan);}
+.wcard{background:var(--bg1);border:1px solid var(--border);padding:18px;position:relative;overflow:hidden;animation:cin .35s ease both;}
+.wcard::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.wcard.BULLISH::after{background:var(--green);}
+.wcard.BEARISH::after{background:var(--red);}
+.wcard.RANGING::after{background:var(--gold);}
+.wcard.WAIT::after{background:var(--muted);}
+.wcard-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.wsym{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:3px;line-height:1;}
+.wdir-badge{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:3px;padding:3px 13px;}
+.wdir-badge.BULLISH{background:var(--green-dim);color:var(--green);border:1px solid var(--green);}
+.wdir-badge.BEARISH{background:var(--red-dim);color:var(--red);border:1px solid var(--red);}
+.wdir-badge.RANGING{background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold);}
+.wdir-badge.WAIT{background:var(--bg2);color:var(--muted);border:1px solid var(--border);}
+.wretro{margin:10px 0;padding:10px 12px;background:var(--bg2);border-left:2px solid var(--purple);font-size:.62rem;line-height:1.65;color:var(--text);}
+.wretro-title{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;letter-spacing:3px;color:var(--purple);margin-bottom:5px;}
+.wmove-strip{display:flex;gap:8px;margin:10px 0;}
+.wmove-box{flex:1;text-align:center;padding:7px 4px;background:var(--bg2);border:1px solid rgba(255,255,255,.05);}
+.wmove-lbl{font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:2px;font-family:'Barlow Condensed',sans-serif;}
+.wmove-val{font-size:.74rem;font-weight:700;}
+.wgameplan{margin:10px 0;padding:12px;background:rgba(0,200,240,.05);border:1px solid rgba(0,200,240,.2);}
+.wgp-title{font-family:'Barlow Condensed',sans-serif;font-size:.57rem;letter-spacing:3px;color:var(--cyan);margin-bottom:8px;}
+.wgp-trigger{font-size:.62rem;color:var(--text);line-height:1.5;padding:7px 10px;background:var(--bg2);border:1px solid rgba(0,200,240,.15);margin-bottom:8px;}
+.wgp-levels{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
+.wgp-box{text-align:center;padding:6px 4px;background:var(--bg2);border:1px solid rgba(255,255,255,.04);}
+.wgp-lbl{font-size:.48rem;color:var(--muted);letter-spacing:2px;margin-bottom:2px;}
+.wgp-v{font-size:.7rem;font-weight:700;}
+.winvalidate{font-size:.58rem;color:var(--muted);padding:5px 8px;border:1px solid rgba(255,41,82,.15);background:rgba(255,41,82,.04);margin-top:4px;}
+.wpattern{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);border:1px solid rgba(0,200,240,.15);margin:8px 0;font-size:.62rem;}
+.wverdict{margin-top:10px;padding:10px 12px;background:var(--bg2);border-left:2px solid var(--gold);font-size:.65rem;line-height:1.6;color:var(--gold);font-style:italic;}
+.wnews-warn{margin-top:6px;padding:6px 10px;background:rgba(255,41,82,.06);border:1px solid rgba(255,41,82,.3);font-size:.59rem;color:var(--red);}
+.wnews-ok{font-size:.57rem;color:var(--green);opacity:.55;padding:4px 0;}
+.wrisk-row{display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--bg2);border:1px solid rgba(255,255,255,.04);margin:6px 0;font-size:.62rem;}
+.wrisk-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.wrisk-dot.on {background:var(--green);box-shadow:0 0 5px var(--green);}
+.wrisk-dot.off{background:var(--red);  box-shadow:0 0 5px var(--red);}
+.wrisk-dot.neu{background:var(--gold); box-shadow:0 0 5px var(--gold);}
+.weekly-intro{text-align:center;padding:18px;margin-bottom:18px;background:var(--bg1);border:1px solid var(--border);}
+.weekly-intro-title{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:4px;color:var(--cyan);margin-bottom:6px;}
+.weekly-intro-sub{font-size:.6rem;color:var(--muted);line-height:1.7;letter-spacing:1px;}
 </style>
 </head>
 <body>
@@ -207,23 +250,11 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:1px;background
     <div class="logo-block">
       <div>
         <div class="wolfname">🐺 WOLF AGENT</div>
-        <div class="wolfsub">REAL CHART READING · ORB · VWAP · S&amp;R · 0DTE</div>
+        <div class="wolfsub">BY JAYDAWOLFX &nbsp;·&nbsp; REAL CHART READING &amp; ANALYSIS</div>
       </div>
       <div id="sessionPill" class="session-pill">-- SESSION --</div>
     </div>
     <div id="scanTime" style="font-size:.58rem;color:var(--muted);text-align:right;line-height:1.6;"></div>
-  </div>
-
-  <!-- Knowledge strip -->
-  <div class="kstrip">
-    <div class="kb">📖 VOLMAN PRICE ACTION</div>
-    <div class="kb">📚 BABYPIPS PIPSOLOGY</div>
-    <div class="kb">📊 FIDELITY CHART PATTERNS</div>
-    <div class="kb">⚡ ORB METHOD</div>
-    <div class="kb">📐 VWAP ANALYSIS</div>
-    <div class="kb">📍 PREV DAY HIGH/LOW</div>
-    <div class="kb">📰 NEWS RISK CHECK</div>
-    <div class="kb">🎯 REAL OHLC DATA</div>
   </div>
 
   <!-- Method explainer -->
@@ -260,6 +291,9 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:1px;background
     <button class="scan-btn" id="scanBtn" onclick="startScan()">
       <span>🐺 RUN WOLF SCAN</span>
     </button>
+    <button class="scan-btn" id="weeklyBtn" onclick="startWeekly()" style="border-color:var(--cyan);background:var(--cyan-dim);color:var(--cyan);">
+      <span>📅 WEEKLY OUTLOOK</span>
+    </button>
     <button class="ftab on"  id="f-all"     onclick="setFilter('all')">ALL MARKETS</button>
     <button class="ftab"     id="f-forex"   onclick="setFilter('forex')">FOREX</button>
     <button class="ftab"     id="f-stocks"  onclick="setFilter('stocks')">STOCKS</button>
@@ -281,7 +315,7 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:1px;background
       <div class="empty-sub">
         SCANS 14 FOREX PAIRS + 10 STOCKS + 0DTE SPY/QQQ<br>
         REAL OHLC DATA · ORB + VWAP ANALYSIS · PREV DAY LEVELS<br>
-        VOLMAN + BABYPIPS TRAINED · LIVE NEWS CHECK<br><br>
+        REAL OHLC DATA · PROFESSIONAL CHART ANALYSIS · LIVE NEWS CHECK<br><br>
         <span style="opacity:.4;font-size:.52rem;">SIGNAL GIVEN WHEN 2+ CONDITIONS ALIGN — NO FORCED WAITS</span>
       </div>
     </div>
@@ -292,7 +326,7 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:1px;background
         <div class="sec-title">FOREX SIGNALS</div>
         <div class="sec-badge" id="forexBadge">TOP 3 TRENDING</div>
         <div class="sec-line"></div>
-        <span style="font-size:.55rem;color:var(--muted)">VOLMAN + BABYPIPS METHOD</span>
+        <span style="font-size:.55rem;color:var(--muted)">PROFESSIONAL CHART ANALYSIS</span>
       </div>
       <div class="grid" id="forexCards"></div>
     </div>
@@ -318,12 +352,30 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;height:1px;background
       </div>
       <div class="grid" id="optsCards"></div>
     </div>
+
+    <!-- Weekly Outlook section -->
+    <div id="weeklySec" style="display:none">
+      <div class="sec-hdr">
+        <div class="sec-title">WEEKLY OUTLOOK</div>
+        <div class="sec-badge" id="weeklyBadge">TOP TRENDING PAIRS</div>
+        <div class="sec-line"></div>
+        <span style="font-size:.55rem;color:var(--cyan)">REAL DATA · PROFESSIONAL ANALYSIS · NO GUESSING</span>
+      </div>
+      <div class="weekly-intro">
+        <div class="weekly-intro-title">📅 WOLF WEEKLY MARKET OUTLOOK</div>
+        <div class="weekly-intro-sub">
+          Top trending pairs only · Real OHLC data · Last week narrative · Pattern detection ·<br>
+          Next-week gameplan with entry zones, SL &amp; TP · News risk check · Pure chart reading, no guessing.
+        </div>
+      </div>
+      <div class="grid" id="weeklyCards"></div>
+    </div>
   </div>
 
   <!-- Footer meta -->
   <div class="scanmeta" id="scanMeta" style="display:none">
     <span id="metaTime"></span>
-    <span>WOLF AGENT v2.0 · ORB + VWAP · REAL DATA · NO PRICE PREDICTION</span>
+    <span>WOLF AGENT · BY JAYDAWOLFX · REAL DATA · PROFESSIONAL ANALYSIS</span>
   </div>
 
 </div><!-- /wrap -->
@@ -617,6 +669,188 @@ function fp(v) {
   const n = parseFloat(v);
   if (isNaN(n) || n === 0) return '---';
   return n < 10 ? n.toFixed(5) : n < 1000 ? n.toFixed(2) : n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+// ── WEEKLY OUTLOOK ────────────────────────────────────────────────────────
+let weeklyPollTimer = null;
+
+async function startWeekly() {
+  const btn = document.getElementById('weeklyBtn');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = '⏳ SCANNING...';
+
+  // Hide scan results, show weekly section placeholder
+  ['emptyState','forexSec','stocksSec','optionsSec'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('weeklySec').style.display = 'block';
+  document.getElementById('weeklyCards').innerHTML = '';
+  document.getElementById('scanMeta').style.display = 'none';
+  showStatus('📅 Wolf Weekly Outlook initializing...');
+
+  const r = await fetch('/api/wolf-weekly', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'}
+  });
+  const d = await r.json();
+  pollWeekly(d.job_id);
+}
+
+function pollWeekly(jobId) {
+  if (weeklyPollTimer) clearInterval(weeklyPollTimer);
+  weeklyPollTimer = setInterval(async () => {
+    const r = await fetch(`/api/wolf-weekly-poll/${jobId}`);
+    const d = await r.json();
+    if (d.status === 'running') {
+      showStatus(d.step || 'Building weekly outlook...');
+    } else if (d.status === 'done') {
+      clearInterval(weeklyPollTimer);
+      hideStatus();
+      const btn = document.getElementById('weeklyBtn');
+      btn.disabled = false;
+      btn.querySelector('span').textContent = '📅 WEEKLY OUTLOOK';
+      renderWeekly(d.result);
+    } else if (d.status === 'error') {
+      clearInterval(weeklyPollTimer);
+      hideStatus();
+      const btn = document.getElementById('weeklyBtn');
+      btn.disabled = false;
+      btn.querySelector('span').textContent = '📅 WEEKLY OUTLOOK';
+      showStatus('❌ ' + (d.error || 'Weekly outlook error'));
+    }
+  }, 2500);
+}
+
+function renderWeekly(res) {
+  const allCards = [...(res.forex || []), ...(res.stocks || [])];
+  document.getElementById('weeklyBadge').textContent =
+    allCards.length + ' PAIRS ANALYZED';
+
+  document.getElementById('scanMeta').style.display = 'flex';
+  document.getElementById('metaTime').textContent =
+    'Weekly outlook generated: ' + (res.generated_at || '');
+
+  const container = document.getElementById('weeklyCards');
+  container.innerHTML = '';
+  allCards.forEach((w, i) => {
+    setTimeout(() => container.appendChild(buildWeeklyCard(w)), i * 120);
+  });
+}
+
+function buildWeeklyCard(w) {
+  const el = document.createElement('div');
+  const dir = (w.last_week_direction || w.current_trend || 'WAIT').toUpperCase();
+  el.className = `wcard ${dir}`;
+
+  const pips = w.last_week_pips || w.last_week_move_pips || 0;
+  const pipStr = pips > 0 ? `+${pips} pips` : pips < 0 ? `${pips} pips` : 'N/A';
+  const pipColor = pips > 0 ? 'var(--green)' : pips < 0 ? 'var(--red)' : 'var(--gold)';
+
+  const gp = w.gameplan || {};
+  const gpBias = (gp.bias || 'WAIT').toUpperCase();
+  const gpColor = gpBias === 'BULLISH' ? 'var(--green)' : gpBias === 'BEARISH' ? 'var(--red)' : 'var(--gold)';
+
+  const adxN = parseFloat(w.adx_reading) || 0;
+  const adxColor = adxN >= 25 ? 'var(--green)' : adxN >= 18 ? 'var(--gold)' : 'var(--red)';
+  const adxLbl = w.adx_signal || (adxN >= 25 ? 'TRENDING' : 'RANGING');
+
+  const riskSent = (w.risk_sentiment || 'NEUTRAL').toUpperCase();
+  const riskDot = riskSent === 'RISK-ON' ? 'on' : riskSent === 'RISK-OFF' ? 'off' : 'neu';
+  const riskColor = riskSent === 'RISK-ON' ? 'var(--green)' : riskSent === 'RISK-OFF' ? 'var(--red)' : 'var(--gold)';
+
+  // Key levels broke / held
+  const broke = w.key_level_broken && w.key_level_broken !== 'NONE'
+    ? `<div class="info-row"><span class="info-lbl">LEVEL BROKE</span><span class="info-val" style="color:var(--red)">${w.key_level_broken}</span></div>` : '';
+  const held = w.key_level_held && w.key_level_held !== 'NONE'
+    ? `<div class="info-row"><span class="info-lbl">LEVEL HELD</span><span class="info-val" style="color:var(--green)">${w.key_level_held}</span></div>` : '';
+
+  // Pattern
+  const pat = w.pattern_detected && w.pattern_detected !== 'NONE'
+    ? `<div class="wpattern"><span style="color:var(--cyan)">📐 PATTERN DETECTED</span><span style="margin-left:auto;font-weight:700;color:var(--cyan)">${w.pattern_detected}</span>${w.pattern_target && w.pattern_target !== 'N/A' ? `<span style="color:var(--gold);margin-left:10px">→ target ${w.pattern_target}</span>` : ''}</div>` : '';
+
+  // Gameplan entry
+  const gpEntry = gp.entry_zone
+    ? `${fp(gp.entry_zone.low)} – ${fp(gp.entry_zone.high)}`
+    : '---';
+
+  el.innerHTML = `
+  <div class="wcard-top">
+    <div>
+      <div class="wsym" style="color:${dir==='BULLISH'?'var(--green)':dir==='BEARISH'?'var(--red)':'var(--gold)'}">${w.symbol || '--'}</div>
+      <div style="font-size:.6rem;color:var(--muted);margin-top:2px">${w.current_price ? fp(w.current_price) : ''} &nbsp;|&nbsp; ${w.week_reviewed || ''}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div class="wdir-badge ${dir}">${dir}</div>
+      <div style="font-size:.55rem;color:${pipColor};font-weight:700">${pipStr} last week</div>
+    </div>
+  </div>
+
+  <!-- LAST WEEK NARRATIVE -->
+  <div class="wretro">
+    <div class="wretro-title">📖 LAST WEEK NARRATIVE</div>
+    ${w.last_week_narrative || 'No narrative available'}
+  </div>
+
+  <!-- KEY MOVES -->
+  <div class="wmove-strip">
+    <div class="wmove-box">
+      <div class="wmove-lbl">LAST WEEK MOVE</div>
+      <div class="wmove-val" style="color:${pipColor}">${pipStr}</div>
+    </div>
+    <div class="wmove-box">
+      <div class="wmove-lbl">CURRENT TREND</div>
+      <div class="wmove-val" style="color:${dir==='BULLISH'?'var(--green)':dir==='BEARISH'?'var(--red)':'var(--gold)'}">${w.current_trend || dir}</div>
+    </div>
+    <div class="wmove-box">
+      <div class="wmove-lbl">ADX</div>
+      <div class="wmove-val" style="color:${adxColor}">${adxN || '--'} <span style="font-size:.5rem">${adxLbl}</span></div>
+    </div>
+  </div>
+
+  <!-- EMA100 + LEVELS BROKE/HELD -->
+  <div class="info-row"><span class="info-lbl">100 EMA</span><span class="info-val" style="font-size:.6rem">${w.ema100_status || '---'}</span></div>
+  ${broke}${held}
+  <div class="info-row"><span class="info-lbl">KEY SUPPORT</span><span class="info-val" style="color:var(--green)">${w.key_support ? fp(w.key_support) : '---'}</span></div>
+  <div class="info-row"><span class="info-lbl">KEY RESISTANCE</span><span class="info-val" style="color:var(--red)">${w.key_resistance ? fp(w.key_resistance) : '---'}</span></div>
+
+  <!-- PATTERN -->
+  ${pat}
+
+  <!-- RISK SENTIMENT -->
+  <div class="wrisk-row">
+    <div class="wrisk-dot ${riskDot}"></div>
+    <span style="color:${riskColor};font-weight:700">${riskSent}</span>
+    <span style="margin-left:6px;color:var(--muted)">market sentiment</span>
+  </div>
+
+  <!-- GAMEPLAN -->
+  <div class="wgameplan">
+    <div class="wgp-title">🎯 NEXT WEEK GAMEPLAN — <span style="color:${gpColor}">${gpBias}</span></div>
+    <div class="wgp-trigger">
+      <span style="color:var(--muted);font-size:.55rem;letter-spacing:2px">ENTRY TRIGGER:&nbsp;</span>${gp.entry_trigger || 'No trigger defined'}
+    </div>
+    <div class="wgp-levels">
+      <div class="wgp-box"><div class="wgp-lbl">ENTRY ZONE</div><div class="wgp-v" style="color:var(--cyan)">${gpEntry}</div></div>
+      <div class="wgp-box"><div class="wgp-lbl">STOP LOSS</div><div class="wgp-v" style="color:var(--red)">${gp.stop_loss ? fp(gp.stop_loss) : '---'}</div></div>
+      <div class="wgp-box"><div class="wgp-lbl">TP1</div><div class="wgp-v" style="color:var(--green)">${gp.tp1 ? fp(gp.tp1) : '---'}</div></div>
+      <div class="wgp-box"><div class="wgp-lbl">TP2</div><div class="wgp-v" style="color:var(--cyan)">${gp.tp2 ? fp(gp.tp2) : '---'}</div></div>
+      <div class="wgp-box"><div class="wgp-lbl">TP3</div><div class="wgp-v" style="color:var(--gold)">${gp.tp3 ? fp(gp.tp3) : '---'}</div></div>
+      <div class="wgp-box"><div class="wgp-lbl">BIAS</div><div class="wgp-v" style="color:${gpColor}">${gpBias}</div></div>
+    </div>
+    ${gp.invalidation ? `<div class="winvalidate">⚠️ INVALIDATION: ${gp.invalidation}</div>` : ''}
+  </div>
+
+  <!-- WOLF VERDICT -->
+  <div class="wverdict">🐺 ${w.wolf_verdict || 'No verdict available'}</div>
+
+  <!-- NEWS -->
+  ${w.upcoming_news_risk && w.upcoming_news_risk !== 'NONE'
+    ? `<div class="wnews-warn">⚠️ UPCOMING NEWS: ${w.upcoming_news_risk}</div>`
+    : `<div class="wnews-ok">✓ NO HIGH-IMPACT NEWS THIS WEEK</div>`}
+  `;
+
+  return el;
 }
 </script>
 </body>
