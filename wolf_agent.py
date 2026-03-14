@@ -76,14 +76,14 @@ def fetch_current_price(symbol):
 # ─── Technical Analysis Engine ──────────────────────────────────────────────
 
 def calc_ema(closes, period):
-    """Calculate EMA from close prices."""
+    """Calculate EMA — returns the final scalar value, not a list."""
     if len(closes) < period:
-        return []
+        return None
     k = 2.0 / (period + 1)
-    ema = [sum(closes[:period]) / period]
+    ema = sum(closes[:period]) / period
     for price in closes[period:]:
-        ema.append(price * k + ema[-1] * (1 - k))
-    return ema
+        ema = price * k + ema * (1 - k)
+    return round(ema, 5)
 
 def calc_atr(candles, period=14):
     """Average True Range for SL sizing."""
@@ -332,7 +332,7 @@ def score_pair_for_trend(candles):
     ema_score = 0
     if ema100:
         current = closes[-1]
-        ema_val = ema100[-1]
+        ema_val = ema100
         # Price far from EMA = trending, at EMA = ranging
         pct_away = abs(current - ema_val) / ema_val * 100
         ema_score = min(pct_away * 5, 30)  # max 30 pts
@@ -911,7 +911,7 @@ def wolf_weekly_job(job_id):
             job['step'] = f'📅 Weekly outlook: {pair}...'
             closes = [c['close'] for c in candles]
             current_price = fetch_current_price(pair) or closes[-1]
-            ema100_val = (calc_ema(closes, 100) or [None])[-1]
+            ema100_val = calc_ema(closes, 100)
             atr   = calc_atr(candles)
             adx   = item['adx']
             trend, strength = detect_trend_structure(candles)
@@ -945,7 +945,7 @@ def wolf_weekly_job(job_id):
             job['step'] = f'📅 Weekly outlook: {symbol}...'
             closes = [c['close'] for c in candles]
             current_price = fetch_current_price(symbol) or closes[-1]
-            ema100_val = (calc_ema(closes, 100) or [None])[-1]
+            ema100_val = calc_ema(closes, 100)
             atr   = calc_atr(candles)
             adx   = item['adx']
             trend, strength = detect_trend_structure(candles)
@@ -1018,8 +1018,8 @@ def wolf_scan_job(job_id, scan_type='all'):
 
                 closes = [c['close'] for c in candles]
                 current_price = fetch_current_price(pair) or closes[-1]
-                ema100_list = calc_ema(closes, 100)
-                ema100_val = ema100_list[-1] if ema100_list else None
+                ema100_val = calc_ema(closes, 100)
+                
                 atr = calc_atr(candles)
                 adx = item['adx']
                 trend, strength = detect_trend_structure(candles)
@@ -1062,8 +1062,8 @@ def wolf_scan_job(job_id, scan_type='all'):
 
                 closes = [c['close'] for c in candles]
                 current_price = fetch_current_price(symbol) or closes[-1]
-                ema100_list = calc_ema(closes, 100)
-                ema100_val = ema100_list[-1] if ema100_list else None
+                ema100_val = calc_ema(closes, 100)
+                
                 atr = calc_atr(candles)
                 adx = item['adx']
                 trend, strength = detect_trend_structure(candles)
@@ -1094,8 +1094,8 @@ def wolf_scan_job(job_id, scan_type='all'):
 
                 closes_1d = [c['close'] for c in candles_1d]
                 current_price = fetch_current_price(opt_sym) or closes_1d[-1]
-                ema100_list = calc_ema(closes_1d, 100)
-                ema100_val = ema100_list[-1] if ema100_list else None
+                ema100_val = calc_ema(closes_1d, 100)
+                
                 atr = calc_atr(candles_1d)
                 adx = calc_adx(candles_1d)
                 trend, strength = detect_trend_structure(candles_1d)
