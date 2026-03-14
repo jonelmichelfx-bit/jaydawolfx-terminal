@@ -1367,164 +1367,129 @@ def spy_chart():
 def london_signal():
     """
     EUR/JPY London session analysis.
-    Fetches 1h candles, finds 3AM-8AM EST window,
-    calculates full London session pip move + direction.
-    This determines SPY bias for the 9:30AM open.
+    Direct TwelveData call — 120 hourly candles, UTC forced.
+    3AM-8AM EST = 08:00-13:00 UTC.
     """
     try:
         from datetime import datetime, timezone, timedelta
 
-        candles = get_candles('EUR/JPY', '1h', '5d')
-        if not candles or len(candles) < 8:
+        # ── FETCH DIRECT — bypass get_candles cache/timezone issues ─────────
+        # Request 120 hourly candles (5 days) with explicit UTC timezone
+        candles_raw = []
+        if TWELVE_DATA_KEY:
+            try:
+                url = (f'https://api.twelvedata.com/time_series'
+                       f'?symbol=EUR/JPY&interval=1h&outputsize=120'
+                       f'&timezone=UTC&apikey={TWELVE_DATA_KEY}')
+                resp = http_requests.get(url, timeout=12)
+                js = resp.json()
+                if 'values' in js and js['values']:
+                    for v in reversed(js['values']):  # oldest first
+                        candles_raw.append({
+                            'time':  v['datetime'],   # guaranteed UTC
+                            'open':  float(v['open']),
+                            'high':  float(v['high']),
+                            'low':   float(v['low']),
+                            'close': float(v['close']),
+                        })
+            except Exception as e:
+                print(f'[london-signal TwelveData] {e}')
+
+        # Fallback to yfinance if TwelveData fails
+        if not candles_raw:
+            try:
+                import yfinance as yf
+                df = yf.Ticker('EURJPY=X').history(interval='1h', period='7d')
+                for ts, row in df.iterrows():
+                    # yfinance forex returns UTC-aware timestamps
+                    t = ts.tz_convert('UTC') if ts.tzinfo else ts
+                    candles_raw.append({
+                        'time':  t.strftime('%Y-%m-%d %H:%M'),
+                        'open':  float(row['Open']),
+                        'high':  float(row['High']),
+                        'low':   float(row['Low']),
+                        'close': float(row['Close']),
+                    })
+            except Exception as e:
+                print(f'[london-signal yfinance] {e}')
+
+        if not candles_raw or len(candles_raw) < 5:
             return jsonify({'error': 'Not enough EUR/JPY candle data'}), 500
 
+        # ── PARSE TIMES (all UTC now) ────────────────────────────────────────
         now_utc = datetime.now(timezone.utc)
-        today = now_utc.date()
 
-        # London session: 3AM-8AM EST = 8AM-1PM UTC
-        london_open_utc  = 8   # hour
-        london_close_utc = 13  # hour
-
-        # Parse candle times
-        def parse_candle_time(ct):
-            for fmt in ['%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d']:
+        def parse_time(s):
+            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S']:
                 try:
-                    return datetime.strptime(ct[:16], fmt[:len(ct[:16])]).replace(tzinfo=timezone.utc)
+                    return datetime.strptime(s[:19], fmt).replace(tzinfo=timezone.utc)
                 except:
                     continue
             return None
 
-        # Find today's or most recent London session candles
-        # If before 8AM UTC today, use yesterday's London session
-        if now_utc.hour < london_open_utc:
-            session_date = today - timedelta(days=1)
-        else:
-            session_date = today
+        # London session: 3AM-8AM EST = 08:00-13:00 UTC
+        london_open_utc  = 8
+        london_close_utc = 13
+        pip = 100  # EUR/JPY: 1 pip = 0.01
 
-        london_candles = []
-        for c in candles:
-            ct = parse_candle_time(c['time'])
-            if ct is None:
-                continue
-            if ct.date() == session_date and london_open_utc <= ct.hour < london_close_utc:
-                london_candles.append({'candle': c, 'hour': ct.hour})
+        # Try today first, then walk back up to 4 days to find a valid session
+        session_found = False
+        candle_list = []
+        session_date = None
 
-        # If no candles found for session_date, try previous day
-        if not london_candles:
-            session_date = session_date - timedelta(days=1)
-            for c in candles:
-                ct = parse_candle_time(c['time'])
+        for days_back in range(0, 5):
+            check_date = (now_utc - timedelta(days=days_back)).date()
+            session_candles = []
+            for c in candles_raw:
+                ct = parse_time(c['time'])
                 if ct is None:
                     continue
-                if ct.date() == session_date and london_open_utc <= ct.hour < london_close_utc:
-                    london_candles.append({'candle': c, 'hour': ct.hour})
+                if ct.date() == check_date and london_open_utc <= ct.hour < london_close_utc:
+                    session_candles.append(c)
 
-        if not london_candles:
-            return jsonify({'error': 'London session candles not found'}), 500
+            if len(session_candles) >= 3:  # need at least 3 hourly candles
+                candle_list = sorted(session_candles, key=lambda x: x['time'])
+                session_date = check_date
+                session_found = True
+                break
 
-        london_candles.sort(key=lambda x: x['hour'])
+        if not session_found or not candle_list:
+            return jsonify({'error': f'London session candles not found (checked 5 days, got {len(candles_raw)} total candles)'}), 500
 
-        candle_list = [c['candle'] for c in london_candles]
-
-        # London open = open of first candle (3AM EST / 8AM UTC)
-        # London close = close of last candle before 8AM EST / 1PM UTC
+        # ── CORE CALCULATIONS ────────────────────────────────────────────────
         london_open_price  = candle_list[0]['open']
         london_close_price = candle_list[-1]['close']
         london_high = max(c['high'] for c in candle_list)
         london_low  = min(c['low']  for c in candle_list)
 
-        # ── IMPULSE + RETRACEMENT ANALYSIS ─────────────────────────────────
-        # Walk through candles to find:
-        #   - The biggest directional push (impulse)
-        #   - Any retracement after that push
-        #   - Net direction = overall London bias
+        # Total session range
+        total_range_pips = round((london_high - london_low) * pip)
 
-        pip = 100  # JPY: 1 pip = 0.01, so * 100
-
-        # Running high/low tracking
-        run_high = candle_list[0]['open']
-        run_low  = candle_list[0]['open']
-
-        impulse_direction = None  # 'BULL' or 'BEAR'
-        impulse_start     = candle_list[0]['open']
-        impulse_end       = candle_list[0]['open']
-        impulse_pips      = 0
-
-        retrace_start = None
-        retrace_end   = None
-        retrace_pips  = 0
-
-        # Phase 1: find the first significant move (impulse)
-        IMPULSE_THRESHOLD = 20  # pips needed to call it an impulse
-        for c in candle_list:
-            high_move = round((c['high'] - candle_list[0]['open']) * pip)
-            low_move  = round((c['low']  - candle_list[0]['open']) * pip)
-            if abs(high_move) > abs(low_move) and high_move > IMPULSE_THRESHOLD:
-                if impulse_direction is None:
-                    impulse_direction = 'BULL'
-                    impulse_start = candle_list[0]['open']
-            if abs(low_move) > abs(high_move) and abs(low_move) > IMPULSE_THRESHOLD:
-                if impulse_direction is None:
-                    impulse_direction = 'BEAR'
-                    impulse_start = candle_list[0]['open']
-
-        # More precise: find the extreme point (max high or min low) vs open
-        bull_extreme = max(c['high'] for c in candle_list)
-        bear_extreme = min(c['low']  for c in candle_list)
-        bull_impulse = round((bull_extreme - london_open_price) * pip)
-        bear_impulse = round((london_open_price - bear_extreme) * pip)
+        # Dominant impulse: which extreme is further from open?
+        bull_extreme  = london_high
+        bear_extreme  = london_low
+        bull_impulse  = round((bull_extreme  - london_open_price) * pip)
+        bear_impulse  = round((london_open_price - bear_extreme) * pip)
 
         if bull_impulse >= bear_impulse:
             impulse_direction = 'BULL'
             impulse_pips      = bull_impulse
-            impulse_start     = london_open_price
             impulse_end       = round(bull_extreme, 3)
-            # Retracement = from extreme back to close
-            retrace_pips = round((bull_extreme - london_close_price) * pip)
-            retrace_start = round(bull_extreme, 3)
-            retrace_end   = round(london_close_price, 3)
+            retrace_pips      = round((bull_extreme - london_close_price) * pip)
+            retrace_start     = round(bull_extreme, 3)
+            retrace_end       = round(london_close_price, 3)
         else:
             impulse_direction = 'BEAR'
             impulse_pips      = bear_impulse
-            impulse_start     = london_open_price
             impulse_end       = round(bear_extreme, 3)
-            # Retracement = from extreme back up to close
-            retrace_pips = round((london_close_price - bear_extreme) * pip)
-            retrace_start = round(bear_extreme, 3)
-            retrace_end   = round(london_close_price, 3)
+            retrace_pips      = round((london_close_price - bear_extreme) * pip)
+            retrace_start     = round(bear_extreme, 3)
+            retrace_end       = round(london_close_price, 3)
 
         retrace_pct = round((retrace_pips / impulse_pips) * 100) if impulse_pips > 0 else 0
+        net_pips    = round((london_close_price - london_open_price) * pip)
 
-        # Net pip move (open to close) — TRUE direction
-        net_pips = round((london_close_price - london_open_price) * pip)
-
-        # ── KEY LEVELS BROKEN ───────────────────────────────────────────────
-        # Find hourly candle closes as structure levels, flag which ones were broken
-        key_levels = []
-        prev_close = london_open_price
-        for i, c in enumerate(candle_list):
-            hour_label = f"{8 + i}:00 UTC ({3 + i}AM EST)"
-            level = round(c['close'], 3)
-            move  = round((c['close'] - prev_close) * pip)
-            if abs(move) >= 10:  # only meaningful moves
-                key_levels.append({
-                    'hour': hour_label,
-                    'level': level,
-                    'move_pips': move,
-                    'direction': 'BULL' if move > 0 else 'BEAR',
-                    'high': round(c['high'], 3),
-                    'low':  round(c['low'],  3),
-                })
-            prev_close = c['close']
-
-        # ── OVERALL DIRECTION & SPY BIAS ────────────────────────────────────
-        # Use NET move (open to close) + impulse direction for true bias
-        # If retrace > 70% of impulse = warning (structure unclear)
-        direction_raw = net_pips
-
-        # FIX: direction is determined by DOMINANT IMPULSE, not net pips.
-        # If London dropped 76 pips then retraced 54, that is a BEARISH session.
-        # The retracement only affects confidence level, never the direction label.
+        # ── DIRECTION — based on dominant impulse ───────────────────────────
         if impulse_direction == 'BEAR':
             direction = 'BEARISH'
             if retrace_pct < 50:
@@ -1532,7 +1497,7 @@ def london_signal():
             elif retrace_pct < 70:
                 overall_read = f'Bear impulse: -{impulse_pips} pips ↓ | Moderate retrace: +{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → DOWNTREND — moderate bias'
             else:
-                overall_read = f'Bear impulse: -{impulse_pips} pips ↓ | Deep retrace: +{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → DOWNTREND (weak — deep retrace, confirm at 9:30 open)'
+                overall_read = f'Bear impulse: -{impulse_pips} pips ↓ | Deep retrace: +{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → DOWNTREND (deep retrace — confirm at 9:30)'
         elif impulse_direction == 'BULL':
             direction = 'BULLISH'
             if retrace_pct < 50:
@@ -1540,34 +1505,47 @@ def london_signal():
             elif retrace_pct < 70:
                 overall_read = f'Bull impulse: +{impulse_pips} pips ↑ | Moderate retrace: -{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → UPTREND — moderate bias'
             else:
-                overall_read = f'Bull impulse: +{impulse_pips} pips ↑ | Deep retrace: -{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → UPTREND (weak — deep retrace, confirm at 9:30 open)'
+                overall_read = f'Bull impulse: +{impulse_pips} pips ↑ | Deep retrace: -{retrace_pips} pips ({retrace_pct}%) | Net: {net_pips:+d} pips → UPTREND (deep retrace — confirm at 9:30)'
         else:
             direction = 'FLAT'
-            overall_read = f'No clear impulse detected | Net: {net_pips:+d} pips → No London bias — wait for SPY to show direction first'
+            overall_read = f'No clear impulse | Net: {net_pips:+d} pips → No London bias — wait for SPY direction first'
 
+        # SPY bias
         if direction == 'BULLISH':
-            spy_bias = 'BUY CALLS'
-            bias_color = 'green'
+            spy_bias      = 'BUY CALLS'
+            bias_color    = 'green'
             signal_strength = 'STRONG' if impulse_pips >= 50 and retrace_pct < 50 else 'MODERATE' if impulse_pips >= 30 else 'WEAK'
         elif direction == 'BEARISH':
-            spy_bias = 'BUY PUTS'
-            bias_color = 'red'
+            spy_bias      = 'BUY PUTS'
+            bias_color    = 'red'
             signal_strength = 'STRONG' if impulse_pips >= 50 and retrace_pct < 50 else 'MODERATE' if impulse_pips >= 30 else 'WEAK'
         else:
-            spy_bias = 'WAIT — NO SIGNAL'
-            bias_color = 'gold'
+            spy_bias      = 'WAIT — NO SIGNAL'
+            bias_color    = 'gold'
             signal_strength = 'NONE'
 
-        total_range_pips = round((london_high - london_low) * pip)
+        # ── HOURLY BREAKDOWN ─────────────────────────────────────────────────
+        key_levels = []
+        prev_close = london_open_price
+        for i, c in enumerate(candle_list):
+            est_hour = 3 + i
+            hour_label = f'{est_hour}AM EST'
+            move = round((c['close'] - prev_close) * pip)
+            if abs(move) >= 5:
+                key_levels.append({
+                    'hour': hour_label,
+                    'level': round(c['close'], 3),
+                    'move_pips': move,
+                    'direction': 'BULL' if move > 0 else 'BEAR',
+                    'high': round(c['high'], 3),
+                    'low':  round(c['low'],  3),
+                })
+            prev_close = c['close']
 
-        # pip_move for backwards compat
-        pip_move = net_pips
-
-        # Current price for live context
+        # ── CURRENT PRICE + EMA100 ───────────────────────────────────────────
         q = get_price('EUR/JPY')
         current_price = round(float(q['price']), 3) if q else london_close_price
 
-        # EMA100 from H1 candles — trend direction
         ema100 = None
         ema100_trend = 'UNKNOWN'
         try:
@@ -1577,44 +1555,45 @@ def london_signal():
                 period = min(100, len(closes))
                 k = 2.0 / (period + 1)
                 ema = closes[0]
-                for c in closes[1:]: ema = c * k + ema * (1 - k)
+                for c_val in closes[1:]:
+                    ema = c_val * k + ema * (1 - k)
                 ema100 = round(ema, 3)
                 ema100_trend = 'UPTREND' if current_price > ema100 else 'DOWNTREND'
-        except: pass
+        except:
+            pass
 
         return jsonify({
-            'session_date': str(session_date),
+            'session_date':       str(session_date),
+            'candles_used':       len(candle_list),
             'london_open_price':  round(london_open_price, 3),
             'london_close_price': round(london_close_price, 3),
-            'london_high': round(london_high, 3),
-            'london_low':  round(london_low, 3),
-            'pip_move': pip_move,
-            'net_pips': net_pips,
-            'total_range_pips': total_range_pips,
-            'direction': direction,
-            'spy_bias': spy_bias,
-            'bias_color': bias_color,
-            'signal_strength': signal_strength,
-            'overall_read': overall_read,
-            'impulse_direction': impulse_direction,
-            'impulse_pips': impulse_pips,
-            'impulse_start': round(impulse_start, 3),
-            'impulse_end': impulse_end,
-            'retrace_pips': retrace_pips,
-            'retrace_pct': retrace_pct,
-            'retrace_start': retrace_start,
-            'retrace_end': retrace_end,
-            'key_levels': key_levels,
-            'current_price': current_price,
-            'ema100': ema100,
-            'ema100_trend': ema100_trend,
-            'candles_used': len(london_candles),
-            'session_hours': f'3AM-8AM EST ({london_open_utc}:00-{london_close_utc}:00 UTC)',
+            'london_high':        round(london_high, 3),
+            'london_low':         round(london_low, 3),
+            'pip_move':           net_pips,
+            'net_pips':           net_pips,
+            'total_range_pips':   total_range_pips,
+            'direction':          direction,
+            'spy_bias':           spy_bias,
+            'bias_color':         bias_color,
+            'signal_strength':    signal_strength,
+            'overall_read':       overall_read,
+            'impulse_direction':  impulse_direction,
+            'impulse_pips':       impulse_pips,
+            'impulse_start':      round(london_open_price, 3),
+            'impulse_end':        impulse_end,
+            'retrace_pips':       retrace_pips,
+            'retrace_pct':        retrace_pct,
+            'retrace_start':      retrace_start,
+            'retrace_end':        retrace_end,
+            'key_levels':         key_levels,
+            'current_price':      current_price,
+            'ema100':             ema100,
+            'ema100_trend':       ema100_trend,
+            'session_hours':      '3AM-8AM EST (08:00-13:00 UTC)',
         })
     except Exception as e:
         import traceback; print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
-
 @app.route('/api/forex-analyze', methods=['POST'])
 @login_required
 def forex_analyze():
@@ -2132,11 +2111,22 @@ def run_byakugan_job(job_id, scan_filter, date_str, user_id):
         for s in top5:
             g=s.get('greeks') or {}
             stocks_ctx += f"\n===\n{s['ticker']} ${s['price']} Score:{s['score']} {s['direction']}\nEMA20:{s['ema20']} EMA50:{s['ema50']} EMA100:{s.get('ema100','?')} EMA200:{s['ema200']} RSI:{s['rsi']} MACD:{s['macd_bias']}\nADX:{s.get('adx','?')} ({s.get('adx_signal','?')}) | Structure:{s.get('hh_hl_structure','?')} ({s.get('hh_hl_strength','?')}% confidence)\nATR:{s.get('atr','?')} IV:{s.get('iv_estimate','?')}% Vol:{s['vol_ratio']}x UOA:{s['unusual_activity']}x\nD:{g.get('delta','?')} G:{g.get('gamma','?')} T:{g.get('theta','?')} V:{g.get('vega','?')}\nSR:{[(l['type'],l['price'],l['strength']) for l in s['sr_levels'][:3]]}\nNEWS:{' | '.join([n['title'][:60] for n in s['news']]) if s['news'] else 'None'}\n==="
-        prompt = f"""You are Byakugan — elite Wall Street options trader. Paul Tudor Jones + Tom Sosnoff + Jesse Livermore. Analyze so trader knows EXACTLY what to do tomorrow open.
+        prompt = f"""You are BYAKUGAN — elite Wall Street options trader with full chart pattern vision. Paul Tudor Jones + Tom Sosnoff + Jesse Livermore + Fidelity CMT pattern analysis. Analyze so trader knows EXACTLY what to do tomorrow open.
+
+CHART PATTERN DETECTION (apply to real data above):
+Reversal: Double/Triple Top/Bottom (neckline break only), H&S (lowest failure rate, neckline close required), Pipe Bottom (2 tall bars end of downtrend)
+Continuation: Bull/Bear Flag (target=flagpole height), Pennant, Cup & Handle (break above both lips)
+Triangles: Ascending (usually breaks up), Descending (usually breaks down), Symmetrical (either way)
+Wedges: Rising Wedge (breaks DOWN), Falling Wedge (breaks UP) — need 5 touches
+Compression: NR4 (day 4 narrower than 1-3 = breakout imminent), Inside Bar (same signal)
+Rules: Pattern NOT complete until CLOSE beyond level. False breakout = trap. Failed breakout = your entry.
+ADX RULE: Only recommend BUY if ADX > 25. If ADX < 20 = ranging, reduce size or skip.
+EMA100 RULE: Long only above EMA100, short only below. No exceptions.
+
 TODAY:{date_str} MARKET:SPY:{regime['spy_price']} ({regime['spy_change']:+.2f}%) VIX:{vix} {regime['fear_greed']} {regime['regime']} VIX STRATEGY:{vix_guide}
 {stocks_ctx}
-RULES: Friday weeklies 1-5DTE stocks. 0DTE/1DTE SPY/QQQ. Delta 0.35-0.50 directional. Confidence clear=80-92% mixed=65-75%. Greeks required. Real S/R entries.
-JSON only no markdown: {{"scan_date":"{date_str}","market_regime":{{"spy":"{regime['spy_price']}","spy_change":"{regime['spy_change']:+.2f}%","vix":"{vix}","sentiment":"{regime['fear_greed']}","regime":"{regime['regime']}","wolf_market_read":"2 sentences"}},"tomorrow_game_plan":"3 sentences","picks":[{{"rank":1,"ticker":"X","price":"0","wolf_score":80,"confidence":82,"direction":"BULLISH","sector":"Tech","thesis":"thesis","news_catalyst":"news","technical_setup":"setup","entry_zone":"X","key_support":"X","key_resistance":"Y","stop_loss":"X","target_1":"X","target_2":"Y","target_3":"Z","tomorrow_entry":"entry plan","options_play":{{"strategy":"LONG CALL","recommended_strike":"Xc","expiration":"This Friday (3 DTE)","entry_price":"X","max_risk":"$X","target_exit":"$X","stop_exit":"$X","greeks":{{"delta":0.42,"gamma":0.008,"theta":-0.85,"vega":0.45}},"iv_environment":"context","note":"note"}},"confluences":["c1"],"warnings":["w1"],"invalidation":"stop"}}]}}"""
+RULES: Friday weeklies 1-5DTE stocks. 0DTE/1DTE SPY/QQQ. Delta 0.35-0.50 directional. Confidence clear=80-92% mixed=65-75%. Greeks required. Real S/R entries. No guessing — conclusions from real data only.
+JSON only no markdown: {{"scan_date":"{date_str}","market_regime":{{"spy":"{regime['spy_price']}","spy_change":"{regime['spy_change']:+.2f}%","vix":"{vix}","sentiment":"{regime['fear_greed']}","regime":"{regime['regime']}","wolf_market_read":"2 sentences"}},"tomorrow_game_plan":"3 sentences","picks":[{{"rank":1,"ticker":"X","price":"0","wolf_score":80,"confidence":82,"direction":"BULLISH","sector":"Tech","thesis":"thesis","pattern_detected":"pattern name or NONE","pattern_target":"price or N/A","adx_reading":28,"adx_signal":"TRENDING","news_catalyst":"news","technical_setup":"setup","entry_zone":"X","key_support":"X","key_resistance":"Y","stop_loss":"X","target_1":"X","target_2":"Y","target_3":"Z","tomorrow_entry":"entry plan","options_play":{{"strategy":"LONG CALL","recommended_strike":"Xc","expiration":"This Friday (3 DTE)","entry_price":"X","max_risk":"$X","target_exit":"$X","stop_exit":"$X","greeks":{{"delta":0.42,"gamma":0.008,"theta":-0.85,"vega":0.45}},"iv_environment":"context","note":"note"}},"confluences":["c1"],"warnings":["w1"],"invalidation":"stop"}}]}}"""
         result = None; last_error = None
         for attempt in range(3):
             try:
@@ -2857,14 +2847,15 @@ def _run_sage_job(job_id, pair, mode):
 
         da=cd.get("daily",{}); h4=cd.get("h4",{}); wk=cd.get("weekly",{}); h1=cd.get("hourly",{})
 
-        _sage_jobs[job_id]["step"]="Synthesizing all 10 chart masters + 4 legends + market structure..."
-        prompt=("You are SAGE MODE — the most powerful trading intelligence system ever built.\n"
+        _sage_jobs[job_id]["step"]="Synthesizing all 10 chart masters + 4 legends + full pattern analysis..."
+        prompt=("You are SAGE OF 6 PATH AGENT — the most powerful trading intelligence system ever built.\n"
+            "You read REAL chart data. You detect real patterns. You never guess.\n"
             "Date: {} | Instrument: {} | Price: {} | Session: {}\n\n"
-            "LIVE NEWS (use ONLY these — do NOT invent economic events, do NOT mention NFP/CPI/FOMC unless it appears in the headlines below):\n{}\n\n"
+            "LIVE NEWS (use ONLY these — do NOT invent economic events):\n{}\n\n"
             "{}\n\n"
             "CHART MASTERS — apply ALL 10:\n"
             "- JOHN MURPHY Intermarket: bonds/commodities/DXY vs {}\n"
-            "- STEVE NISON Candlesticks: read buyer/seller battle\n"
+            "- STEVE NISON Candlesticks: read buyer/seller battle from real candle data\n"
             "- MARK DOUGLAS Market Mode: trending or ranging? Where is the edge?\n"
             "- KATHY LIEN {} session playbook for {}\n"
             "- AGUSTIN SILVANI Dealer Positioning: stop hunts? smart money traps?\n"
@@ -2873,25 +2864,52 @@ def _run_sage_job(job_id, pair, mode):
             "- RICHARD WYCKOFF Phase: accumulation/markup/distribution/markdown?\n"
             "- JOHN BOLLINGER Bands: Upper:{} Mid:{} Lower:{}\n"
             "- WILDER ATR: Daily ATR={} use 1.5x for SL 3x for TP3\n\n"
+            "FIDELITY PATTERN DETECTION — check all from real candle data:\n"
+            "REVERSAL: Double Top/Bottom (2 peaks/troughs at same level, neckline break only), "
+            "Triple Top/Bottom (3 touches = strongest), H&S Top/Bottom (lowest failure rate — neckline break ONLY, target=head-to-neckline distance), "
+            "Pipe Bottom (2 tall bars at end of downtrend)\n"
+            "CONTINUATION: Bull/Bear Flag (flagpole + consolidation, target=flagpole height), "
+            "Pennant (converging lines after sharp move), Cup & Handle (rounded bottom + handle, break above both lips)\n"
+            "TRIANGLES: Symmetrical (converging trendlines, 2+ touches each side), "
+            "Ascending (flat top + rising bottom, usually breaks up), "
+            "Descending (flat bottom + falling top, usually breaks down)\n"
+            "WEDGES: Rising Wedge (both lines up, 5 touches needed, breaks DOWN), "
+            "Falling Wedge (both lines down, 5 touches, breaks UP)\n"
+            "COMPRESSION: NR4 (day 4 range narrower than days 1-3 = breakout imminent), "
+            "Inside Bar (bar inside prior bar range = compression), "
+            "Gap (explosion gap with pivot low = valid entry)\n"
+            "CANDLESTICK: Engulfing (strongest at S/R), Doji (indecision at key level), "
+            "Hammer/Shooting Star (long wick rejecting level), Dark Cloud/Piercing\n"
+            "PATTERN RULES: Pattern NOT complete until price CLOSES beyond level — no wick entries. "
+            "False breakout (breaks then returns) = trap. Failed breakout (false then opposite break) = YOUR entry.\n\n"
+            "VOLMAN PRINCIPLES:\n"
+            "- Buildup before breakout (tight consolidation at S/R) = HIGH CONFIDENCE entry\n"
+            "- Price shooting through S/R with no buildup = SKIP (false break risk)\n"
+            "- Double pressure (both bulls and bears same direction) = strongest moves\n"
+            "- EMA100 is trend FILTER — long only above it, short only below it\n"
+            "- ADX > 25 = trending (trade it), ADX < 20 = ranging (wait or skip)\n\n"
             "{}\n\n"
-            "CRITICAL MARKET STRUCTURE ANALYSIS (prevents wrong-direction trades):\n"
+            "CRITICAL MARKET STRUCTURE ANALYSIS:\n"
             "1. WHERE IS PRICE? Near major S/R? Top of range? Bottom? Mid-range?\n"
-            "2. MARKET PHASE: Trending (HH+HL or LH+LL) or Ranging (bouncing between levels)?\n"
-            "3. ABC/WAVE POSITION: Is this an IMPULSE wave (trend direction, strong) or ABC CORRECTION (counter-trend trap)?\n"
-            "4. KEY S/R ZONES: 2 nearest resistance levels above. 2 nearest support levels below. Rejecting any?\n"
-            "5. TREND STRENGTH: ADX-equivalent — strong trend (25+) or consolidating/ranging (<20)?\n"
-            "6. HIGHER TF CONTEXT: Weekly and Daily structure — respecting Daily EMA? In a weekly range?\n"
-            "7. RULE: Return WAIT if: at major S/R without breakout, ABC correction likely, or ranging with no edge.\n"
-            "   BUT EVEN ON WAIT — you MUST fill in the conditional entry levels (where the trade would be IF setup triggers).\n"
-            "   A WAIT means 'not yet' — NOT 'no levels'. Always show the nearest valid entry, SL, and TPs.\n\n"
+            "2. MARKET PHASE: Trending (HH+HL or LH+LL) or Ranging?\n"
+            "3. PATTERN: Is any Fidelity pattern completing from the data above?\n"
+            "4. ABC/WAVE POSITION: Impulse wave or ABC correction (counter-trend trap)?\n"
+            "5. KEY S/R ZONES: 2 nearest resistance above, 2 nearest support below.\n"
+            "6. TREND STRENGTH: ADX >25 trending, <20 ranging — state actual value.\n"
+            "7. HIGHER TF CONTEXT: Weekly and Daily structure alignment.\n"
+            "8. RULE: Return WAIT if: at major S/R without breakout, ABC correction likely, or ranging. "
+            "   BUT EVEN ON WAIT — fill in conditional entry levels (where trade would be IF setup triggers).\n\n"
             "MANDATE: 30-40 pip minimum. SL behind real SR. Min 2:1 RR. High TF=direction Low TF=entry.\n"
-            "CRITICAL: NEVER return 0 for entry, stop_loss, tp1, tp2, tp3 or sl_pips. ALWAYS use real price levels based on the chart data above.\n\n"
+            "CRITICAL: NEVER return 0 for entry, stop_loss, tp1, tp2, tp3 or sl_pips. ALWAYS use real price levels.\n\n"
             "Return ONLY valid JSON (no markdown, no extra text):\n"
             '{{\"verdict\":\"BUY or SELL or WAIT\",\"confidence\":65,\"session\":\"{}\",\"entry\":\"{}\",\"stop_loss\":\"REAL_PRICE\",\"sl_pips\":20,'
             '\"tp1\":\"REAL_PRICE\",\"tp1_pips\":30,\"tp2\":\"REAL_PRICE\",\"tp2_pips\":50,\"tp3\":\"REAL_PRICE\",\"tp3_pips\":80,\"rr_ratio\":\"1:2.5\",'
             '\"timeframe_alignment\":{{\"weekly\":\"?\",\"daily\":\"?\",\"h4\":\"?\",\"h1\":\"?\",\"m15\":\"?\"}},'
             '\"legend_consensus\":{{\"soros\":\"\",\"druckenmiller\":\"\",\"lipschutz\":\"\",\"kovner\":\"\"}},'
             '\"chart_masters\":{{\"murphy\":\"\",\"nison\":\"\",\"douglas\":\"\",\"kathy_lien\":\"\",\"silvani\":\"\",\"laidi\":\"\",\"elder\":\"\",\"wyckoff\":\"\",\"bollinger\":\"\",\"wilder\":\"\"}},'
+            '\"pattern_detected\":\"pattern name + timeframe or NONE\",'
+            '\"pattern_target\":\"price target from pattern or N/A\",'
+            '\"buildup_present\":true,'
             '\"key_levels\":{{\"nearest_support\":\"\",\"nearest_resistance\":\"\",\"stop_zone\":\"\"}},'
             '\"market_structure\":{{\"phase\":\"TRENDING or RANGING or BREAKOUT or REVERSAL\",\"abc_position\":\"IMPULSE WAVE or ABC CORRECTION or UNKNOWN\",\"price_location\":\"AT RESISTANCE or AT SUPPORT or MID-RANGE or BREAKOUT ZONE\",\"trend_strength\":\"STRONG TREND or MODERATE TREND or RANGING or CHOPPY\",\"higher_tf_context\":\"\",\"sr_above\":\"\",\"sr_below\":\"\"}},'
             '\"candlestick_signal\":\"\",\"news_impact\":\"\",\"geopolitical_risk\":\"\",\"sage_says\":\"\",\"invalidation\":\"\"}}'

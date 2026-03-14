@@ -141,7 +141,79 @@ def calc_adx(candles, period=14):
     except:
         return None
 
-def find_sr_zones(candles, sensitivity=0.003):
+def calc_rsi(closes, period=14):
+    """Wilder's Smoothed RSI — same formula as TradingView/MT4."""
+    if len(closes) < period + 2:
+        return None
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        diff = closes[i] - closes[i-1]
+        gains.append(max(diff, 0))
+        losses.append(max(-diff, 0))
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+    if avg_loss == 0:
+        return 100.0
+    return round(100 - (100 / (1 + avg_gain / avg_loss)), 1)
+
+def calc_macd(closes):
+    """EMA12 - EMA26. Returns (macd_val, bias)."""
+    if len(closes) < 26:
+        return None, None
+    ema12 = calc_ema(closes[-50:], 12)
+    ema26 = calc_ema(closes[-50:], 26)
+    if ema12 and ema26:
+        macd = round(ema12 - ema26, 5)
+        return macd, 'BULLISH' if macd > 0 else 'BEARISH'
+    return None, None
+
+def calc_bollinger(closes, period=20, num_std=2):
+    """Bollinger Bands — upper, mid, lower."""
+    if len(closes) < period:
+        return None, None, None
+    recent = closes[-period:]
+    mid = sum(recent) / period
+    variance = sum((x - mid) ** 2 for x in recent) / period
+    std = variance ** 0.5
+    upper = round(mid + num_std * std, 5)
+    lower = round(mid - num_std * std, 5)
+    return upper, round(mid, 5), lower
+
+def find_sr_simple(candles, current_price):
+    """Real S/R from swing highs/lows — min 2 touches (Volman rule)."""
+    if len(candles) < 10:
+        return [], []
+    highs = [c['high'] for c in candles]
+    lows  = [c['low']  for c in candles]
+    margin = current_price * 0.003
+    levels = []
+    for i in range(2, len(candles) - 2):
+        if highs[i] >= highs[i-1] and highs[i] >= highs[i-2] and highs[i] >= highs[i+1] and highs[i] >= highs[i+2]:
+            levels.append({'price': highs[i], 'type': 'R'})
+        if lows[i] <= lows[i-1] and lows[i] <= lows[i-2] and lows[i] <= lows[i+1] and lows[i] <= lows[i+2]:
+            levels.append({'price': lows[i], 'type': 'S'})
+    clustered = []
+    for lv in levels:
+        merged = False
+        for cl in clustered:
+            if abs(lv['price'] - cl['price']) < margin:
+                cl['touches'] = cl.get('touches', 1) + 1
+                merged = True
+                break
+        if not merged:
+            clustered.append({'price': round(lv['price'], 5), 'type': lv['type'], 'touches': 1})
+    valid = [l for l in clustered if l['touches'] >= 2]
+    if not valid:
+        valid = sorted(clustered, key=lambda x: abs(x['price'] - current_price))[:6]
+    supports    = [l for l in valid if l['price'] < current_price]
+    resistances = [l for l in valid if l['price'] > current_price]
+    return (sorted(supports,    key=lambda x: x['price'], reverse=True)[:3],
+            sorted(resistances, key=lambda x: x['price'])[:3])
+
+
     """
     Find REAL S/R zones using pivot highs/lows with minimum 2 touches.
     Volman principle: only trade levels that have been TESTED at least twice.
@@ -274,7 +346,148 @@ def score_pair_for_trend(candles):
     total = adx_score + structure_score + ema_score
     return int(min(total, 100))
 
-# ─── News Check ──────────────────────────────────────────────────────────────
+def fetch_wolf_chart_data(symbol, current_price):
+    """
+    Full 5-timeframe chart analysis for Wolf Agent.
+    Matches Sage Mode data depth: Weekly/Daily/H4/H1/M15.
+    Returns structured dict ready to feed Claude.
+    """
+    data = {'symbol': symbol, 'price': current_price,
+            'weekly': {}, 'daily': {}, 'h4': {}, 'h1': {}, 'm15': {},
+            'supports': [], 'resistances': [], 'patterns': {}}
+
+    def tf_block(candles, label):
+        if not candles or len(candles) < 10:
+            return {}
+        closes = [c['close'] for c in candles]
+        highs  = [c['high']  for c in candles]
+        lows   = [c['low']   for c in candles]
+        ema9   = calc_ema(closes, min(9,   len(closes)))
+        ema20  = calc_ema(closes, min(20,  len(closes)))
+        ema50  = calc_ema(closes, min(50,  len(closes)))
+        ema100 = calc_ema(closes, min(100, len(closes)))
+        ema200 = calc_ema(closes, min(200, len(closes)))
+        rsi    = calc_rsi(closes)
+        _, macd_bias = calc_macd(closes)
+        atr    = calc_atr(candles)
+        adx    = calc_adx(candles)
+        trend, strength = detect_trend_structure(candles)
+        bb_upper, bb_mid, bb_lower = calc_bollinger(closes)
+
+        # Trend determination
+        bull = sum([
+            1 if ema9   and current_price > ema9   else 0,
+            1 if ema20  and current_price > ema20  else 0,
+            1 if ema50  and current_price > ema50  else 0,
+            1 if macd_bias == 'BULLISH' else 0,
+        ])
+        tf_trend = 'BULLISH' if bull >= 3 else 'BEARISH' if bull <= 1 else 'MIXED'
+
+        return {
+            'trend':      tf_trend,
+            'structure':  trend,
+            'strength':   strength,
+            'ema9':       round(ema9,   5) if ema9   else None,
+            'ema20':      round(ema20,  5) if ema20  else None,
+            'ema50':      round(ema50,  5) if ema50  else None,
+            'ema100':     round(ema100, 5) if ema100 else None,
+            'ema200':     round(ema200, 5) if ema200 else None,
+            'rsi':        rsi,
+            'macd':       macd_bias,
+            'atr':        atr,
+            'adx':        adx,
+            'adx_signal': 'TRENDING' if adx and adx > 25 else 'RANGING' if adx and adx < 20 else 'WEAK',
+            'vs_ema100':  'ABOVE' if ema100 and current_price > ema100 else 'BELOW',
+            'vs_ema200':  'ABOVE' if ema200 and current_price > ema200 else 'BELOW',
+            'bb_upper':   bb_upper,
+            'bb_mid':     bb_mid,
+            'bb_lower':   bb_lower,
+            'high':       round(max(highs[-20:]), 5),
+            'low':        round(min(lows[-20:]),  5),
+            'candles':    len(candles),
+        }
+
+    # ── Fetch all 5 timeframes ──────────────────────────────────────
+    try:
+        wk_c   = fetch_ohlc(symbol, interval='1week', outputsize=52)
+        data['weekly'] = tf_block(wk_c, 'Weekly') if wk_c else {}
+    except: pass
+    time.sleep(0.2)
+
+    try:
+        d1_c   = fetch_ohlc(symbol, interval='1day', outputsize=60)
+        data['daily'] = tf_block(d1_c, 'Daily') if d1_c else {}
+        if d1_c:
+            sup, res = find_sr_simple(d1_c, current_price)
+            data['supports']    = sup
+            data['resistances'] = res
+    except: pass
+    time.sleep(0.2)
+
+    try:
+        h4_c   = fetch_ohlc(symbol, interval='4h', outputsize=60)
+        data['h4'] = tf_block(h4_c, 'H4') if h4_c else {}
+    except: pass
+    time.sleep(0.2)
+
+    try:
+        h1_c   = fetch_ohlc(symbol, interval='1h', outputsize=48)
+        data['h1'] = tf_block(h1_c, 'H1') if h1_c else {}
+    except: pass
+    time.sleep(0.2)
+
+    try:
+        m15_c  = fetch_ohlc(symbol, interval='15min', outputsize=40)
+        data['m15'] = tf_block(m15_c, 'M15') if m15_c else {}
+    except: pass
+
+    return data
+
+
+def format_wolf_chart(d):
+    """Format 5-TF data block for Claude prompt."""
+    sep = '=' * 60
+    wk = d.get('weekly', {}); da = d.get('daily', {})
+    h4 = d.get('h4', {});     h1 = d.get('h1', {})
+    m15 = d.get('m15', {})
+    sup = d.get('supports', []); res = d.get('resistances', [])
+
+    def tf_line(label, tf):
+        if not tf:
+            return f'{label}: no data'
+        return (f"{label}: {tf.get('trend','?')} | Structure={tf.get('structure','?')} ({tf.get('strength','?')}%)"
+                f" | EMA9={tf.get('ema9','?')} EMA20={tf.get('ema20','?')} EMA50={tf.get('ema50','?')}"
+                f" EMA100={tf.get('ema100','?')} EMA200={tf.get('ema200','?')}"
+                f" | RSI={tf.get('rsi','?')} MACD={tf.get('macd','?')}"
+                f" | ADX={tf.get('adx','?')} ({tf.get('adx_signal','?')})"
+                f" | ATR={tf.get('atr','?')}"
+                f" | {tf.get('vs_ema100','?')} EMA100 | {tf.get('vs_ema200','?')} EMA200"
+                f" | BB Upper={tf.get('bb_upper','?')} Mid={tf.get('bb_mid','?')} Lower={tf.get('bb_lower','?')}"
+                f" | Range High={tf.get('high','?')} Low={tf.get('low','?')}")
+
+    lines = [
+        sep,
+        f"5-TIMEFRAME CHART DATA — {d['symbol']} @ {d['price']}",
+        sep,
+        tf_line('WEEKLY', wk),
+        tf_line('DAILY',  da),
+        tf_line('H4',     h4),
+        tf_line('H1',     h1),
+        tf_line('M15',    m15),
+        sep,
+    ]
+    if sup:
+        lines.append('REAL SUPPORT ZONES (min 2 touches):')
+        for s in sup:
+            lines.append(f"  SUPPORT @ {s['price']} — {s['touches']} touches")
+    if res:
+        lines.append('REAL RESISTANCE ZONES (min 2 touches):')
+        for r in res:
+            lines.append(f"  RESISTANCE @ {r['price']} — {r['touches']} touches")
+    lines.append(sep)
+    return '\n'.join(lines)
+
+
 
 def check_news_risk(symbol):
     """
@@ -484,15 +697,17 @@ RESPOND ONLY IN THIS EXACT JSON FORMAT:
 
 def run_wolf_analysis(symbol, candles, current_price, supports, resistances,
                       trend, trend_strength, adx, ema100_val, atr, news_warning, is_option=False):
-    """Feed real data to Claude for chart analysis. No prediction, pure reading."""
+    """Feed real 5-TF data to Claude. No prediction — pure chart reading."""
 
-    # Build data payload
-    recent_candles = candles[-10:]  # Last 10 candles for Claude to read
+    # ── Fetch full 5-TF data (Sage-level depth) ───────────────────────────
+    chart = fetch_wolf_chart_data(symbol, current_price)
+    chart_block = format_wolf_chart(chart)
+
+    # Fallback context from daily candles (passed in from scan job)
+    recent_candles = candles[-10:]
     candle_summary = []
     for c in recent_candles:
         body = abs(c['close'] - c['open'])
-        wick_up = c['high'] - max(c['open'], c['close'])
-        wick_dn = min(c['open'], c['close']) - c['low']
         direction = 'BULL' if c['close'] > c['open'] else 'BEAR'
         candle_summary.append({
             'date': c['date'],
@@ -500,47 +715,43 @@ def run_wolf_analysis(symbol, candles, current_price, supports, resistances,
             'L': round(c['low'], 5),  'C': round(c['close'], 5),
             'direction': direction,
             'body_size': round(body, 5),
-            'upper_wick': round(wick_up, 5),
-            'lower_wick': round(wick_dn, 5)
+            'upper_wick': round(c['high'] - max(c['open'], c['close']), 5),
+            'lower_wick': round(min(c['open'], c['close']) - c['low'], 5),
         })
 
-    # 30-day high/low for context
     highs_30 = [c['high'] for c in candles]
-    lows_30 = [c['low'] for c in candles]
+    lows_30  = [c['low']  for c in candles]
     high_30d = round(max(highs_30), 5) if highs_30 else 0
-    low_30d = round(min(lows_30), 5) if lows_30 else 0
-    mid_30d = round((high_30d + low_30d) / 2, 5)
+    low_30d  = round(min(lows_30),  5) if lows_30  else 0
+    price_pct = round(((current_price - low_30d) / (high_30d - low_30d) * 100)
+                      if (high_30d - low_30d) > 0 else 50, 1)
 
-    # Price position
-    price_pct = round(((current_price - low_30d) / (high_30d - low_30d) * 100) if (high_30d - low_30d) > 0 else 50, 1)
+    # Use richer daily data from 5-TF fetch if available
+    da  = chart.get('daily', {})
+    adx_real    = da.get('adx')    or adx
+    ema100_real = da.get('ema100') or ema100_val
+    atr_real    = da.get('atr')    or atr
+    trend_real  = da.get('structure') or trend
+    strength_real = da.get('strength') or trend_strength
 
     user_message = f"""SYMBOL: {symbol}
 CURRENT PRICE: {current_price}
-30-DAY RANGE: High={high_30d} | Low={low_30d} | Mid={mid_30d}
-PRICE POSITION: {price_pct}% of 30-day range (0%=low, 100%=high)
+30-DAY RANGE: High={high_30d} | Low={low_30d} | Price at {price_pct}% of range
 
-100 EMA: {round(ema100_val, 5) if ema100_val else 'NOT AVAILABLE'}
-PRICE vs 100 EMA: {'ABOVE' if ema100_val and current_price > ema100_val else 'BELOW' if ema100_val else 'UNKNOWN'}
-ADX (Trend Strength): {adx if adx else 'NOT AVAILABLE'} {'(TRENDING)' if adx and adx > 25 else '(RANGING/WEAK)' if adx else ''}
-ATR (Volatility): {atr}
+{chart_block}
 
-TREND STRUCTURE: {trend} ({trend_strength}% score)
-
-REAL SUPPORT ZONES (minimum 2 touches each):
-{json.dumps(supports[:3], indent=2) if supports else 'None found in 30-day data'}
-
-REAL RESISTANCE ZONES (minimum 2 touches each):
-{json.dumps(resistances[:3], indent=2) if resistances else 'None found in 30-day data'}
-
-LAST 10 CANDLES (newest last):
+LAST 10 DAILY CANDLES (newest last):
 {json.dumps(candle_summary, indent=2)}
 
 NEWS RISK: {news_warning if news_warning else 'NONE DETECTED'}
 
-{'OPTIONS CONTEXT: This is a 0DTE options analysis request for SPY/QQQ. Apply 0DTE rules.' if is_option else ''}
+{'OPTIONS CONTEXT: 0DTE analysis. Apply ORB + VWAP + PDH/PDL rules.' if is_option else ''}
 
-TASK: Read this data like a professional chart analyst. Apply Volman, BabyPips, and Fidelity principles.
-Give me the trade signal based purely on what this data shows. No forecasting. No fluff."""
+TASK: Read ALL 5 timeframes above like a professional chart analyst.
+Apply Volman buildup rules, Fidelity pattern detection, BabyPips structure.
+Give the trade signal based purely on what the data shows. No forecasting. No fluff.
+ADX RULE: Only signal BUY/SELL if ADX > 25. If ADX < 20 = WAIT.
+EMA100 RULE: BUY only if price ABOVE EMA100. SELL only if price BELOW EMA100."""
 
     client = Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
     response = client.messages.create(
@@ -551,27 +762,22 @@ Give me the trade signal based purely on what this data shows. No forecasting. N
     )
 
     raw = response.content[0].text.strip()
-
-    # Parse JSON
     try:
-        # Strip any markdown fences
         if '```' in raw:
             raw = raw.split('```')[1]
             if raw.startswith('json'):
                 raw = raw[4:]
         result = json.loads(raw.strip())
-        result['symbol'] = symbol
+        result['symbol']        = symbol
         result['current_price'] = current_price
-        result['atr'] = atr
-        result['adx'] = adx
-        result['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+        result['atr']           = atr_real
+        result['adx']           = adx_real
+        result['timestamp']     = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
         return result
     except Exception as e:
         return {
-            'symbol': symbol,
-            'signal': 'ERROR',
-            'error': f'Parse error: {str(e)}',
-            'raw': raw[:200],
+            'symbol': symbol, 'signal': 'ERROR',
+            'error': f'Parse error: {str(e)}', 'raw': raw[:200],
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
         }
 
@@ -584,14 +790,24 @@ def run_weekly_analysis(symbol, candles_daily, candles_weekly, current_price,
     this_week = candles_daily[-5:] if len(candles_daily) >= 5 else candles_daily
 
     # Weekly move calculation
-    pip = 100 if any(x in symbol for x in ['JPY', 'HUF', 'KRW']) else 10000
-    if symbol in ['SPY', 'QQQ', 'SPX'] or not ('/' in symbol):
-        pip = 1  # stocks — use dollars not pips
+    # Forex: multiply by pip value to get pips (EUR/USD = x10000, JPY = x100)
+    # Stocks: use raw price difference in dollars/points
+    is_stock = '/' not in symbol
+    if is_stock:
+        pip = 1          # stocks → dollar/point move
+        unit = 'pts'
+    elif any(x in symbol for x in ['JPY', 'HUF', 'KRW']):
+        pip = 100        # JPY pairs → pips
+        unit = 'pips'
+    else:
+        pip = 10000      # standard forex → pips
+        unit = 'pips'
 
     week_open = last_week[0]['open'] if last_week else candles_daily[0]['open']
     week_close = last_week[-1]['close'] if last_week else candles_daily[-1]['close']
     last_week_pips = round((week_close - week_open) * pip)
     last_week_dir = 'BULLISH' if last_week_pips > 0 else 'BEARISH' if last_week_pips < 0 else 'RANGE'
+    move_label = f"{last_week_pips:+d} {unit}"
 
     # 30-day range
     highs = [c['high'] for c in candles_daily]
@@ -614,7 +830,9 @@ def run_weekly_analysis(symbol, candles_daily, candles_weekly, current_price,
 
     user_message = f"""WEEKLY MARKET OUTLOOK REQUEST
 SYMBOL: {symbol}
+INSTRUMENT TYPE: {'STOCK — moves measured in dollars/points (pts), NOT pips' if is_stock else 'FOREX PAIR — moves measured in pips'}
 CURRENT PRICE: {current_price}
+LAST WEEK MOVE: {move_label} (open: {round(week_open,5)} → close: {round(week_close,5)})
 30-DAY RANGE: High={high_30} | Low={low_30} | Price at {price_pct}% of range
 
 100 EMA: {round(ema100_val, 5) if ema100_val else 'N/A'}
@@ -635,7 +853,7 @@ REAL RESISTANCE ZONES (2+ touches each):
 
 NEWS RISK: {news_warning if news_warning else 'NONE DETECTED'}
 
-TASK: Apply the full weekly outlook framework. Read last week's price action narrative, find any completing patterns, and give me a real gameplan for next week with specific price levels."""
+TASK: Apply the full weekly outlook framework. Read last week's price action narrative, find any completing patterns, and give me a real gameplan for next week with specific price levels. For stocks use dollar/point moves. For forex use pips."""
 
     client = Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
     response = client.messages.create(

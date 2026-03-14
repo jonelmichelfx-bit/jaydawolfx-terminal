@@ -744,7 +744,9 @@ function buildWeeklyCard(w) {
   el.className = `wcard ${dir}`;
 
   const pips = w.last_week_pips || w.last_week_move_pips || 0;
-  const pipStr = pips > 0 ? `+${pips} pips` : pips < 0 ? `${pips} pips` : 'N/A';
+  const isStock = !w.symbol.includes('/');
+  const unit = isStock ? 'pts' : 'pips';
+  const pipStr = pips > 0 ? `+${pips} ${unit}` : pips < 0 ? `${pips} ${unit}` : 'N/A';
   const pipColor = pips > 0 ? 'var(--green)' : pips < 0 ? 'var(--red)' : 'var(--gold)';
 
   const gp = w.gameplan || {};
