@@ -346,17 +346,17 @@ def score_pair_for_trend(candles):
     total = adx_score + structure_score + ema_score
     return int(min(total, 100))
 
-def fetch_wolf_chart_data(symbol, current_price):
+def fetch_wolf_chart_data(symbol, current_price, daily_candles=None):
     """
     Full 5-timeframe chart analysis for Wolf Agent.
-    Matches Sage Mode data depth: Weekly/Daily/H4/H1/M15.
-    Returns structured dict ready to feed Claude.
+    Accepts pre-fetched daily candles to avoid duplicate API calls.
+    Only fetches Weekly/H4/H1/M15 fresh — reuses daily from scan job.
     """
     data = {'symbol': symbol, 'price': current_price,
             'weekly': {}, 'daily': {}, 'h4': {}, 'h1': {}, 'm15': {},
             'supports': [], 'resistances': [], 'patterns': {}}
 
-    def tf_block(candles, label):
+    def tf_block(candles):
         if not candles or len(candles) < 10:
             return {}
         closes = [c['close'] for c in candles]
@@ -373,8 +373,6 @@ def fetch_wolf_chart_data(symbol, current_price):
         adx    = calc_adx(candles)
         trend, strength = detect_trend_structure(candles)
         bb_upper, bb_mid, bb_lower = calc_bollinger(closes)
-
-        # Trend determination
         bull = sum([
             1 if ema9   and current_price > ema9   else 0,
             1 if ema20  and current_price > ema20  else 0,
@@ -382,63 +380,60 @@ def fetch_wolf_chart_data(symbol, current_price):
             1 if macd_bias == 'BULLISH' else 0,
         ])
         tf_trend = 'BULLISH' if bull >= 3 else 'BEARISH' if bull <= 1 else 'MIXED'
-
         return {
-            'trend':      tf_trend,
-            'structure':  trend,
-            'strength':   strength,
-            'ema9':       round(ema9,   5) if ema9   else None,
-            'ema20':      round(ema20,  5) if ema20  else None,
-            'ema50':      round(ema50,  5) if ema50  else None,
-            'ema100':     round(ema100, 5) if ema100 else None,
-            'ema200':     round(ema200, 5) if ema200 else None,
-            'rsi':        rsi,
-            'macd':       macd_bias,
-            'atr':        atr,
-            'adx':        adx,
+            'trend': tf_trend, 'structure': trend, 'strength': strength,
+            'ema9':   round(ema9,   5) if ema9   else None,
+            'ema20':  round(ema20,  5) if ema20  else None,
+            'ema50':  round(ema50,  5) if ema50  else None,
+            'ema100': round(ema100, 5) if ema100 else None,
+            'ema200': round(ema200, 5) if ema200 else None,
+            'rsi': rsi, 'macd': macd_bias, 'atr': atr, 'adx': adx,
             'adx_signal': 'TRENDING' if adx and adx > 25 else 'RANGING' if adx and adx < 20 else 'WEAK',
-            'vs_ema100':  'ABOVE' if ema100 and current_price > ema100 else 'BELOW',
-            'vs_ema200':  'ABOVE' if ema200 and current_price > ema200 else 'BELOW',
-            'bb_upper':   bb_upper,
-            'bb_mid':     bb_mid,
-            'bb_lower':   bb_lower,
-            'high':       round(max(highs[-20:]), 5),
-            'low':        round(min(lows[-20:]),  5),
-            'candles':    len(candles),
+            'vs_ema100': 'ABOVE' if ema100 and current_price > ema100 else 'BELOW',
+            'vs_ema200': 'ABOVE' if ema200 and current_price > ema200 else 'BELOW',
+            'bb_upper': bb_upper, 'bb_mid': bb_mid, 'bb_lower': bb_lower,
+            'high': round(max(highs[-20:]), 5),
+            'low':  round(min(lows[-20:]),  5),
+            'candles': len(candles),
         }
 
-    # ── Fetch all 5 timeframes ──────────────────────────────────────
-    try:
-        wk_c   = fetch_ohlc(symbol, interval='1week', outputsize=52)
-        data['weekly'] = tf_block(wk_c, 'Weekly') if wk_c else {}
-    except: pass
-    time.sleep(0.2)
+    # ── Daily — reuse pre-fetched candles from scan job (no extra API call) ──
+    d1_c = daily_candles
+    if not d1_c:
+        try:
+            d1_c = fetch_ohlc(symbol, interval='1day', outputsize=60)
+        except: pass
+    if d1_c:
+        data['daily'] = tf_block(d1_c)
+        sup, res = find_sr_simple(d1_c, current_price)
+        data['supports']    = sup
+        data['resistances'] = res
 
+    # ── Weekly ────────────────────────────────────────────────────────────────
     try:
-        d1_c   = fetch_ohlc(symbol, interval='1day', outputsize=60)
-        data['daily'] = tf_block(d1_c, 'Daily') if d1_c else {}
-        if d1_c:
-            sup, res = find_sr_simple(d1_c, current_price)
-            data['supports']    = sup
-            data['resistances'] = res
+        wk_c = fetch_ohlc(symbol, interval='1week', outputsize=52)
+        data['weekly'] = tf_block(wk_c) if wk_c else {}
     except: pass
-    time.sleep(0.2)
+    time.sleep(0.15)
 
+    # ── H4 ────────────────────────────────────────────────────────────────────
     try:
-        h4_c   = fetch_ohlc(symbol, interval='4h', outputsize=60)
-        data['h4'] = tf_block(h4_c, 'H4') if h4_c else {}
+        h4_c = fetch_ohlc(symbol, interval='4h', outputsize=60)
+        data['h4'] = tf_block(h4_c) if h4_c else {}
     except: pass
-    time.sleep(0.2)
+    time.sleep(0.15)
 
+    # ── H1 ────────────────────────────────────────────────────────────────────
     try:
-        h1_c   = fetch_ohlc(symbol, interval='1h', outputsize=48)
-        data['h1'] = tf_block(h1_c, 'H1') if h1_c else {}
+        h1_c = fetch_ohlc(symbol, interval='1h', outputsize=48)
+        data['h1'] = tf_block(h1_c) if h1_c else {}
     except: pass
-    time.sleep(0.2)
+    time.sleep(0.15)
 
+    # ── M15 ───────────────────────────────────────────────────────────────────
     try:
-        m15_c  = fetch_ohlc(symbol, interval='15min', outputsize=40)
-        data['m15'] = tf_block(m15_c, 'M15') if m15_c else {}
+        m15_c = fetch_ohlc(symbol, interval='15min', outputsize=40)
+        data['m15'] = tf_block(m15_c) if m15_c else {}
     except: pass
 
     return data
@@ -699,8 +694,8 @@ def run_wolf_analysis(symbol, candles, current_price, supports, resistances,
                       trend, trend_strength, adx, ema100_val, atr, news_warning, is_option=False):
     """Feed real 5-TF data to Claude. No prediction — pure chart reading."""
 
-    # ── Fetch full 5-TF data (Sage-level depth) ───────────────────────────
-    chart = fetch_wolf_chart_data(symbol, current_price)
+    # ── Fetch full 5-TF data — reuse daily candles from scan job ─────────────
+    chart = fetch_wolf_chart_data(symbol, current_price, daily_candles=candles)
     chart_block = format_wolf_chart(chart)
 
     # Fallback context from daily candles (passed in from scan job)
@@ -920,7 +915,7 @@ def wolf_weekly_job(job_id):
             atr   = calc_atr(candles)
             adx   = item['adx']
             trend, strength = detect_trend_structure(candles)
-            supports, resistances = find_sr_zones(candles)
+            supports, resistances = find_sr_simple(candles, current_price)
             news  = check_news_risk(pair)
             analysis = run_weekly_analysis(pair, candles, [], current_price, supports, resistances,
                                            trend, strength, adx, ema100_val, atr, news)
@@ -954,7 +949,7 @@ def wolf_weekly_job(job_id):
             atr   = calc_atr(candles)
             adx   = item['adx']
             trend, strength = detect_trend_structure(candles)
-            supports, resistances = find_sr_zones(candles)
+            supports, resistances = find_sr_simple(candles, current_price)
             news  = check_news_risk(symbol)
             analysis = run_weekly_analysis(symbol, candles, [], current_price, supports, resistances,
                                            trend, strength, adx, ema100_val, atr, news)
@@ -1028,7 +1023,7 @@ def wolf_scan_job(job_id, scan_type='all'):
                 atr = calc_atr(candles)
                 adx = item['adx']
                 trend, strength = detect_trend_structure(candles)
-                supports, resistances = find_sr_zones(candles)
+                supports, resistances = find_sr_simple(candles, current_price)
                 news = check_news_risk(pair)
 
                 analysis = run_wolf_analysis(
@@ -1072,7 +1067,7 @@ def wolf_scan_job(job_id, scan_type='all'):
                 atr = calc_atr(candles)
                 adx = item['adx']
                 trend, strength = detect_trend_structure(candles)
-                supports, resistances = find_sr_zones(candles)
+                supports, resistances = find_sr_simple(candles, current_price)
                 news = check_news_risk(symbol)
 
                 analysis = run_wolf_analysis(
@@ -1104,7 +1099,7 @@ def wolf_scan_job(job_id, scan_type='all'):
                 atr = calc_atr(candles_1d)
                 adx = calc_adx(candles_1d)
                 trend, strength = detect_trend_structure(candles_1d)
-                supports, resistances = find_sr_zones(candles_1d)
+                supports, resistances = find_sr_simple(candles_1d, current_price)
 
                 # Add previous day levels as critical 0DTE S/R
                 prev_day = candles_1d[-2] if len(candles_1d) >= 2 else None
